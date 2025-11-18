@@ -1,4 +1,4 @@
-// server.js - ATUALIZADO PARA ES6 MODULES + POSTGRESQL + INICIALIZAÇÃO AUTOMÁTICA
+// server.js - ATUALIZADO COM COMPATIBILIDADE E CSP
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -31,6 +31,15 @@ pool.on('connect', () => {
 
 pool.on('error', (err) => {
   console.error('❌ Erro na conexão PostgreSQL:', err);
+});
+
+// ================= CONFIGURAÇÃO CSP (CONTENT SECURITY POLICY) =================
+app.use((req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net; img-src 'self' data: https:;"
+  );
+  next();
 });
 
 // ================= INICIALIZAÇÃO AUTOMÁTICA DO BANCO =================
@@ -143,7 +152,9 @@ async function executeInitSQL() {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false // Já configuramos manualmente acima
+}));
 app.use(compression());
 app.use(morgan('combined'));
 
@@ -478,6 +489,73 @@ app.get('/api/categorias', async (req, res) => {
     }
 });
 
+// ================= ROTAS DE COMPATIBILIDADE =================
+// Para manter compatibilidade com frontend antigo
+
+app.get('/api/estoque', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                id,
+                name as produto,
+                stock_quantity as quantidade,
+                5 as minimo,
+                categoria
+            FROM products 
+            WHERE is_active = true 
+            ORDER BY name
+        `);
+        
+        const alertas = result.rows.filter(item => item.quantidade <= 5);
+        
+        res.json({
+            success: true,
+            data: result.rows,
+            totalItens: result.rows.length,
+            alertas: alertas.length,
+            itensBaixoEstoque: alertas
+        });
+    } catch (error) {
+        console.error('Erro ao buscar estoque (compatibilidade):', error);
+        res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    }
+});
+
+app.post('/api/estoque', async (req, res) => {
+    try {
+        const { produto: name, quantidade: stock_quantity } = req.body;
+        
+        if (!name || stock_quantity === undefined) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Produto e quantidade são obrigatórios' 
+            });
+        }
+
+        const result = await pool.query(
+            `INSERT INTO products (name, stock_quantity, category_id) 
+             VALUES ($1, $2, $3) 
+             RETURNING *`,
+            [name.trim(), parseInt(stock_quantity), 1]
+        );
+
+        res.json({
+            success: true,
+            data: {
+                id: result.rows[0].id,
+                produto: result.rows[0].name,
+                quantidade: result.rows[0].stock_quantity,
+                minimo: 5,
+                categoria: "Geral"
+            },
+            message: "Item adicionado ao estoque! 📦"
+        });
+    } catch (error) {
+        console.error('Erro ao criar produto (compatibilidade):', error);
+        res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    }
+});
+
 // ================= ROTA DE INICIALIZAÇÃO MANUAL =================
 app.post('/api/init-db', async (req, res) => {
     // 🔒 Segurança básica - você pode remover depois
@@ -542,6 +620,7 @@ async function startServer() {
 ║ 🩺 Health: /health                    ║
 ║ 📊 Dashboard: /                       ║
 ║ 🔧 Init DB: POST /api/init-db        ║
+║ 🔄 Compatibilidade: /api/estoque     ║
 ╚══════════════════════════════════════╝
             `);
         });
