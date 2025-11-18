@@ -12,11 +12,7 @@
     "build": "echo \"No build step required for Node.js app\"",
     "lint": "echo \"No linter configured\"",
     "setup": "npm install && echo \"Dependencies installed successfully\"",
-    "deploy": "npm run build && npm start",
-    "init-db": "node init-db.js",
-    "db-migrate": "node init-db.js",
-    "db-reset": "node init-db.js",
-    "fix-admin": "node fix-admin.js"
+    "deploy": "npm run build && npm start"
   },
   "keywords": [
     "pdv",
@@ -54,13 +50,10 @@
     "morgan": "^1.10.0",
     "pg": "^8.11.3",
     "dotenv": "^16.3.1",
-    "bcryptjs": "^2.4.3",
-    "cookie-parser": "^1.4.6"
+    "bcryptjs": "^2.4.3"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1",
-    "eslint": "^8.56.0",
-    "prettier": "^3.1.1"
+    "nodemon": "^3.0.1"
   },
   "engines": {
     "node": ">=18.0.0",
@@ -73,17 +66,5 @@
   "bugs": {
     "url": "https://github.com/seu-usuario/bizflow-app/issues"
   },
-  "homepage": "https://github.com/seu-usuario/bizflow-app#readme",
-  "files": [
-    "server.js",
-    "package.json",
-    "public/",
-    "views/",
-    "README.md",
-    "init-db.js"
-  ],
-  "volta": {
-    "node": "18.17.0",
-    "npm": "9.6.7"
-  }
+  "homepage": "https://github.com/seu-usuario/bizflow-app#readme"
 }
