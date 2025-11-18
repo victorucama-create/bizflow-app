@@ -1,98 +1,220 @@
-/* ===== ESTILOS DE AUTENTICAÇÃO ===== */
+/* ===== RESET E CONFIGURAÇÕES GERAIS ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-/* Login Modal */
-.modal-content {
+:root {
+    --primary-color: #2c5aa0;
+    --secondary-color: #6c757d;
+    --success-color: #198754;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #0dcaf0;
+    --light-color: #f8f9fa;
+    --dark-color: #212529;
+    --border-radius: 0.75rem;
+    --box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    --transition: all 0.3s ease;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: var(--dark-color);
+}
+
+/* ===== CARDS ===== */
+.card {
     border: none;
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
+    transition: var(--transition);
+    margin-bottom: 1.5rem;
 }
 
-.modal-header {
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
+    font-weight: 600;
+    padding: 1rem 1.5rem;
 }
 
-.modal-backdrop {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.card-body {
+    padding: 1.5rem;
 }
 
-/* Form de Login */
-#login-form .input-group-text {
+/* ===== BOTÕES ===== */
+.btn {
+    border-radius: 0.75rem;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    transition: var(--transition);
+    border: none;
+}
+
+.btn-lg {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color), #1e40af);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, var(--success-color), #16a34a);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, var(--warning-color), #eab308);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, var(--danger-color), #dc2626);
+}
+
+/* ===== FORMULÁRIOS ===== */
+.form-control, .form-select {
+    border-radius: 0.75rem;
+    border: 2px solid #e2e8f0;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: var(--transition);
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(44, 90, 160, 0.25);
+}
+
+.form-label {
+    font-weight: 600;
+    color: var(--dark-color);
+    margin-bottom: 0.5rem;
+}
+
+.input-group-text {
+    border-radius: 0.75rem;
     background: var(--light-color);
     border: 2px solid #e2e8f0;
-    border-right: none;
 }
 
-#login-form .form-control {
-    border-left: none;
+/* ===== NAVBAR ===== */
+.navbar {
+    background: linear-gradient(135deg, var(--primary-color), #1e3a8a) !important;
+    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
 }
 
-/* Alertas de Autenticação */
-.alert-flutuante {
-    animation: slideInRight 0.3s ease-out;
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.5rem;
 }
 
-@keyframes slideInRight {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
+.navbar-nav .nav-link {
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    transition: var(--transition);
+    margin: 0 0.25rem;
 }
 
-/* Seção de Usuários */
-#usuarios .list-group-item {
-    border-left: 4px solid transparent;
+.navbar-nav .nav-link:hover,
+.navbar-nav .nav-link.active {
+    background: rgba(255, 255, 255, 0.15);
+    color: white !important;
+}
+
+/* ===== BADGES ===== */
+.badge {
+    font-weight: 500;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+}
+
+/* ===== LISTAS ===== */
+.list-group-item {
+    border: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 1rem 1.5rem;
     transition: var(--transition);
 }
 
-#usuarios .list-group-item:hover {
-    border-left-color: var(--primary-color);
-    transform: translateX(5px);
+.list-group-item:hover {
+    background: var(--light-color);
 }
 
-/* Badges de Status de Usuário */
-.badge.bg-danger {
-    background: linear-gradient(135deg, var(--danger-color), #dc2626) !important;
+.list-group-item:last-child {
+    border-bottom: none;
 }
 
-.badge.bg-primary {
-    background: linear-gradient(135deg, var(--primary-color), #1e40af) !important;
-}
-
-.badge.bg-success {
-    background: linear-gradient(135deg, var(--success-color), #16a34a) !important;
-}
-
-/* Dropdown de Usuário */
-.dropdown-menu {
+/* ===== ALERTAS ===== */
+.alert {
     border: none;
     border-radius: var(--border-radius);
-    box-shadow: var(--box-shadow);
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
+    border-left: 4px solid;
+    padding: 1rem 1.5rem;
 }
 
-.dropdown-item {
-    padding: 0.75rem 1rem;
-    transition: var(--transition);
-    border-radius: 0.5rem;
-    margin: 0.125rem 0.5rem;
-    width: auto;
+.alert-warning {
+    background: rgba(255, 193, 7, 0.1);
+    border-left-color: var(--warning-color);
 }
 
-.dropdown-item:hover {
-    background: var(--primary-color);
-    color: white;
-    transform: translateX(5px);
+.alert-success {
+    background: rgba(25, 135, 84, 0.1);
+    border-left-color: var(--success-color);
 }
 
-/* Loading States para Autenticação */
+.alert-danger {
+    background: rgba(220, 53, 69, 0.1);
+    border-left-color: var(--danger-color);
+}
+
+/* ===== ANIMAÇÕES ===== */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+/* ===== RESPONSIVIDADE ===== */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 1rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .btn-lg {
+        padding: 0.875rem 1.5rem;
+        font-size: 1rem;
+    }
+    
+    .navbar-nav .nav-link {
+        padding: 0.5rem;
+        margin: 0.125rem 0;
+    }
+}
+
+/* ===== LOADING STATES ===== */
 .btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
@@ -105,63 +227,4 @@
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
-}
-
-/* Responsividade para Modais */
-@media (max-width: 576px) {
-    .modal-dialog {
-        margin: 1rem;
-    }
-    
-    .modal-content {
-        border-radius: 1rem;
-    }
-    
-    #register-form .row {
-        margin: 0;
-    }
-    
-    #register-form .col-md-6 {
-        padding: 0;
-    }
-}
-
-/* Animações para Transições de Tela */
-#app-content {
-    animation: fadeIn 0.5s ease-out;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Estilos para Demo Info */
-.text-muted small {
-    font-size: 0.8rem;
-    opacity: 0.8;
-}
-
-/* Melhorias de Acessibilidade */
-.form-control:focus {
-    outline: none;
-}
-
-.btn:focus {
-    box-shadow: 0 0 0 0.2rem rgba(44, 90, 160, 0.25);
-}
-
-/* Estados de Hover para Cards de Login */
-.modal-content .card {
-    transition: var(--transition);
-}
-
-.modal-content .card:hover {
-    transform: translateY(-2px);
 }
