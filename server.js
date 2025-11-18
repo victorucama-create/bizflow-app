@@ -1073,30 +1073,35 @@ app.get('/health', async (req, res) => {
 });
 
 // ================= ROTAS DE AUTENTICAÇÃO FASE 4 =================
-app.post('/api/auth/login', async (req, res) => {
-  console.log('🔐 Recebida tentativa de login...');
-  
+app.post('/api/auth/login', empresaContext, async (req, res) => {
   try {
-    const { username, password } = req.body;
-    console.log('📧 Usuário:', username);
+    const { username, password, empresa_id } = req.body;
 
-    // Validações básicas
     if (!username || !password) {
-      console.log('❌ Campos obrigatórios faltando');
       return res.status(400).json({ 
         success: false, 
         error: 'Username e password são obrigatórios' 
       });
     }
 
-    // CORREÇÃO: Consulta SUPER simplificada
-    console.log('🔍 Buscando usuário no banco...');
-    const userResult = await pool.query(
-      'SELECT id, username, email, password_hash, full_name, role, empresa_id, filial_id FROM users WHERE username = $1 AND is_active = true LIMIT 1',
-      [username]
-    );
+    console.log(`🔐 Tentativa de login: ${username}, Empresa: ${req.empresa_id}`);
 
-    console.log('📊 Resultado da busca:', userResult.rows.length, 'usuários encontrados');
+    // CORREÇÃO: Buscar usuário de forma mais simples primeiro
+    let userQuery = `
+      SELECT u.* 
+      FROM users u 
+      WHERE u.username = $1 AND u.is_active = true
+    `;
+    
+    let queryParams = [username];
+    
+    // Se empresa_id foi fornecido, filtrar por empresa
+    if (req.empresa_id) {
+      userQuery += ' AND u.empresa_id = $2';
+      queryParams.push(req.empresa_id);
+    }
+
+    const userResult = await pool.query(userQuery, queryParams);
 
     if (userResult.rows.length === 0) {
       console.log('❌ Usuário não encontrado:', username);
@@ -1110,29 +1115,54 @@ app.post('/api/auth/login', async (req, res) => {
     console.log('✅ Usuário encontrado:', user.username);
 
     // Verificar senha
-    console.log('🔑 Verificando senha...');
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
     
     if (!isValidPassword) {
-      console.log('❌ Senha inválida para:', username);
+      console.log('❌ Senha inválida para usuário:', username);
       return res.status(401).json({ 
         success: false, 
         error: 'Credenciais inválidas' 
       });
     }
 
-    console.log('✅ Senha válida!');
+    console.log('✅ Senha válida para:', username);
 
-    // Gerar token simples
-    const sessionToken = 'bizflow_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    // Buscar informações completas do usuário com JOINs (se necessário)
+    let userCompleteQuery = `
+      SELECT u.*, e.nome as empresa_nome, f.nome as filial_nome 
+      FROM users u 
+      LEFT JOIN empresas e ON u.empresa_id = e.id 
+      LEFT JOIN filiais f ON u.filial_id = f.id 
+      WHERE u.id = $1
+    `;
+    
+    const userCompleteResult = await pool.query(userCompleteQuery, [user.id]);
+    const userComplete = userCompleteResult.rows[0] || user;
+
+    // Gerar token de sessão
+    const sessionToken = crypto.randomBytes(64).toString('hex');
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
+    // Salvar sessão
+    await pool.query(
+      'INSERT INTO user_sessions (user_id, session_token, empresa_id, expires_at) VALUES ($1, $2, $3, $4)',
+      [user.id, sessionToken, user.empresa_id, expiresAt]
+    );
+
+    // Atualizar último login
+    await pool.query(
+      'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
+      [user.id]
+    );
+
+    // Registrar auditoria
+    await logAudit('LOGIN', 'users', user.id, null, null, req);
+
     // Remover password hash da resposta
-    const { password_hash, ...userWithoutPassword } = user;
+    const { password_hash, ...userWithoutPassword } = userComplete;
 
-    console.log('🎉 Login realizado com sucesso para:', username);
+    console.log('✅ Login realizado com sucesso para:', username);
 
-    // Resposta de sucesso
     res.json({
       success: true,
       message: 'Login realizado com sucesso!',
@@ -1144,15 +1174,80 @@ app.post('/api/auth/login', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('💥 ERRO CRÍTICO NO LOGIN:', error);
-    console.error('📝 Stack trace:', error.stack);
-    
-    // Resposta de erro detalhada
+    console.error('❌ Erro no login:', error);
+    console.error('Stack trace:', error.stack);
     res.status(500).json({ 
       success: false, 
       error: 'Erro interno do servidor',
-      message: error.message,
-      stack: process.env.NODE_ENV === 'production' ? undefined : error.stack
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Rota para verificar autenticação - CORREÇÃO PARA A INTERFACE
+app.get('/api/auth/me', requireAuth, async (req, res) => {
+  try {
+    console.log('🔍 Verificando autenticação do usuário...');
+    
+    // Remover password hash da resposta
+    const { password_hash, ...userWithoutPassword } = req.user;
+    
+    res.json({
+      success: true,
+      data: userWithoutPassword
+    });
+  } catch (error) {
+    console.error('Erro ao verificar autenticação:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erro interno do servidor' 
+    });
+  }
+});
+
+// Rota de logout
+app.post('/api/auth/logout', requireAuth, async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (token) {
+      await pool.query(
+        'DELETE FROM user_sessions WHERE session_token = $1',
+        [token]
+      );
+    }
+
+    // Registrar auditoria
+    await logAudit('LOGOUT', 'users', req.user.id, null, null, req);
+
+    res.json({
+      success: true,
+      message: 'Logout realizado com sucesso!'
+    });
+  } catch (error) {
+    console.error('Erro no logout:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// Rota para verificar se o servidor está online
+app.get('/api/auth/status', async (req, res) => {
+  try {
+    // Testar conexão com o banco
+    await pool.query('SELECT 1');
+    
+    res.json({
+      success: true,
+      status: 'online',
+      database: 'connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.json({
+      success: false,
+      status: 'online',
+      database: 'disconnected',
+      error: error.message
     });
   }
 });
