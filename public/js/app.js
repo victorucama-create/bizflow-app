@@ -1,5 +1,5 @@
-// BizFlow - Sistema de Gestão Integrada
-// JavaScript Application Controller - Versão com Autenticação
+// BizFlow - Sistema de Gestão Integrada - FASE 3
+// JavaScript Application Controller com Módulos Avançados
 
 class BizFlowApp {
     constructor() {
@@ -11,11 +11,13 @@ class BizFlowApp {
         this.produtos = [];
         this.dashboardData = {};
         this.isOnline = false;
+        this.relatoriosData = {};
+        this.financeiroData = {};
     }
 
     async init() {
         try {
-            console.log('🚀 Inicializando BizFlow App...');
+            console.log('🚀 Inicializando BizFlow App FASE 3...');
             
             // Verificar autenticação
             if (!this.authToken) {
@@ -35,8 +37,8 @@ class BizFlowApp {
             // Iniciar atualizações automáticas
             this.iniciarAtualizacoesAutomaticas();
             
-            console.log('✅ BizFlow App inicializado com sucesso!');
-            this.mostrarAlerta('Sistema carregado com sucesso! 🎉', 'success');
+            console.log('✅ BizFlow App FASE 3 inicializado com sucesso!');
+            this.mostrarAlerta('Sistema FASE 3 carregado! 🎉', 'success');
         } catch (error) {
             console.error('❌ Erro ao inicializar app:', error);
             this.mostrarAlerta('Modo offline ativado. Dados locais carregados.', 'warning');
@@ -80,30 +82,13 @@ class BizFlowApp {
             if (data.status === 'OK') {
                 this.isOnline = true;
                 this.atualizarStatusConexao('online', 'Conectado');
-                console.log('✅ Conexão estabelecida com sucesso');
+                console.log('✅ Conexão estabelecida com sucesso - FASE 3');
                 return true;
             } else {
                 throw new Error('Health check retornou status inválido');
             }
         } catch (error) {
             console.warn('⚠️ Health check falhou, tentando rota alternativa...');
-            
-            try {
-                const testResponse = await fetch(`${this.API_BASE_URL}/api/test`, {
-                    method: 'GET',
-                    headers: this.getAuthHeaders(),
-                    timeout: 5000
-                });
-                
-                if (testResponse.ok) {
-                    this.isOnline = true;
-                    this.atualizarStatusConexao('online', 'Conectado');
-                    console.log('✅ Conexão estabelecida via rota alternativa');
-                    return true;
-                }
-            } catch (secondError) {
-                console.warn('⚠️ Todas as tentativas de conexão falharam');
-            }
             
             this.isOnline = false;
             this.atualizarStatusConexao('offline', 'Modo Offline');
@@ -113,15 +98,16 @@ class BizFlowApp {
 
     async carregarDadosIniciais() {
         try {
-            console.log('📥 Carregando dados iniciais...');
+            console.log('📥 Carregando dados iniciais FASE 3...');
             
             await Promise.all([
                 this.carregarVendas(),
                 this.carregarEstoque(),
-                this.carregarDashboard()
+                this.carregarDashboardAvancado(),
+                this.carregarContasFinanceiras()
             ]);
             
-            console.log('✅ Dados iniciais carregados com sucesso');
+            console.log('✅ Dados iniciais FASE 3 carregados com sucesso');
         } catch (error) {
             console.warn('⚠️ Erro ao carregar dados da API, usando modo offline');
             throw error;
@@ -140,6 +126,23 @@ class BizFlowApp {
             e.preventDefault();
             this.adicionarItemEstoque();
         });
+
+        // Formulário Financeiro
+        const financeiroForm = document.getElementById('financeiro-form');
+        if (financeiroForm) {
+            financeiroForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.registrarContaFinanceira();
+            });
+        }
+
+        // Filtros de Relatórios
+        const filtroRelatorio = document.getElementById('filtro-relatorio');
+        if (filtroRelatorio) {
+            filtroRelatorio.addEventListener('change', (e) => {
+                this.carregarRelatorios(e.target.value);
+            });
+        }
 
         // Atalhos de teclado
         document.addEventListener('keydown', (e) => {
@@ -186,17 +189,417 @@ class BizFlowApp {
         // Atualizar dashboard a cada 30 segundos (apenas se online)
         setInterval(() => {
             if (this.isOnline && !document.hidden) {
-                this.carregarDashboard();
+                this.carregarDashboardAvancado();
             }
         }, 30000);
 
         // Verificar alertas a cada minuto
         setInterval(() => {
             this.verificarAlertasEstoque();
+            this.verificarContasVencidas();
         }, 60000);
     }
 
-    // ================= VENDAS =================
+    // ================= DASHBOARD AVANÇADO =================
+
+    async carregarDashboardAvancado() {
+        if (!this.isOnline) {
+            this.atualizarDashboardLocal();
+            return;
+        }
+
+        try {
+            const response = await fetch(`${this.API_BASE_URL}/api/dashboard/avancado?periodo=30`, {
+                headers: this.getAuthHeaders()
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.dashboardData = data.data;
+                this.atualizarDashboardAvancado(this.dashboardData);
+                return true;
+            }
+        } catch (error) {
+            console.error('Erro ao carregar dashboard avançado:', error);
+            this.atualizarDashboardLocal();
+        }
+    }
+
+    atualizarDashboardAvancado(data) {
+        if (!data.metricas) return;
+
+        const metricas = data.metricas;
+        
+        // Atualizar métricas principais
+        this.atualizarElemento('total-receita', `R$ ${metricas.receitaTotal.toFixed(2)}`);
+        this.atualizarElemento('total-vendas', metricas.totalVendas.toString());
+        this.atualizarElemento('total-produtos', metricas.totalProdutos.toString());
+        
+        // Novas métricas FASE 3
+        this.atualizarElemento('ticket-medio', `R$ ${metricas.ticketMedio.toFixed(2)}`);
+        this.atualizarElemento('lucro-total', `R$ ${metricas.lucro.toFixed(2)}`);
+        this.atualizarElemento('contas-pendentes', metricas.contasPendentes.toString());
+        this.atualizarElemento('alertas-estoque', metricas.alertasEstoque.toString());
+
+        // Atualizar cards financeiros
+        this.atualizarElemento('receitas-card', `R$ ${metricas.receitas.toFixed(2)}`);
+        this.atualizarElemento('despesas-card', `R$ ${metricas.despesas.toFixed(2)}`);
+        this.atualizarElemento('lucro-card', `R$ ${metricas.lucro.toFixed(2)}`);
+
+        // Atualizar gráficos
+        this.atualizarGraficoVendas(data.vendasPorDia);
+        this.atualizarTopProdutos(data.topProdutos);
+        
+        this.animarAtualizacaoDashboard();
+    }
+
+    atualizarGraficoVendas(vendasPorDia) {
+        const container = document.getElementById('grafico-vendas');
+        if (!container || !vendasPorDia || vendasPorDia.length === 0) return;
+
+        const labels = vendasPorDia.map(item => {
+            const data = new Date(item.data);
+            return data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        });
+        
+        const dadosVendas = vendasPorDia.map(item => item.quantidade_vendas);
+        const dadosReceita = vendasPorDia.map(item => parseFloat(item.receita_dia));
+
+        container.innerHTML = `
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Vendas dos Últimos 7 Dias</h6>
+                </div>
+                <div class="card-body">
+                    <div style="height: 200px; position: relative;">
+                        <canvas id="vendasChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Inicializar gráfico quando o DOM estiver pronto
+        setTimeout(() => {
+            this.inicializarGraficoVendas(labels, dadosVendas, dadosReceita);
+        }, 100);
+    }
+
+    inicializarGraficoVendas(labels, dadosVendas, dadosReceita) {
+        const ctx = document.getElementById('vendasChart');
+        if (!ctx) return;
+
+        // Simulação do Chart.js - em produção usar biblioteca real
+        ctx.innerHTML = `
+            <div class="text-center p-4">
+                <div class="row">
+                    <div class="col-6">
+                        <small class="text-muted">Vendas por Dia</small>
+                        <div class="mt-2">
+                            ${dadosVendas.map((vendas, i) => `
+                                <div class="d-flex align-items-center mb-1">
+                                    <small class="me-2" style="width: 40px">${labels[i]}</small>
+                                    <div class="progress flex-grow-1" style="height: 8px">
+                                        <div class="progress-bar bg-primary" style="width: ${(vendas / Math.max(...dadosVendas)) * 100}%"></div>
+                                    </div>
+                                    <small class="ms-2">${vendas}</small>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Receita por Dia (R$)</small>
+                        <div class="mt-2">
+                            ${dadosReceita.map((receita, i) => `
+                                <div class="d-flex align-items-center mb-1">
+                                    <small class="me-2" style="width: 40px">${labels[i]}</small>
+                                    <div class="progress flex-grow-1" style="height: 8px">
+                                        <div class="progress-bar bg-success" style="width: ${(receita / Math.max(...dadosReceita)) * 100}%"></div>
+                                    </div>
+                                    <small class="ms-2">${receita.toFixed(0)}</small>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    atualizarTopProdutos(topProdutos) {
+        const container = document.getElementById('top-produtos');
+        if (!container) return;
+
+        if (!topProdutos || topProdutos.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center">Nenhum dado disponível</p>';
+            return;
+        }
+
+        const html = topProdutos.slice(0, 5).map((produto, index) => `
+            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                <div class="flex-grow-1">
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-primary me-2">${index + 1}</span>
+                        <div>
+                            <small class="fw-bold">${produto.product_name}</small>
+                            <br>
+                            <small class="text-muted">${produto.categoria || 'Geral'}</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <small class="text-success fw-bold">${produto.total_vendido} un</small>
+                    <br>
+                    <small class="text-muted">R$ ${parseFloat(produto.receita_produto).toFixed(2)}</small>
+                </div>
+            </div>
+        `).join('');
+
+        container.innerHTML = html;
+    }
+
+    // ================= RELATÓRIOS AVANÇADOS =================
+
+    async carregarRelatorios(tipo = 'vendas') {
+        if (!this.isOnline) {
+            this.mostrarAlerta('Relatórios disponíveis apenas online', 'warning');
+            return;
+        }
+
+        try {
+            let url = '';
+            switch(tipo) {
+                case 'vendas':
+                    url = '/api/relatorios/vendas';
+                    break;
+                case 'produtos':
+                    url = '/api/relatorios/produtos';
+                    break;
+                case 'financeiro':
+                    url = '/api/financeiro/fluxo-caixa';
+                    break;
+                default:
+                    return;
+            }
+
+            const response = await fetch(`${this.API_BASE_URL}${url}`, {
+                headers: this.getAuthHeaders()
+            });
+
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+            const data = await response.json();
+            
+            if (data.success) {
+                this.relatoriosData[tipo] = data.data;
+                this.exibirRelatorio(tipo, data.data);
+            }
+        } catch (error) {
+            console.error(`Erro ao carregar relatório ${tipo}:`, error);
+            this.mostrarAlerta(`Erro ao carregar relatório: ${error.message}`, 'danger');
+        }
+    }
+
+    exibirRelatorio(tipo, dados) {
+        const container = document.getElementById('relatorio-container');
+        if (!container) return;
+
+        let html = '';
+
+        switch(tipo) {
+            case 'vendas':
+                html = this.gerarRelatorioVendas(dados);
+                break;
+            case 'produtos':
+                html = this.gerarRelatorioProdutos(dados);
+                break;
+            case 'financeiro':
+                html = this.gerarRelatorioFinanceiro(dados);
+                break;
+        }
+
+        container.innerHTML = html;
+    }
+
+    gerarRelatorioVendas(dados) {
+        return `
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Relatório de Vendas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Período</th>
+                                    <th>Vendas</th>
+                                    <th>Receita</th>
+                                    <th>Ticket Médio</th>
+                                    <th>Itens Vendidos</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${dados.resumo.map(item => `
+                                    <tr>
+                                        <td>${item.periodo}</td>
+                                        <td>${item.total_vendas}</td>
+                                        <td>R$ ${parseFloat(item.receita_total).toFixed(2)}</td>
+                                        <td>R$ ${parseFloat(item.ticket_medio).toFixed(2)}</td>
+                                        <td>${item.total_itens_vendidos}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // ================= MÓDULO FINANCEIRO =================
+
+    async carregarContasFinanceiras() {
+        if (!this.isOnline) return;
+
+        try {
+            const response = await fetch(`${this.API_BASE_URL}/api/financeiro/contas`, {
+                headers: this.getAuthHeaders()
+            });
+
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+            const data = await response.json();
+            
+            if (data.success) {
+                this.financeiroData.contas = data.data;
+                this.exibirContasFinanceiras(data.data);
+            }
+        } catch (error) {
+            console.error('Erro ao carregar contas financeiras:', error);
+        }
+    }
+
+    async registrarContaFinanceira() {
+        const form = document.getElementById('financeiro-form');
+        if (!form) return;
+
+        const nome = document.getElementById('conta-nome').value;
+        const tipo = document.getElementById('conta-tipo').value;
+        const categoria = document.getElementById('conta-categoria').value;
+        const valor = parseFloat(document.getElementById('conta-valor').value);
+        const dataVencimento = document.getElementById('conta-vencimento').value;
+
+        if (!nome || !valor || !dataVencimento) {
+            this.mostrarAlerta('Preencha todos os campos obrigatórios!', 'warning');
+            return;
+        }
+
+        this.mostrarLoading(form, 'Registrando...');
+
+        try {
+            const contaData = {
+                name: nome,
+                type: tipo,
+                category: categoria,
+                amount: valor,
+                due_date: dataVencimento,
+                status: 'pendente'
+            };
+
+            const response = await fetch(`${this.API_BASE_URL}/api/financeiro/contas`, {
+                method: 'POST',
+                headers: this.getAuthHeaders(),
+                body: JSON.stringify(contaData)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                form.reset();
+                this.mostrarAlerta('Conta registrada com sucesso!', 'success');
+                this.carregarContasFinanceiras();
+                this.carregarDashboardAvancado();
+            } else {
+                throw new Error(data.error || 'Erro ao registrar conta');
+            }
+        } catch (error) {
+            this.mostrarAlerta(error.message, 'danger');
+        } finally {
+            this.esconderLoading(form, 'Registrar Conta');
+        }
+    }
+
+    exibirContasFinanceiras(contas) {
+        const container = document.getElementById('lista-contas');
+        if (!container) return;
+
+        if (!contas || contas.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-file-invoice-dollar fa-3x mb-3"></i>
+                    <p>Nenhuma conta registrada</p>
+                </div>
+            `;
+            return;
+        }
+
+        const html = contas.map(conta => {
+            const badgeClass = conta.status === 'pago' || conta.status === 'recebido' ? 'bg-success' : 
+                             conta.status === 'atrasado' ? 'bg-danger' : 'bg-warning';
+            const tipoIcon = conta.type === 'receita' ? 'arrow-down' : 'arrow-up';
+            const tipoClass = conta.type === 'receita' ? 'text-success' : 'text-danger';
+            
+            return `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">
+                                <i class="fas fa-${tipoIcon} ${tipoClass} me-2"></i>
+                                ${conta.name}
+                            </h6>
+                            <small class="text-muted">
+                                <i class="fas fa-tag me-1"></i>${conta.category || 'Outros'}
+                                <i class="fas fa-calendar ms-2 me-1"></i>
+                                ${new Date(conta.due_date).toLocaleDateString('pt-BR')}
+                            </small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge ${badgeClass} mb-1">${conta.status}</span>
+                            <div>
+                                <strong class="${tipoClass}">R$ ${conta.amount.toFixed(2)}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = html;
+    }
+
+    verificarContasVencidas() {
+        if (!this.financeiroData.contas) return;
+
+        const hoje = new Date();
+        const contasVencidas = this.financeiroData.contas.filter(conta => {
+            const vencimento = new Date(conta.due_date);
+            return vencimento < hoje && (conta.status === 'pendente');
+        });
+
+        if (contasVencidas.length > 0 && document.visibilityState === 'visible') {
+            this.mostrarAlerta(
+                `${contasVencidas.length} conta(s) vencida(s)! Verifique o módulo financeiro. ⚠️`,
+                'warning'
+            );
+        }
+    }
+
+    // ================= VENDAS (mantido para compatibilidade) =================
 
     async carregarVendas() {
         if (!this.isOnline) {
@@ -329,7 +732,7 @@ class BizFlowApp {
             // Recarregar dados
             if (this.isOnline) {
                 await this.carregarVendas();
-                await this.carregarDashboard();
+                await this.carregarDashboardAvancado();
             } else {
                 this.exibirVendas(this.vendas);
                 this.atualizarDashboardLocal();
@@ -402,7 +805,7 @@ class BizFlowApp {
         container.innerHTML = html;
     }
 
-    // ================= ESTOQUE =================
+    // ================= ESTOQUE (mantido para compatibilidade) =================
 
     async carregarEstoque() {
         if (!this.isOnline) {
@@ -462,17 +865,23 @@ class BizFlowApp {
     async adicionarItemEstoque() {
         const form = document.getElementById('estoque-form');
         const produtoInput = document.getElementById('produto-estoque');
+        const precoInput = document.getElementById('preco');
         const quantidadeInput = document.getElementById('quantidade');
-        const minimoInput = document.getElementById('minimo');
         
         const produto = produtoInput.value.trim();
+        const preco = parseFloat(precoInput.value);
         const quantidade = parseInt(quantidadeInput.value);
-        const minimo = parseInt(minimoInput.value);
 
         // Validação
         if (!produto) {
             this.mostrarAlerta('Informe o nome do produto!', 'warning');
             produtoInput.focus();
+            return;
+        }
+
+        if (!preco || preco <= 0) {
+            this.mostrarAlerta('Informe um preço válido!', 'warning');
+            precoInput.focus();
             return;
         }
 
@@ -482,36 +891,26 @@ class BizFlowApp {
             return;
         }
 
-        if (minimo < 1) {
-            this.mostrarAlerta('Estoque mínimo deve ser pelo menos 1!', 'warning');
-            minimoInput.focus();
-            return;
-        }
-
         this.mostrarLoading(form, 'Adicionando...');
 
         try {
             let resultado;
             
             if (this.isOnline) {
-                let response;
-                try {
-                    response = await fetch(`${this.API_BASE_URL}/api/produtos`, {
-                        method: 'POST',
-                        headers: this.getAuthHeaders(),
-                        body: JSON.stringify({ 
-                            produto: produto,
-                            quantidade: quantidade,
-                            minimo: minimo
-                        })
-                    });
-                } catch (error) {
-                    response = await fetch(`${this.API_BASE_URL}/api/estoque`, {
-                        method: 'POST',
-                        headers: this.getAuthHeaders(),
-                        body: JSON.stringify({ produto, quantidade, minimo })
-                    });
-                }
+                const produtoData = {
+                    name: produto,
+                    price: preco,
+                    cost: preco * 0.7,
+                    stock_quantity: quantidade,
+                    category_id: 1,
+                    sku: 'SKU' + Date.now()
+                };
+
+                const response = await fetch(`${this.API_BASE_URL}/api/produtos`, {
+                    method: 'POST',
+                    headers: this.getAuthHeaders(),
+                    body: JSON.stringify(produtoData)
+                });
 
                 if (!response.ok) {
                     if (response.status === 401) {
@@ -525,7 +924,7 @@ class BizFlowApp {
                 resultado = await response.json();
 
                 if (!resultado.success) {
-                    throw new Error(resultado.error || 'Erro ao adicionar item');
+                    throw new Error(resultado.error || 'Erro ao adicionar produto');
                 }
             } else {
                 resultado = {
@@ -533,24 +932,23 @@ class BizFlowApp {
                     data: {
                         id: Date.now(),
                         produto,
+                        preco,
                         quantidade,
-                        minimo,
                         categoria: "Geral",
                         ultimaAtualizacao: new Date().toISOString()
                     },
-                    message: "Item adicionado (modo offline) 📦"
+                    message: "Produto adicionado (modo offline) 📦"
                 };
                 
                 this.estoque.unshift(resultado.data);
             }
 
             form.reset();
-            minimoInput.value = 5;
             produtoInput.focus();
 
             if (this.isOnline) {
                 await this.carregarEstoque();
-                await this.carregarDashboard();
+                await this.carregarDashboardAvancado();
             } else {
                 this.exibirEstoque(this.estoque);
                 this.atualizarDashboardLocal();
@@ -559,13 +957,13 @@ class BizFlowApp {
             this.mostrarAlerta(resultado.message, 'success');
 
         } catch (error) {
-            console.error('Erro ao adicionar item:', error);
+            console.error('Erro ao adicionar produto:', error);
             this.mostrarAlerta(
-                this.isOnline ? error.message : 'Item salvo localmente (sem sincronização)',
+                this.isOnline ? error.message : 'Produto salvo localmente (sem sincronização)',
                 this.isOnline ? 'danger' : 'warning'
             );
         } finally {
-            this.esconderLoading(form, 'Adicionar ao Estoque');
+            this.esconderLoading(form, 'Adicionar Produto');
         }
     }
 
@@ -576,7 +974,7 @@ class BizFlowApp {
             container.innerHTML = `
                 <div class="text-center text-muted py-4">
                     <i class="fas fa-box-open fa-3x mb-3"></i>
-                    <p>Nenhum item cadastrado</p>
+                    <p>Nenhum produto cadastrado</p>
                     <small class="text-warning">
                         <i class="fas fa-${this.isOnline ? 'cloud' : 'wifi'} me-1"></i>
                         ${this.isOnline ? 'Online' : 'Offline'}
@@ -587,7 +985,7 @@ class BizFlowApp {
         }
 
         const html = estoque.map(item => {
-            const alerta = item.quantidade <= item.minimo;
+            const alerta = item.quantidade <= (item.minimo || 5);
             const badgeClass = alerta ? 'bg-danger' : 'bg-success';
             const badgeText = alerta ? 'Baixo' : 'OK';
             const icon = alerta ? 'exclamation-triangle' : 'check';
@@ -609,7 +1007,7 @@ class BizFlowApp {
                             </span>
                             <div class="mt-1">
                                 <small class="text-muted">
-                                    ${item.quantidade} / ${item.minimo} min
+                                    ${item.quantidade} unidades
                                 </small>
                             </div>
                         </div>
@@ -618,190 +1016,10 @@ class BizFlowApp {
                         <div class="alert alert-warning mt-2 py-1 mb-0">
                             <small>
                                 <i class="fas fa-exclamation-triangle me-1"></i>
-                                <strong>Alerta:</strong> Estoque abaixo do mínimo!
+                                <strong>Alerta:</strong> Estoque baixo!
                             </small>
                         </div>
                     ` : ''}
-                </div>
-            `;
-        }).join('');
-
-        container.innerHTML = html;
-    }
-
-    // ================= USUÁRIOS (ADMIN ONLY) =================
-
-    async carregarUsuarios() {
-        if (!this.isOnline || !this.currentUser || this.currentUser.role !== 'admin') {
-            return;
-        }
-
-        try {
-            const response = await fetch(`${this.API_BASE_URL}/api/users`, {
-                headers: this.getAuthHeaders()
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
-            const data = await response.json();
-
-            if (data.success) {
-                this.exibirUsuarios(data.data);
-            }
-        } catch (error) {
-            console.error('Erro ao carregar usuários:', error);
-            this.mostrarAlerta('Erro ao carregar lista de usuários', 'danger');
-        }
-    }
-
-    exibirUsuarios(usuarios) {
-        const container = document.getElementById('lista-usuarios');
-        
-        if (!usuarios || usuarios.length === 0) {
-            container.innerHTML = `
-                <div class="text-center text-muted py-4">
-                    <i class="fas fa-users fa-3x mb-3"></i>
-                    <p>Nenhum usuário cadastrado</p>
-                </div>
-            `;
-            return;
-        }
-
-        const html = usuarios.map(usuario => {
-            const badgeClass = usuario.role === 'admin' ? 'bg-danger' : 'bg-primary';
-            const statusClass = usuario.is_active ? 'bg-success' : 'bg-secondary';
-            const statusText = usuario.is_active ? 'Ativo' : 'Inativo';
-            
-            return `
-                <div class="list-group-item">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="flex-grow-1">
-                            <h6 class="mb-1">${usuario.full_name}</h6>
-                            <small class="text-muted">
-                                <i class="fas fa-user me-1"></i>${usuario.username}
-                                <i class="fas fa-envelope ms-2 me-1"></i>${usuario.email}
-                            </small>
-                            <br>
-                            <span class="badge ${badgeClass} me-2">${usuario.role}</span>
-                            <span class="badge ${statusClass}">${statusText}</span>
-                            <small class="text-muted ms-2">
-                                <i class="fas fa-calendar me-1"></i>
-                                ${new Date(usuario.created_at).toLocaleDateString('pt-BR')}
-                            </small>
-                        </div>
-                        <div class="btn-group">
-                            <button class="btn btn-outline-primary btn-sm" onclick="bizFlowApp.editarUsuario(${usuario.id})">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        container.innerHTML = html;
-    }
-
-    editarUsuario(usuarioId) {
-        this.mostrarAlerta('Funcionalidade de edição em desenvolvimento', 'info');
-    }
-
-    // ================= DASHBOARD =================
-
-    async carregarDashboard() {
-        if (!this.isOnline) {
-            this.atualizarDashboardLocal();
-            return;
-        }
-
-        try {
-            const response = await fetch(`${this.API_BASE_URL}/api/dashboard`, {
-                headers: this.getAuthHeaders()
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                this.dashboardData = data.data;
-                this.atualizarDashboard(this.dashboardData);
-            }
-        } catch (error) {
-            console.error('Erro ao carregar dashboard:', error);
-            this.atualizarDashboardLocal();
-        }
-    }
-
-    atualizarDashboard(data) {
-        this.atualizarElemento('total-receita', `R$ ${data.receitaTotal.toFixed(2)}`);
-        this.atualizarElemento('total-vendas', data.totalVendas.toString());
-        this.atualizarElemento('total-itens', data.totalItensEstoque.toString());
-        this.atualizarElemento('total-alertas', data.alertasEstoque.toString());
-
-        this.atualizarElemento('resumo-receita', `R$ ${data.receitaTotal.toFixed(2)}`);
-        this.atualizarElemento('resumo-vendas', data.totalVendas.toString());
-        this.atualizarElemento('resumo-ticket', `R$ ${data.ticketMedio.toFixed(2)}`);
-
-        this.atualizarTransacoesRecentes();
-        this.animarAtualizacaoDashboard();
-    }
-
-    atualizarDashboardLocal() {
-        const receitaTotal = this.vendas.reduce((sum, v) => {
-            const valor = v.valor || v.total_amount || 0;
-            const quantidade = v.quantidade || v.total_items || 1;
-            return sum + (valor * quantidade);
-        }, 0);
-        
-        const totalVendas = this.vendas.length;
-        const totalItensEstoque = this.estoque.length;
-        const alertasEstoque = this.estoque.filter(item => item.quantidade <= item.minimo).length;
-        const ticketMedio = totalVendas > 0 ? receitaTotal / totalVendas : 0;
-
-        const dataLocal = {
-            receitaTotal,
-            totalVendas,
-            totalItensEstoque,
-            alertasEstoque,
-            ticketMedio
-        };
-
-        this.atualizarDashboard(dataLocal);
-    }
-
-    atualizarTransacoesRecentes() {
-        const container = document.getElementById('transacoes-recentes');
-        const vendasRecentes = this.vendas.slice(0, 5);
-        
-        if (vendasRecentes.length === 0) {
-            container.innerHTML = '<p class="text-muted text-center">Nenhuma transação disponível</p>';
-            return;
-        }
-
-        const html = vendasRecentes.map(venda => {
-            const produto = venda.produto || (venda.items && venda.items[0]?.product_name) || 'Produto não informado';
-            const valor = venda.valor || venda.total_amount || 0;
-            const quantidade = venda.quantidade || venda.total_items || 1;
-            const data = venda.data || (venda.sale_date ? new Date(venda.sale_date).toISOString().split('T')[0] : 'N/D');
-            const hora = venda.hora || (venda.sale_date ? new Date(venda.sale_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/D');
-            
-            return `
-                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
-                    <div>
-                        <small class="fw-bold">${produto}</small>
-                        <br>
-                        <small class="text-muted">${data} ${hora}</small>
-                    </div>
-                    <div class="text-end">
-                        <small class="text-success fw-bold">R$ ${valor.toFixed(2)}</small>
-                        <br>
-                        <small class="text-muted">x${quantidade}</small>
-                    </div>
                 </div>
             `;
         }).join('');
@@ -824,52 +1042,8 @@ class BizFlowApp {
     atualizarElemento(id, valor) {
         const elemento = document.getElementById(id);
         if (elemento) {
-            if (!isNaN(parseFloat(valor)) && isFinite(valor)) {
-                this.animarContador(elemento, parseFloat(valor));
-            } else {
-                elemento.textContent = valor;
-            }
+            elemento.textContent = valor;
         }
-    }
-
-    animarContador(elemento, valorFinal) {
-        const valorTexto = elemento.textContent;
-        let valorAtual;
-        
-        if (valorTexto.includes('R$')) {
-            valorAtual = parseFloat(valorTexto.replace('R$', '').replace(',', '').trim()) || 0;
-        } else {
-            valorAtual = parseFloat(valorTexto) || 0;
-        }
-        
-        const duracao = 800;
-        const frames = 30;
-        const incremento = (valorFinal - valorAtual) / frames;
-        let valorAtualAnimado = valorAtual;
-        let frame = 0;
-
-        const animar = () => {
-            if (frame < frames) {
-                valorAtualAnimado += incremento;
-                
-                if (elemento.id.includes('receita') || elemento.id.includes('ticket')) {
-                    elemento.textContent = `R$ ${valorAtualAnimado.toFixed(2)}`;
-                } else {
-                    elemento.textContent = Math.round(valorAtualAnimado).toString();
-                }
-                
-                frame++;
-                setTimeout(animar, duracao / frames);
-            } else {
-                if (elemento.id.includes('receita') || elemento.id.includes('ticket')) {
-                    elemento.textContent = `R$ ${valorFinal.toFixed(2)}`;
-                } else {
-                    elemento.textContent = Math.round(valorFinal).toString();
-                }
-            }
-        };
-
-        animar();
     }
 
     mostrarAlerta(mensagem, tipo = 'info') {
@@ -958,7 +1132,7 @@ class BizFlowApp {
     }
 
     verificarAlertasEstoque() {
-        const alertas = this.estoque.filter(item => item.quantidade <= item.minimo);
+        const alertas = this.estoque.filter(item => item.quantidade <= (item.minimo || 5));
         
         if (alertas.length > 0 && document.visibilityState === 'visible') {
             const ultimoAlerta = localStorage.getItem('ultimoAlertaEstoque');
@@ -966,7 +1140,7 @@ class BizFlowApp {
             
             if (!ultimoAlerta || (agora - parseInt(ultimoAlerta)) > 300000) {
                 this.mostrarAlerta(
-                    `${alertas.length} item(s) com estoque baixo! Verifique o módulo de estoque. ⚠️`,
+                    `${alertas.length} produto(s) com estoque baixo! Verifique o módulo de estoque. ⚠️`,
                     'warning'
                 );
                 localStorage.setItem('ultimoAlertaEstoque', agora.toString());
@@ -974,8 +1148,34 @@ class BizFlowApp {
         }
     }
 
+    atualizarDashboardLocal() {
+        const receitaTotal = this.vendas.reduce((sum, v) => {
+            const valor = v.valor || v.total_amount || 0;
+            const quantidade = v.quantidade || v.total_items || 1;
+            return sum + (valor * quantidade);
+        }, 0);
+        
+        const totalVendas = this.vendas.length;
+        const totalProdutos = this.estoque.length;
+        const ticketMedio = totalVendas > 0 ? receitaTotal / totalVendas : 0;
+
+        const dataLocal = {
+            metricas: {
+                receitaTotal,
+                totalVendas,
+                totalProdutos,
+                ticketMedio,
+                lucro: receitaTotal * 0.3, // Estimativa
+                contasPendentes: 0,
+                alertasEstoque: this.estoque.filter(item => item.quantidade <= 5).length
+            }
+        };
+
+        this.atualizarDashboardAvancado(dataLocal);
+    }
+
     carregarDadosLocais() {
-        console.log('📂 Carregando dados locais...');
+        console.log('📂 Carregando dados locais FASE 3...');
         
         this.vendas = [
             { id: 1, produto: "Café Expresso", valor: 5.00, quantidade: 1, data: "2024-01-15", hora: "10:30" },
@@ -983,46 +1183,30 @@ class BizFlowApp {
         ];
 
         this.estoque = [
-            { id: 1, produto: "Café em Grãos", quantidade: 50, minimo: 10, categoria: "Matéria-prima" },
-            { id: 2, produto: "Leite", quantidade: 25, minimo: 15, categoria: "Laticínios" }
+            { id: 1, produto: "Café em Grãos", quantidade: 50, preco: 24.90, categoria: "Matéria-prima" },
+            { id: 2, produto: "Leite", quantidade: 25, preco: 6.50, categoria: "Laticínios" }
         ];
 
-        this.dashboardData = {
-            receitaTotal: 14.00,
-            totalVendas: 2,
-            totalItensVendidos: 3,
-            ticketMedio: 7.00,
-            alertasEstoque: 0,
-            totalItensEstoque: 2,
-            vendasRecentes: 2
-        };
-
+        this.atualizarDashboardLocal();
         this.exibirVendas(this.vendas);
         this.exibirEstoque(this.estoque);
-        this.atualizarDashboard(this.dashboardData);
         
-        console.log('✅ Dados locais carregados');
+        console.log('✅ Dados locais FASE 3 carregados');
     }
 }
 
 // ================= INICIALIZAÇÃO DA APLICAÇÃO =================
 
 // Funções globais
-function exportarVendas() {
+function exportarRelatorio() {
     if (window.bizFlowApp) {
-        window.bizFlowApp.exportarVendasCSV();
+        window.bizFlowApp.mostrarAlerta('Exportação de relatórios em desenvolvimento!', 'info');
     }
 }
 
-function exportarEstoque() {
+function gerarRelatorio(tipo) {
     if (window.bizFlowApp) {
-        window.bizFlowApp.exportarEstoqueJSON();
-    }
-}
-
-function gerarRelatorio() {
-    if (window.bizFlowApp) {
-        window.bizFlowApp.mostrarAlerta('Relatório gerado com sucesso! 📋', 'info');
+        window.bizFlowApp.carregarRelatorios(tipo);
     }
 }
 
