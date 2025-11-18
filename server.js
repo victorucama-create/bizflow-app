@@ -1,4 +1,4 @@
-// server.js - SISTEMA COMPLETO BIZFLOW COM AUTENTICAÇÃO
+// server.js - SISTEMA COMPLETO BIZFLOW FASE 3
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -67,6 +67,7 @@ async function initializeDatabase() {
     } else {
       console.log('✅ Tabelas já existem');
       await ensureAdminUser();
+      await ensureFinancialTables();
     }
     
   } catch (error) {
@@ -150,6 +151,30 @@ async function createTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      -- TABELAS FINANCEIRAS (FASE 3)
+      CREATE TABLE financial_accounts (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        type VARCHAR(50) CHECK (type IN ('receita', 'despesa')),
+        category VARCHAR(100),
+        amount DECIMAL(15,2) NOT NULL,
+        due_date DATE,
+        status VARCHAR(50) CHECK (status IN ('pendente', 'pago', 'recebido', 'atrasado')),
+        user_id INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE financial_reports (
+        id SERIAL PRIMARY KEY,
+        report_type VARCHAR(100) NOT NULL,
+        period_start DATE,
+        period_end DATE,
+        data JSONB,
+        user_id INTEGER REFERENCES users(id),
+        generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
       -- Inserir categorias
       INSERT INTO categories (name, description) VALUES 
       ('Geral', 'Produtos diversos'),
@@ -185,6 +210,65 @@ async function createTables() {
     throw error;
   } finally {
     client.release();
+  }
+}
+
+async function ensureFinancialTables() {
+  try {
+    // Verificar se tabelas financeiras existem
+    const result = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'financial_accounts'
+      );
+    `);
+    
+    if (!result.rows[0].exists) {
+      console.log('🔄 Criando tabelas financeiras...');
+      const client = await pool.connect();
+      
+      try {
+        await client.query('BEGIN');
+        
+        await client.query(`
+          CREATE TABLE financial_accounts (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            type VARCHAR(50) CHECK (type IN ('receita', 'despesa')),
+            category VARCHAR(100),
+            amount DECIMAL(15,2) NOT NULL,
+            due_date DATE,
+            status VARCHAR(50) CHECK (status IN ('pendente', 'pago', 'recebido', 'atrasado')),
+            user_id INTEGER REFERENCES users(id),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        
+        await client.query(`
+          CREATE TABLE financial_reports (
+            id SERIAL PRIMARY KEY,
+            report_type VARCHAR(100) NOT NULL,
+            period_start DATE,
+            period_end DATE,
+            data JSONB,
+            user_id INTEGER REFERENCES users(id),
+            generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        
+        await client.query('COMMIT');
+        console.log('✅ Tabelas financeiras criadas!');
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    }
+  } catch (error) {
+    console.error('❌ Erro ao verificar tabelas financeiras:', error);
   }
 }
 
@@ -261,7 +345,8 @@ app.get('/health', async (req, res) => {
     res.json({ 
       status: 'OK', 
       timestamp: new Date().toISOString(),
-      version: '2.0.0'
+      version: '3.0.0',
+      phase: 'FASE 3 - Sistema Avançado & Relatórios'
     });
   } catch (error) {
     res.status(500).json({ 
@@ -333,103 +418,6 @@ app.post('/api/auth/login', async (req, res) => {
 
   } catch (error) {
     console.error('Erro no login:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Erro interno do servidor' 
-    });
-  }
-});
-
-app.post('/api/auth/register', async (req, res) => {
-  try {
-    const { username, email, password, full_name } = req.body;
-
-    if (!username || !email || !password || !full_name) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Todos os campos são obrigatórios' 
-      });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'A senha deve ter pelo menos 6 caracteres' 
-      });
-    }
-
-    // Verificar se usuário já existe
-    const existingUser = await pool.query(
-      'SELECT id FROM users WHERE username = $1 OR email = $2',
-      [username, email]
-    );
-
-    if (existingUser.rows.length > 0) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Username ou email já estão em uso' 
-      });
-    }
-
-    // Hash da senha
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    // Criar usuário
-    const userResult = await pool.query(
-      `INSERT INTO users (username, email, password_hash, full_name) 
-       VALUES ($1, $2, $3, $4) 
-       RETURNING id, username, email, full_name, role, created_at`,
-      [username, email, passwordHash, full_name]
-    );
-
-    res.status(201).json({
-      success: true,
-      message: 'Usuário criado com sucesso!',
-      data: userResult.rows[0]
-    });
-
-  } catch (error) {
-    console.error('Erro no registro:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Erro interno do servidor' 
-    });
-  }
-});
-
-app.post('/api/auth/logout', requireAuth, async (req, res) => {
-  try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    
-    await pool.query(
-      'DELETE FROM user_sessions WHERE session_token = $1',
-      [token]
-    );
-
-    res.json({
-      success: true,
-      message: 'Logout realizado com sucesso!'
-    });
-
-  } catch (error) {
-    console.error('Erro no logout:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Erro interno do servidor' 
-    });
-  }
-});
-
-app.get('/api/auth/me', requireAuth, async (req, res) => {
-  try {
-    const { password_hash, ...userWithoutPassword } = req.user;
-    
-    res.json({
-      success: true,
-      data: userWithoutPassword
-    });
-  } catch (error) {
-    console.error('Erro ao buscar perfil:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Erro interno do servidor' 
@@ -552,7 +540,305 @@ app.post('/api/vendas', requireAuth, async (req, res) => {
   }
 });
 
-// Dashboard
+// ================= FASE 3 - RELATÓRIOS AVANÇADOS =================
+
+// Dashboard Avançado
+app.get('/api/dashboard/avancado', requireAuth, async (req, res) => {
+  try {
+    const { periodo = '30' } = req.query;
+    const periodoDias = parseInt(periodo);
+
+    // Métricas principais
+    const [vendasResult, produtosResult, financeiroResult, topProdutosResult] = await Promise.all([
+      // Total de vendas e receita
+      pool.query(`
+        SELECT 
+          COUNT(*) as total_vendas,
+          COALESCE(SUM(total_amount), 0) as receita_total,
+          COALESCE(AVG(total_amount), 0) as ticket_medio
+        FROM sales 
+        WHERE sale_date >= CURRENT_DATE - INTERVAL '${periodoDias} days'
+      `),
+      
+      // Total de produtos
+      pool.query(`
+        SELECT 
+          COUNT(*) as total_produtos,
+          SUM(stock_quantity) as total_estoque,
+          COUNT(CASE WHEN stock_quantity <= 5 THEN 1 END) as alertas_estoque
+        FROM products 
+        WHERE is_active = true
+      `),
+      
+      // Dados financeiros
+      pool.query(`
+        SELECT 
+          COALESCE(SUM(CASE WHEN type = 'receita' AND status = 'recebido' THEN amount ELSE 0 END), 0) as receitas,
+          COALESCE(SUM(CASE WHEN type = 'despesa' AND status = 'pago' THEN amount ELSE 0 END), 0) as despesas,
+          COUNT(CASE WHEN status = 'pendente' THEN 1 END) as contas_pendentes
+        FROM financial_accounts
+        WHERE due_date >= CURRENT_DATE - INTERVAL '${periodoDias} days'
+      `),
+      
+      // Produtos mais vendidos
+      pool.query(`
+        SELECT 
+          si.product_name,
+          SUM(si.quantity) as total_vendido,
+          SUM(si.total_price) as receita_produto
+        FROM sale_items si
+        JOIN sales s ON si.sale_id = s.id
+        WHERE s.sale_date >= CURRENT_DATE - INTERVAL '${periodoDias} days'
+        GROUP BY si.product_name
+        ORDER BY total_vendido DESC
+        LIMIT 10
+      `)
+    ]);
+
+    // Vendas por dia (últimos 7 dias)
+    const vendasPorDiaResult = await pool.query(`
+      SELECT 
+        DATE(sale_date) as data,
+        COUNT(*) as quantidade_vendas,
+        COALESCE(SUM(total_amount), 0) as receita_dia
+      FROM sales
+      WHERE sale_date >= CURRENT_DATE - INTERVAL '7 days'
+      GROUP BY DATE(sale_date)
+      ORDER BY data
+    `);
+
+    const data = {
+      metricas: {
+        receitaTotal: parseFloat(vendasResult.rows[0].receita_total),
+        totalVendas: parseInt(vendasResult.rows[0].total_vendas),
+        ticketMedio: parseFloat(vendasResult.rows[0].ticket_medio),
+        totalProdutos: parseInt(produtosResult.rows[0].total_produtos),
+        totalEstoque: parseInt(produtosResult.rows[0].total_estoque),
+        alertasEstoque: parseInt(produtosResult.rows[0].alertas_estoque),
+        receitas: parseFloat(financeiroResult.rows[0].receitas),
+        despesas: parseFloat(financeiroResult.rows[0].despesas),
+        lucro: parseFloat(financeiroResult.rows[0].receitas) - parseFloat(financeiroResult.rows[0].despesas),
+        contasPendentes: parseInt(financeiroResult.rows[0].contas_pendentes)
+      },
+      topProdutos: topProdutosResult.rows,
+      vendasPorDia: vendasPorDiaResult.rows,
+      periodo: periodoDias
+    };
+    
+    res.json({
+      success: true,
+      data: data
+    });
+    
+  } catch (error) {
+    console.error('Erro ao buscar dashboard avançado:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// Relatórios de Vendas
+app.get('/api/relatorios/vendas', requireAuth, async (req, res) => {
+  try {
+    const { data_inicio, data_fim, agrupamento = 'dia' } = req.query;
+    
+    let queryWhere = '';
+    if (data_inicio && data_fim) {
+      queryWhere = `WHERE s.sale_date BETWEEN '${data_inicio}' AND '${data_fim} 23:59:59'`;
+    }
+
+    const relatorioResult = await pool.query(`
+      SELECT 
+        ${agrupamento === 'dia' ? "DATE(s.sale_date) as periodo" : 
+          agrupamento === 'mes' ? "TO_CHAR(s.sale_date, 'YYYY-MM') as periodo" : 
+          "TO_CHAR(s.sale_date, 'YYYY') as periodo"},
+        COUNT(*) as total_vendas,
+        COALESCE(SUM(s.total_amount), 0) as receita_total,
+        COALESCE(AVG(s.total_amount), 0) as ticket_medio,
+        SUM(si.quantity) as total_itens_vendidos
+      FROM sales s
+      LEFT JOIN sale_items si ON s.id = si.sale_id
+      ${queryWhere}
+      GROUP BY ${agrupamento === 'dia' ? "DATE(s.sale_date)" : 
+                agrupamento === 'mes' ? "TO_CHAR(s.sale_date, 'YYYY-MM')" : 
+                "TO_CHAR(s.sale_date, 'YYYY')"}
+      ORDER BY periodo
+    `);
+
+    // Métodos de pagamento
+    const metodosPagamentoResult = await pool.query(`
+      SELECT 
+        payment_method,
+        COUNT(*) as quantidade,
+        COALESCE(SUM(total_amount), 0) as valor_total
+      FROM sales
+      ${queryWhere}
+      GROUP BY payment_method
+      ORDER BY valor_total DESC
+    `);
+
+    res.json({
+      success: true,
+      data: {
+        resumo: relatorioResult.rows,
+        metodosPagamento: metodosPagamentoResult.rows,
+        periodo: {
+          data_inicio,
+          data_fim,
+          agrupamento
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('Erro ao gerar relatório de vendas:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// Relatório de Produtos
+app.get('/api/relatorios/produtos', requireAuth, async (req, res) => {
+  try {
+    const { data_inicio, data_fim } = req.query;
+    
+    let queryWhere = '';
+    if (data_inicio && data_fim) {
+      queryWhere = `WHERE s.sale_date BETWEEN '${data_inicio}' AND '${data_fim} 23:59:59'`;
+    }
+
+    const produtosResult = await pool.query(`
+      SELECT 
+        si.product_name as produto,
+        SUM(si.quantity) as quantidade_vendida,
+        COALESCE(SUM(si.total_price), 0) as receita_total,
+        COALESCE(AVG(si.unit_price), 0) as preco_medio,
+        (SELECT name FROM categories c 
+         JOIN products p ON p.category_id = c.id 
+         WHERE p.name = si.product_name LIMIT 1) as categoria
+      FROM sale_items si
+      JOIN sales s ON si.sale_id = s.id
+      ${queryWhere}
+      GROUP BY si.product_name
+      ORDER BY quantidade_vendida DESC
+      LIMIT 20
+    `);
+
+    res.json({
+      success: true,
+      data: produtosResult.rows,
+      periodo: { data_inicio, data_fim }
+    });
+    
+  } catch (error) {
+    console.error('Erro ao gerar relatório de produtos:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// ================= FASE 3 - MÓDULO FINANCEIRO =================
+
+// Contas a Pagar/Receber
+app.get('/api/financeiro/contas', requireAuth, async (req, res) => {
+  try {
+    const { tipo, status } = req.query;
+    
+    let queryWhere = 'WHERE 1=1';
+    if (tipo) queryWhere += ` AND type = '${tipo}'`;
+    if (status) queryWhere += ` AND status = '${status}'`;
+    
+    const result = await pool.query(`
+      SELECT * FROM financial_accounts 
+      ${queryWhere}
+      ORDER BY due_date, created_at DESC
+    `);
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Erro ao buscar contas:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+app.post('/api/financeiro/contas', requireAuth, async (req, res) => {
+  try {
+    const { name, type, category, amount, due_date, status = 'pendente' } = req.body;
+    
+    const result = await pool.query(
+      `INSERT INTO financial_accounts (name, type, category, amount, due_date, status, user_id) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) 
+       RETURNING *`,
+      [name, type, category, amount, due_date, status, req.user.id]
+    );
+
+    res.json({
+      success: true,
+      data: result.rows[0],
+      message: "Conta registrada com sucesso!"
+    });
+  } catch (error) {
+    console.error('Erro ao criar conta:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+app.put('/api/financeiro/contas/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    const result = await pool.query(
+      `UPDATE financial_accounts SET status = $1, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $2 RETURNING *`,
+      [status, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Conta não encontrada' });
+    }
+
+    res.json({
+      success: true,
+      data: result.rows[0],
+      message: "Status atualizado com sucesso!"
+    });
+  } catch (error) {
+    console.error('Erro ao atualizar conta:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// Fluxo de Caixa
+app.get('/api/financeiro/fluxo-caixa', requireAuth, async (req, res) => {
+  try {
+    const { meses = 6 } = req.query;
+    
+    const fluxoResult = await pool.query(`
+      SELECT 
+        TO_CHAR(due_date, 'YYYY-MM') as mes,
+        SUM(CASE WHEN type = 'receita' AND status = 'recebido' THEN amount ELSE 0 END) as receitas,
+        SUM(CASE WHEN type = 'despesa' AND status = 'pago' THEN amount ELSE 0 END) as despesas,
+        SUM(CASE WHEN type = 'receita' AND status = 'recebido' THEN amount ELSE 0 END) - 
+        SUM(CASE WHEN type = 'despesa' AND status = 'pago' THEN amount ELSE 0 END) as saldo
+      FROM financial_accounts
+      WHERE due_date >= CURRENT_DATE - INTERVAL '${meses} months'
+      GROUP BY TO_CHAR(due_date, 'YYYY-MM')
+      ORDER BY mes
+    `);
+
+    res.json({
+      success: true,
+      data: fluxoResult.rows
+    });
+    
+  } catch (error) {
+    console.error('Erro ao buscar fluxo de caixa:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// Dashboard (mantido para compatibilidade)
 app.get('/api/dashboard', requireAuth, async (req, res) => {
   try {
     const salesResult = await pool.query(`
@@ -618,7 +904,7 @@ app.get('/api/debug/users', async (req, res) => {
 // ================= INICIALIZAÇÃO DO SERVIDOR =================
 async function startServer() {
   try {
-    console.log('🚀 Iniciando BizFlow Server...');
+    console.log('🚀 Iniciando BizFlow Server FASE 3...');
     
     // Inicializar banco de dados
     await initializeDatabase();
@@ -627,13 +913,14 @@ async function startServer() {
     app.listen(PORT, HOST, () => {
       console.log(`
 ╔══════════════════════════════════════╗
-║            🚀 BIZFLOW API           ║
-║        Sistema de Gestão Integrada   ║
+║         🚀 BIZFLOW API FASE 3       ║
+║      Sistema Avançado & Relatórios   ║
 ╠══════════════════════════════════════╣
 ║ 📍 Porta: ${PORT}                          ║
 ║ 🌐 Host: ${HOST}                         ║
 ║ 🗄️  Banco: PostgreSQL                 ║
-║ 🔐 Autenticação: ATIVADA             ║
+║ 📊 Relatórios: ATIVADOS              ║
+║ 💰 Financeiro: ATIVADO               ║
 ║ 👤 Usuário: admin / admin123         ║
 ╚══════════════════════════════════════╝
       `);
