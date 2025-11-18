@@ -916,17 +916,20 @@ app.post('/api/auth/login', empresaContext, async (req, res) => {
       });
     }
 
-    // Buscar usuário
+    console.log('🔐 Tentativa de login:', { username, empresa_id: req.empresa_id });
+
+    // Buscar usuário - CORREÇÃO: usar req.empresa_id do middleware
     const userResult = await pool.query(
       `SELECT u.*, e.nome as empresa_nome, f.nome as filial_nome 
        FROM users u 
        LEFT JOIN empresas e ON u.empresa_id = e.id 
        LEFT JOIN filiais f ON u.filial_id = f.id 
        WHERE u.username = $1 AND u.empresa_id = $2 AND u.is_active = true`,
-      [username, req.empresa_id]
+      [username, req.empresa_id] // CORREÇÃO: usar req.empresa_id
     );
 
     if (userResult.rows.length === 0) {
+      console.log('❌ Usuário não encontrado:', username);
       return res.status(401).json({ 
         success: false, 
         error: 'Credenciais inválidas' 
@@ -934,16 +937,61 @@ app.post('/api/auth/login', empresaContext, async (req, res) => {
     }
 
     const user = userResult.rows[0];
+    console.log('✅ Usuário encontrado:', user.username);
 
     // Verificar senha
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
     
     if (!isValidPassword) {
+      console.log('❌ Senha inválida para usuário:', username);
       return res.status(401).json({ 
         success: false, 
         error: 'Credenciais inválidas' 
       });
     }
+
+    // Gerar token de sessão
+    const sessionToken = crypto.randomBytes(64).toString('hex');
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    // Salvar sessão
+    await pool.query(
+      'INSERT INTO user_sessions (user_id, session_token, empresa_id, expires_at) VALUES ($1, $2, $3, $4)',
+      [user.id, sessionToken, user.empresa_id, expiresAt]
+    );
+
+    // Atualizar último login
+    await pool.query(
+      'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
+      [user.id]
+    );
+
+    // Registrar auditoria
+    await logAudit('LOGIN', 'users', user.id, null, null, req);
+
+    // Remover password hash da resposta
+    const { password_hash, ...userWithoutPassword } = user;
+
+    console.log('✅ Login bem-sucedido para:', user.username);
+
+    res.json({
+      success: true,
+      message: 'Login realizado com sucesso!',
+      data: {
+        user: userWithoutPassword,
+        session_token: sessionToken,
+        expires_at: expiresAt
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erro no login:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erro interno do servidor: ' + error.message 
+    });
+  }
+});
 
     // Gerar token de sessão
     const sessionToken = crypto.randomBytes(64).toString('hex');
