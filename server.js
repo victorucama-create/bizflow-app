@@ -1057,12 +1057,12 @@ app.post('/api/auth/login', empresaContext, async (req, res) => {
       });
     }
 
-    // Buscar usuário - CORREÇÃO APLICADA
+    console.log(`🔐 Tentativa de login: ${username}, Empresa: ${req.empresa_id}`);
+
+    // CORREÇÃO: Buscar usuário de forma mais simples primeiro
     let userQuery = `
-      SELECT u.*, e.nome as empresa_nome, f.nome as filial_nome 
+      SELECT u.* 
       FROM users u 
-      LEFT JOIN empresas e ON u.empresa_id = e.id 
-      LEFT JOIN filiais f ON u.filial_id = f.id 
       WHERE u.username = $1 AND u.is_active = true
     `;
     
@@ -1077,6 +1077,7 @@ app.post('/api/auth/login', empresaContext, async (req, res) => {
     const userResult = await pool.query(userQuery, queryParams);
 
     if (userResult.rows.length === 0) {
+      console.log('❌ Usuário não encontrado:', username);
       return res.status(401).json({ 
         success: false, 
         error: 'Credenciais inválidas' 
@@ -1084,16 +1085,32 @@ app.post('/api/auth/login', empresaContext, async (req, res) => {
     }
 
     const user = userResult.rows[0];
+    console.log('✅ Usuário encontrado:', user.username);
 
     // Verificar senha
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
     
     if (!isValidPassword) {
+      console.log('❌ Senha inválida para usuário:', username);
       return res.status(401).json({ 
         success: false, 
         error: 'Credenciais inválidas' 
       });
     }
+
+    console.log('✅ Senha válida para:', username);
+
+    // Buscar informações completas do usuário com JOINs (se necessário)
+    let userCompleteQuery = `
+      SELECT u.*, e.nome as empresa_nome, f.nome as filial_nome 
+      FROM users u 
+      LEFT JOIN empresas e ON u.empresa_id = e.id 
+      LEFT JOIN filiais f ON u.filial_id = f.id 
+      WHERE u.id = $1
+    `;
+    
+    const userCompleteResult = await pool.query(userCompleteQuery, [user.id]);
+    const userComplete = userCompleteResult.rows[0] || user;
 
     // Gerar token de sessão
     const sessionToken = crypto.randomBytes(64).toString('hex');
@@ -1115,7 +1132,9 @@ app.post('/api/auth/login', empresaContext, async (req, res) => {
     await logAudit('LOGIN', 'users', user.id, null, null, req);
 
     // Remover password hash da resposta
-    const { password_hash, ...userWithoutPassword } = user;
+    const { password_hash, ...userWithoutPassword } = userComplete;
+
+    console.log('✅ Login realizado com sucesso para:', username);
 
     res.json({
       success: true,
@@ -1128,47 +1147,13 @@ app.post('/api/auth/login', empresaContext, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erro no login:', error);
+    console.error('❌ Erro no login:', error);
+    console.error('Stack trace:', error.stack);
     res.status(500).json({ 
       success: false, 
-      error: 'Erro interno do servidor' 
+      error: 'Erro interno do servidor',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
-  }
-});
-
-// Rota para verificar autenticação
-app.get('/api/auth/me', requireAuth, async (req, res) => {
-  try {
-    const { password_hash, ...userWithoutPassword } = req.user;
-    res.json({
-      success: true,
-      data: userWithoutPassword
-    });
-  } catch (error) {
-    console.error('Erro ao verificar autenticação:', error);
-    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
-  }
-});
-
-// Rota de logout
-app.post('/api/auth/logout', requireAuth, async (req, res) => {
-  try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    
-    if (token) {
-      await pool.query(
-        'DELETE FROM user_sessions WHERE session_token = $1',
-        [token]
-      );
-    }
-
-    res.json({
-      success: true,
-      message: 'Logout realizado com sucesso!'
-    });
-  } catch (error) {
-    console.error('Erro no logout:', error);
-    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
   }
 });
 
