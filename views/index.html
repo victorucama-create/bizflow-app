@@ -374,8 +374,61 @@
                 </div>
 
                 <!-- Restante do dashboard (mantido da FASE 3) -->
-                <!-- ... -->
-
+                <div class="row mt-3">
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-credit-card me-2"></i>Métodos de Pagamento</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="metodos-pagamento">
+                                    <p class="text-muted text-center">Carregando...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-info">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0"><i class="fas fa-bolt me-2"></i>Ações Rápidas</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <button class="btn btn-outline-primary w-100" onclick="scrollToSection('vendas')">
+                                            <i class="fas fa-cash-register me-1"></i>Venda
+                                        </button>
+                                    </div>
+                                    <div class="col-6">
+                                        <button class="btn btn-outline-success w-100" onclick="scrollToSection('estoque')">
+                                            <i class="fas fa-plus me-1"></i>Estoque
+                                        </button>
+                                    </div>
+                                    <div class="col-6">
+                                        <button class="btn btn-outline-info w-100" onclick="scrollToSection('financeiro')">
+                                            <i class="fas fa-money-bill me-1"></i>Financeiro
+                                        </button>
+                                    </div>
+                                    <div class="col-6">
+                                        <button class="btn btn-outline-warning w-100" onclick="scrollToSection('relatorios')">
+                                            <i class="fas fa-chart-bar me-1"></i>Relatórios
+                                        </button>
+                                    </div>
+                                    <div class="col-6">
+                                        <button class="btn btn-outline-secondary w-100" onclick="scrollToSection('backup')">
+                                            <i class="fas fa-database me-1"></i>Backup
+                                        </button>
+                                    </div>
+                                    <div class="col-6">
+                                        <button class="btn btn-outline-dark w-100" onclick="carregarDashboard()">
+                                            <i class="fas fa-sync me-1"></i>Atualizar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- Seções Empresariais FASE 4 -->
@@ -629,8 +682,345 @@
             </section>
 
             <!-- Seções existentes da FASE 3 (mantidas) -->
-            <!-- ... -->
+            <!-- PDV Section -->
+            <section id="vendas" class="mb-5">
+                <div class="row">
+                    <div class="col-12">
+                        <h3 class="nav-section"><i class="fas fa-cash-register me-2"></i>Ponto de Venda</h3>
+                        <p class="text-muted">Registre vendas rapidamente</p>
+                    </div>
+                </div>
 
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="fas fa-plus-circle me-1"></i>Nova Venda</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="venda-form">
+                                    <div class="mb-3">
+                                        <label for="produto" class="form-label">Produto *</label>
+                                        <input type="text" class="form-control" id="produto" 
+                                               placeholder="Nome do produto" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="valor" class="form-label">Valor (R$) *</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">R$</span>
+                                            <input type="number" class="form-control" id="valor" 
+                                                   step="0.01" min="0.01" placeholder="0,00" required>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="quantidade-venda" class="form-label">Quantidade</label>
+                                        <input type="number" class="form-control" id="quantidade-venda" 
+                                               value="1" min="1">
+                                    </div>
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-success btn-lg">
+                                            <i class="fas fa-check me-1"></i> Registrar Venda
+                                        </button>
+                                    </div>
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <kbd>Ctrl + Enter</kbd> para registrar rápido
+                                        </small>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="fas fa-history me-1"></i>Últimas Vendas</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="lista-vendas" style="max-height: 400px; overflow-y: auto;">
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fas fa-receipt fa-3x mb-3"></i>
+                                        <p>Nenhuma venda registrada</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Inventory Section -->
+            <section id="estoque" class="mb-5">
+                <div class="row">
+                    <div class="col-12">
+                        <h3 class="nav-section"><i class="fas fa-boxes me-2"></i>Gestão de Estoque</h3>
+                        <p class="text-muted">Controle seus produtos</p>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="fas fa-plus me-1"></i>Adicionar Produto</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="estoque-form">
+                                    <div class="mb-3">
+                                        <label for="produto-estoque" class="form-label">Nome do Produto *</label>
+                                        <input type="text" class="form-control" id="produto-estoque" 
+                                               placeholder="Nome do produto" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="preco" class="form-label">Preço (R$) *</label>
+                                        <input type="number" class="form-control" id="preco" 
+                                               step="0.01" min="0.01" placeholder="0,00" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="quantidade" class="form-label">Quantidade *</label>
+                                        <input type="number" class="form-control" id="quantidade" 
+                                               min="0" value="0" required>
+                                    </div>
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-primary btn-lg">
+                                            <i class="fas fa-save me-1"></i> Adicionar Produto
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0"><i class="fas fa-clipboard-list me-1"></i>Produtos em Estoque</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="lista-estoque" style="max-height: 400px; overflow-y: auto;">
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fas fa-box-open fa-3x mb-3"></i>
+                                        <p>Nenhum produto cadastrado</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Financeiro Section -->
+            <section id="financeiro" class="mb-5">
+                <div class="row">
+                    <div class="col-12">
+                        <h3 class="nav-section"><i class="fas fa-money-bill-wave me-2"></i>Gestão Financeira</h3>
+                        <p class="text-muted">Controle de contas a pagar e receber</p>
+                    </div>
+                </div>
+
+                <!-- Resumo Financeiro -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div id="resumo-financeiro">
+                            <!-- Resumo será carregado aqui -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="fas fa-file-invoice-dollar me-1"></i>Nova Conta</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="financeiro-form">
+                                    <div class="mb-3">
+                                        <label for="conta-nome" class="form-label">Descrição *</label>
+                                        <input type="text" class="form-control" id="conta-nome" 
+                                               placeholder="Ex: Venda cliente, Pagamento fornecedor" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="conta-tipo" class="form-label">Tipo *</label>
+                                        <select class="form-select" id="conta-tipo" required>
+                                            <option value="receita">Receita</option>
+                                            <option value="despesa">Despesa</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="conta-categoria" class="form-label">Categoria</label>
+                                        <input type="text" class="form-control" id="conta-categoria" 
+                                               placeholder="Ex: Vendas, Materiais, Serviços">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="conta-valor" class="form-label">Valor (R$) *</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">R$</span>
+                                            <input type="number" class="form-control" id="conta-valor" 
+                                                   step="0.01" min="0.01" placeholder="0,00" required>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="conta-vencimento" class="form-label">Data de Vencimento *</label>
+                                        <input type="date" class="form-control" id="conta-vencimento" required>
+                                    </div>
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-info btn-lg">
+                                            <i class="fas fa-check me-1"></i> Registrar Conta
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-secondary text-white">
+                                <h5 class="mb-0"><i class="fas fa-list me-1"></i>Contas Registradas</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="lista-contas" style="max-height: 400px; overflow-y: auto;">
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fas fa-file-invoice-dollar fa-3x mb-3"></i>
+                                        <p>Nenhuma conta registrada</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Relatórios Section -->
+            <section id="relatorios" class="mb-5">
+                <div class="row">
+                    <div class="col-12">
+                        <h3 class="nav-section"><i class="fas fa-chart-bar me-2"></i>Relatórios Avançados</h3>
+                        <p class="text-muted">Análises detalhadas do seu negócio</p>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtros de Relatório</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3 mb-3">
+                                        <label for="filtro-relatorio" class="form-label">Tipo de Relatório</label>
+                                        <select class="form-select" id="filtro-relatorio">
+                                            <option value="vendas">Relatório de Vendas</option>
+                                            <option value="produtos">Relatório de Produtos</option>
+                                            <option value="financeiro">Fluxo de Caixa</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label for="data-inicio" class="form-label">Data Início</label>
+                                        <input type="date" class="form-control" id="data-inicio">
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label for="data-fim" class="form-label">Data Fim</label>
+                                        <input type="date" class="form-control" id="data-fim">
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label for="agrupamento-relatorio" class="form-label">Agrupamento</label>
+                                        <select class="form-select" id="agrupamento-relatorio">
+                                            <option value="dia">Por Dia</option>
+                                            <option value="mes">Por Mês</option>
+                                            <option value="ano">Por Ano</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <button class="btn btn-primary" onclick="gerarRelatorio(document.getElementById('filtro-relatorio').value)">
+                                        <i class="fas fa-chart-bar me-1"></i> Gerar Relatório
+                                    </button>
+                                    <button class="btn btn-success ms-2" onclick="exportarRelatorio()">
+                                        <i class="fas fa-download me-1"></i> Exportar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12">
+                        <div id="relatorio-container">
+                            <div class="text-center text-muted py-5">
+                                <i class="fas fa-chart-bar fa-4x mb-3"></i>
+                                <h4>Selecione um tipo de relatório para visualizar</h4>
+                                <p>Use os filtros acima para gerar relatórios personalizados</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Backup Section -->
+            <section id="backup" class="mb-5">
+                <div class="row">
+                    <div class="col-12">
+                        <h3 class="nav-section"><i class="fas fa-database me-2"></i>Sistema de Backup</h3>
+                        <p class="text-muted">Cópia de segurança e restauração de dados</p>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Backups do Sistema</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Backups automáticos</strong> são realizados a cada 6 horas para administradores.
+                                </div>
+                                <div id="lista-backups" style="max-height: 400px; overflow-y: auto;">
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fas fa-database fa-3x mb-3"></i>
+                                        <p>Nenhum backup encontrado</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Ações de Backup</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-success btn-lg" onclick="gerarBackup()">
+                                        <i class="fas fa-database me-2"></i>Gerar Backup
+                                    </button>
+                                    <button class="btn btn-outline-primary" onclick="bizFlowApp.exportarPDF('completo')">
+                                        <i class="fas fa-file-pdf me-2"></i>Exportar PDF Completo
+                                    </button>
+                                    <button class="btn btn-outline-success" onclick="bizFlowApp.exportarExcel('completo')">
+                                        <i class="fas fa-file-excel me-2"></i>Exportar Excel Completo
+                                    </button>
+                                </div>
+                                <div class="mt-3">
+                                    <div class="alert alert-warning">
+                                        <small>
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                            <strong>Atenção:</strong> Backups contêm todos os dados do sistema. 
+                                            Mantenha-os em local seguro.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
 
         <!-- Footer -->
@@ -751,14 +1141,13 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     
+    <!-- Sistema de Autenticação FASE 4 (Simplificado) -->
     <script>
-        // Sistema de Autenticação FASE 4
         class AuthSystem {
             constructor() {
                 this.token = localStorage.getItem('bizflow_token');
                 this.user = JSON.parse(localStorage.getItem('bizflow_user') || 'null');
                 this.empresaAtual = JSON.parse(localStorage.getItem('bizflow_empresa') || '{"id": 1, "nome": "Empresa Principal"}');
-                this.socket = null;
                 this.init();
             }
 
@@ -780,46 +1169,47 @@
                     e.preventDefault();
                     this.handleLogout();
                 });
+            }
 
-                // Formulários FASE 4
-                const empresaForm = document.getElementById('empresa-form');
-                if (empresaForm) {
-                    empresaForm.addEventListener('submit', (e) => {
-                        e.preventDefault();
-                        this.handleNovaEmpresa();
-                    });
-                }
-
-                const filialForm = document.getElementById('filial-form');
-                if (filialForm) {
-                    filialForm.addEventListener('submit', (e) => {
-                        e.preventDefault();
-                        this.handleNovaFilial();
-                    });
-                }
-
-                const apiKeyForm = document.getElementById('api-key-form');
-                if (apiKeyForm) {
-                    apiKeyForm.addEventListener('submit', (e) => {
-                        e.preventDefault();
-                        this.handleNovaApiKey();
-                    });
-                }
-
-                // Configurações
-                const websocketSwitch = document.getElementById('config-websocket');
-                if (websocketSwitch) {
-                    websocketSwitch.addEventListener('change', (e) => {
-                        if (window.bizFlowApp) {
-                            window.bizFlowApp.configuracoes.websocket = e.target.checked;
-                            window.bizFlowApp.salvarConfiguracoes();
-                            if (e.target.checked) {
-                                window.bizFlowApp.conectarWebSocket();
-                            } else {
-                                window.bizFlowApp.desconectarWebSocket();
+            async checkAuthStatus() {
+                if (this.token && this.user) {
+                    try {
+                        const response = await fetch('/api/auth/me', {
+                            headers: {
+                                'Authorization': `Bearer ${this.token}`
                             }
+                        });
+
+                        if (response.ok) {
+                            this.showApp();
+                        } else {
+                            this.clearAuth();
+                            this.showLogin();
                         }
-                    });
+                    } catch (error) {
+                        this.clearAuth();
+                        this.showLogin();
+                    }
+                } else {
+                    this.showLogin();
+                }
+            }
+
+            async checkSystemStatus() {
+                try {
+                    const response = await fetch('/health');
+                    const data = await response.json();
+                    
+                    if (data.status === 'OK') {
+                        document.getElementById('system-status').innerHTML = 
+                            '<span class="badge bg-success">Sistema Online - FASE 4 COMPLETA</span>';
+                    } else {
+                        document.getElementById('system-status').innerHTML = 
+                            '<span class="badge bg-danger">Sistema Offline</span>';
+                    }
+                } catch (error) {
+                    document.getElementById('system-status').innerHTML = 
+                        '<span class="badge bg-danger">Erro de Conexão</span>';
                 }
             }
 
@@ -875,6 +1265,23 @@
                 }
             }
 
+            async handleLogout() {
+                try {
+                    await fetch('/api/auth/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${this.token}`
+                        }
+                    });
+                } catch (error) {
+                    console.error('Erro no logout:', error);
+                } finally {
+                    this.clearAuth();
+                    this.showLogin();
+                    this.showAlert('Logout realizado com sucesso!', 'info');
+                }
+            }
+
             showApp() {
                 document.querySelector('.auth-container').style.display = 'none';
                 document.querySelector('.app-container').style.display = 'block';
@@ -892,67 +1299,70 @@
                     window.bizFlowApp.setEmpresaAtual(this.empresaAtual);
                     window.bizFlowApp.init();
                 }
-                
-                // Carregar dados FASE 4
-                this.carregarEmpresas();
-                this.carregarFiliais();
-                this.carregarApiKeys();
-                this.carregarDashboardAvancado();
-                
-                // Configurar tema
-                if (window.bizFlowApp.configuracoes.tema === 'auto') {
-                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                    document.body.setAttribute('data-bs-theme', prefersDark ? 'dark' : 'light');
-                }
             }
 
-            async carregarEmpresas() {
-                try {
-                    const response = await fetch('/api/empresas', {
-                        headers: {
-                            'Authorization': `Bearer ${this.token}`
-                        }
-                    });
-                    const data = await response.json();
+            showLogin() {
+                document.querySelector('.auth-container').style.display = 'flex';
+                document.querySelector('.app-container').style.display = 'none';
+            }
 
-                    if (data.success && window.bizFlowApp) {
-                        window.bizFlowApp.exibirEmpresas(data.data);
+            clearAuth() {
+                this.token = null;
+                this.user = null;
+                localStorage.removeItem('bizflow_token');
+                localStorage.removeItem('bizflow_user');
+                localStorage.removeItem('bizflow_empresa');
+            }
+
+            showAlert(message, type = 'info') {
+                // Remove alertas anteriores
+                const existingAlert = document.querySelector('.alert-flutuante');
+                if (existingAlert) {
+                    existingAlert.remove();
+                }
+
+                const alert = document.createElement('div');
+                alert.className = `alert alert-${type} alert-flutuante alert-dismissible fade show`;
+                alert.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+                alert.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-${this.obterIconeAlerta(type)} me-2"></i>
+                        <div class="flex-grow-1">${message}</div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+
+                document.body.appendChild(alert);
+
+                // Auto-remove após 5 segundos
+                setTimeout(() => {
+                    if (alert.parentNode) {
+                        alert.remove();
                     }
-                } catch (error) {
-                    console.error('Erro ao carregar empresas:', error);
-                }
+                }, 5000);
             }
 
-            async carregarFiliais() {
-                try {
-                    const response = await fetch('/api/filiais', {
-                        headers: {
-                            'Authorization': `Bearer ${this.token}`
-                        }
-                    });
-                    const data = await response.json();
-
-                    if (data.success && window.bizFlowApp) {
-                        window.bizFlowApp.exibirFiliais(data.data);
-                    }
-                } catch (error) {
-                    console.error('Erro ao carregar filiais:', error);
-                }
+            obterIconeAlerta(tipo) {
+                const icones = {
+                    success: 'check-circle',
+                    danger: 'exclamation-triangle',
+                    warning: 'exclamation-circle',
+                    info: 'info-circle'
+                };
+                return icones[tipo] || 'info-circle';
             }
 
-            async carregarApiKeys() {
-                try {
-                    // Implementar carregamento de API Keys
-                    if (window.bizFlowApp) {
-                        window.bizFlowApp.carregarApiKeys();
-                    }
-                } catch (error) {
-                    console.error('Erro ao carregar API Keys:', error);
-                }
+            showLoading(form, text) {
+                const button = form.querySelector('button[type="submit"]');
+                button.disabled = true;
+                button.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i>${text}`;
             }
 
-            // ... (outros métodos mantidos)
-
+            hideLoading(form, text) {
+                const button = form.querySelector('button[type="submit"]');
+                button.disabled = false;
+                button.innerHTML = `<i class="fas fa-sign-in-alt me-1"></i>${text}`;
+            }
         }
 
         // Funções globais FASE 4
@@ -976,6 +1386,51 @@
         function marcarTodasComoLidas() {
             if (window.bizFlowApp) {
                 window.bizFlowApp.marcarTodasNotificacoesComoLidas();
+            }
+        }
+
+        function scrollToSection(sectionId) {
+            document.getElementById(sectionId).scrollIntoView({ 
+                behavior: 'smooth' 
+            });
+        }
+
+        function carregarDashboard() {
+            if (window.bizFlowApp) {
+                window.bizFlowApp.carregarDashboardAvancado();
+                window.authSystem.showAlert('Dados atualizados!', 'success');
+            }
+        }
+
+        function gerarRelatorio(tipo) {
+            if (window.bizFlowApp) {
+                window.bizFlowApp.carregarRelatorios(tipo);
+            }
+        }
+
+        function exportarRelatorio() {
+            if (window.bizFlowApp) {
+                const tipo = document.getElementById('filtro-relatorio')?.value || 'vendas';
+                window.bizFlowApp.exportarPDF(tipo);
+            }
+        }
+
+        function gerarBackup() {
+            if (window.bizFlowApp) {
+                window.bizFlowApp.gerarBackup();
+            }
+        }
+
+        function alternarTema() {
+            const body = document.body;
+            const temaAtual = body.getAttribute('data-bs-theme');
+            const novoTema = temaAtual === 'dark' ? 'light' : 'dark';
+            
+            body.setAttribute('data-bs-theme', novoTema);
+            
+            if (window.bizFlowApp) {
+                window.bizFlowApp.configuracoes.tema = novoTema;
+                window.bizFlowApp.salvarConfiguracoes();
             }
         }
 
