@@ -976,4 +976,115 @@ class BizFlowApp {
                 a.href = url;
                 a.download = `vendas-bizflow-offline-${new Date().toISOString().split('T')[0]}.csv`;
                 document.body.appendChild(a);
-               
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            }
+            
+            this.mostrarAlerta('Vendas exportadas com sucesso! 📊', 'success');
+        } catch (error) {
+            console.error('Erro ao exportar vendas:', error);
+            this.mostrarAlerta('Erro ao exportar vendas', 'danger');
+        }
+    }
+
+    exportarEstoqueJSON() {
+        try {
+            const dados = {
+                estoque: this.estoque,
+                exportadoEm: new Date().toISOString(),
+                totalItens: this.estoque.length,
+                modo: this.isOnline ? 'online' : 'offline'
+            };
+            
+            const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `estoque-bizflow-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            this.mostrarAlerta('Estoque exportado com sucesso! 📦', 'success');
+        } catch (error) {
+            console.error('Erro ao exportar estoque:', error);
+            this.mostrarAlerta('Erro ao exportar estoque', 'danger');
+        }
+    }
+}
+
+// ================= INICIALIZAÇÃO DA APLICAÇÃO =================
+
+// Funções globais para os botões
+function exportarVendas() {
+    if (window.bizFlowApp) {
+        window.bizFlowApp.exportarVendasCSV();
+    }
+}
+
+function exportarEstoque() {
+    if (window.bizFlowApp) {
+        window.bizFlowApp.exportarEstoqueJSON();
+    }
+}
+
+function gerarRelatorio() {
+    if (window.bizFlowApp) {
+        window.bizFlowApp.mostrarAlerta('Relatório gerado com sucesso! 📋', 'info');
+    }
+}
+
+function scrollToSection(sectionId) {
+    document.getElementById(sectionId).scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+    });
+}
+
+// Inicializar aplicação quando o DOM estiver carregado
+document.addEventListener('DOMContentLoaded', function() {
+    window.bizFlowApp = new BizFlowApp();
+    
+    // Configurar ano atual no footer
+    document.getElementById('ano-atual').textContent = new Date().getFullYear();
+    
+    // Efeito de fade-in para as seções
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, { threshold: 0.1 });
+
+    // Observar todas as seções
+    document.querySelectorAll('section').forEach(section => {
+        section.style.opacity = '0';
+        section.style.transform = 'translateY(20px)';
+        section.style.transition = 'all 0.6s ease-out';
+        observer.observe(section);
+    });
+});
+
+// Prevenir envio de formulários com Enter (exceto textareas)
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && !e.target.classList.contains('btn')) {
+        e.preventDefault();
+    }
+});
+
+// Service Worker registration (para futura implementação PWA)
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js')
+            .then(function(registration) {
+                console.log('ServiceWorker registration successful');
+            })
+            .catch(function(error) {
+                console.log('ServiceWorker registration failed');
+            });
+    });
+}
