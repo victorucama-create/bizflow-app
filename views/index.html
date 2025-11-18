@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BizFlow - Sistema de Gestão Integrada</title>
+    <title>BizFlow - Sistema de Gestão Integrada FASE 3</title>
     
     <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>📊</text></svg>">
@@ -33,6 +33,19 @@
         .app-container {
             display: none;
         }
+        .metric-card {
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+        }
+        .nav-section {
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
     </style>
 </head>
 <body>
@@ -43,7 +56,7 @@
                 <h1 class="text-primary">
                     <i class="fas fa-chart-line me-2"></i>BizFlow
                 </h1>
-                <p class="text-muted">Sistema de Gestão Integrada</p>
+                <p class="text-muted">Sistema de Gestão Integrada - FASE 3</p>
             </div>
 
             <!-- Formulário de Login -->
@@ -95,6 +108,7 @@
                 <a class="navbar-brand" href="#">
                     <i class="fas fa-chart-line me-2"></i> 
                     <strong>BizFlow</strong>
+                    <small class="ms-2 opacity-75">FASE 3</small>
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                     <span class="navbar-toggler-icon"></span>
@@ -114,6 +128,16 @@
                         <li class="nav-item">
                             <a class="nav-link" href="#estoque">
                                 <i class="fas fa-boxes me-1"></i> Estoque
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#financeiro">
+                                <i class="fas fa-money-bill-wave me-1"></i> Financeiro
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#relatorios">
+                                <i class="fas fa-chart-bar me-1"></i> Relatórios
                             </a>
                         </li>
                     </ul>
@@ -140,18 +164,19 @@
                 <div class="row mb-4">
                     <div class="col-12">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h2><i class="fas fa-tachometer-alt me-2"></i> Dashboard</h2>
+                            <h2><i class="fas fa-tachometer-alt me-2"></i> Dashboard Avançado</h2>
                             <span class="badge bg-success" id="status-conexao">
                                 <i class="fas fa-circle me-1"></i> Online
                             </span>
                         </div>
-                        <p class="text-muted">Visão geral do seu negócio</p>
+                        <p class="text-muted">Visão completa do seu negócio - FASE 3</p>
                     </div>
                 </div>
 
+                <!-- Métricas Principais -->
                 <div class="row" id="dashboard-cards">
-                    <div class="col-md-4 mb-3">
-                        <div class="card text-white bg-primary">
+                    <div class="col-md-3 mb-3">
+                        <div class="card text-white bg-primary metric-card">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between">
                                     <div>
@@ -162,13 +187,13 @@
                                         <i class="fas fa-chart-line"></i>
                                     </div>
                                 </div>
-                                <small>Total em vendas</small>
+                                <small>Total em vendas (30 dias)</small>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="col-md-4 mb-3">
-                        <div class="card text-white bg-success">
+                    <div class="col-md-3 mb-3">
+                        <div class="card text-white bg-success metric-card">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between">
                                     <div>
@@ -184,8 +209,8 @@
                         </div>
                     </div>
                     
-                    <div class="col-md-4 mb-3">
-                        <div class="card text-white bg-warning">
+                    <div class="col-md-3 mb-3">
+                        <div class="card text-white bg-warning metric-card">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between">
                                     <div>
@@ -200,33 +225,144 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="col-md-3 mb-3">
+                        <div class="card text-white bg-info metric-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h5><i class="fas fa-ticket-alt"></i> Ticket Médio</h5>
+                                        <h3 id="ticket-medio">R$ 0,00</h3>
+                                    </div>
+                                    <div class="display-4 opacity-50">
+                                        <i class="fas fa-chart-pie"></i>
+                                    </div>
+                                </div>
+                                <small>Valor médio por venda</small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Quick Actions -->
+                <!-- Métricas Financeiras -->
+                <div class="row mt-3">
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-success metric-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h5 class="text-success"><i class="fas fa-arrow-down"></i> Receitas</h5>
+                                        <h3 class="text-success" id="receitas-card">R$ 0,00</h3>
+                                    </div>
+                                    <div class="display-4 text-success opacity-50">
+                                        <i class="fas fa-money-bill"></i>
+                                    </div>
+                                </div>
+                                <small class="text-muted">Total recebido</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-danger metric-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h5 class="text-danger"><i class="fas fa-arrow-up"></i> Despesas</h5>
+                                        <h3 class="text-danger" id="despesas-card">R$ 0,00</h3>
+                                    </div>
+                                    <div class="display-4 text-danger opacity-50">
+                                        <i class="fas fa-file-invoice-dollar"></i>
+                                    </div>
+                                </div>
+                                <small class="text-muted">Total pago</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-primary metric-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h5 class="text-primary"><i class="fas fa-balance-scale"></i> Lucro</h5>
+                                        <h3 class="text-primary" id="lucro-card">R$ 0,00</h3>
+                                    </div>
+                                    <div class="display-4 text-primary opacity-50">
+                                        <i class="fas fa-chart-line"></i>
+                                    </div>
+                                </div>
+                                <small class="text-muted">Resultado líquido</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráficos e Análises -->
                 <div class="row mt-4">
-                    <div class="col-12">
+                    <div class="col-md-8 mb-4">
+                        <div id="grafico-vendas">
+                            <!-- Gráfico será carregado aqui -->
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-4">
                         <div class="card">
-                            <div class="card-header bg-light">
-                                <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Ações Rápidas</h5>
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-trophy me-2"></i>Top Produtos</h6>
                             </div>
                             <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-4 text-center mb-3">
-                                        <button class="btn btn-outline-primary btn-lg p-3" onclick="scrollToSection('vendas')">
-                                            <i class="fas fa-cash-register fa-2x mb-2"></i><br>
-                                            Nova Venda
+                                <div id="top-produtos" style="max-height: 300px; overflow-y: auto;">
+                                    <p class="text-muted text-center">Carregando...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alertas e Notificações -->
+                <div class="row mt-3">
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning text-dark">
+                                <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Alertas</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <span>Contas Pendentes:</span>
+                                    <strong class="text-warning" id="contas-pendentes">0</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mt-2">
+                                    <span>Alertas de Estoque:</span>
+                                    <strong class="text-danger" id="alertas-estoque">0</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-info">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0"><i class="fas fa-bolt me-2"></i>Ações Rápidas</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <button class="btn btn-outline-primary w-100" onclick="scrollToSection('vendas')">
+                                            <i class="fas fa-cash-register me-1"></i>Venda
                                         </button>
                                     </div>
-                                    <div class="col-md-4 text-center mb-3">
-                                        <button class="btn btn-outline-success btn-lg p-3" onclick="scrollToSection('estoque')">
-                                            <i class="fas fa-plus-circle fa-2x mb-2"></i><br>
-                                            Add Estoque
+                                    <div class="col-6">
+                                        <button class="btn btn-outline-success w-100" onclick="scrollToSection('estoque')">
+                                            <i class="fas fa-plus me-1"></i>Estoque
                                         </button>
                                     </div>
-                                    <div class="col-md-4 text-center mb-3">
-                                        <button class="btn btn-outline-info btn-lg p-3" onclick="carregarDashboard()">
-                                            <i class="fas fa-sync fa-2x mb-2"></i><br>
-                                            Atualizar
+                                    <div class="col-6">
+                                        <button class="btn btn-outline-info w-100" onclick="scrollToSection('financeiro')">
+                                            <i class="fas fa-money-bill me-1"></i>Financeiro
+                                        </button>
+                                    </div>
+                                    <div class="col-6">
+                                        <button class="btn btn-outline-warning w-100" onclick="scrollToSection('relatorios')">
+                                            <i class="fas fa-chart-bar me-1"></i>Relatórios
                                         </button>
                                     </div>
                                 </div>
@@ -240,7 +376,7 @@
             <section id="vendas" class="mb-5">
                 <div class="row">
                     <div class="col-12">
-                        <h3><i class="fas fa-cash-register me-2"></i>Ponto de Venda</h3>
+                        <h3 class="nav-section"><i class="fas fa-cash-register me-2"></i>Ponto de Venda</h3>
                         <p class="text-muted">Registre vendas rapidamente</p>
                     </div>
                 </div>
@@ -303,7 +439,7 @@
             <section id="estoque" class="mb-5">
                 <div class="row">
                     <div class="col-12">
-                        <h3><i class="fas fa-boxes me-2"></i>Gestão de Estoque</h3>
+                        <h3 class="nav-section"><i class="fas fa-boxes me-2"></i>Gestão de Estoque</h3>
                         <p class="text-muted">Controle seus produtos</p>
                     </div>
                 </div>
@@ -358,7 +494,163 @@
                     </div>
                 </div>
             </section>
+
+            <!-- Financeiro Section -->
+            <section id="financeiro" class="mb-5">
+                <div class="row">
+                    <div class="col-12">
+                        <h3 class="nav-section"><i class="fas fa-money-bill-wave me-2"></i>Gestão Financeira</h3>
+                        <p class="text-muted">Controle de contas a pagar e receber</p>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="fas fa-file-invoice-dollar me-1"></i>Nova Conta</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="financeiro-form">
+                                    <div class="mb-3">
+                                        <label for="conta-nome" class="form-label">Descrição *</label>
+                                        <input type="text" class="form-control" id="conta-nome" 
+                                               placeholder="Ex: Venda cliente, Pagamento fornecedor" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="conta-tipo" class="form-label">Tipo *</label>
+                                        <select class="form-select" id="conta-tipo" required>
+                                            <option value="receita">Receita</option>
+                                            <option value="despesa">Despesa</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="conta-categoria" class="form-label">Categoria</label>
+                                        <input type="text" class="form-control" id="conta-categoria" 
+                                               placeholder="Ex: Vendas, Materiais, Serviços">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="conta-valor" class="form-label">Valor (R$) *</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">R$</span>
+                                            <input type="number" class="form-control" id="conta-valor" 
+                                                   step="0.01" min="0.01" placeholder="0,00" required>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="conta-vencimento" class="form-label">Data de Vencimento *</label>
+                                        <input type="date" class="form-control" id="conta-vencimento" required>
+                                    </div>
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-info btn-lg">
+                                            <i class="fas fa-check me-1"></i> Registrar Conta
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-secondary text-white">
+                                <h5 class="mb-0"><i class="fas fa-list me-1"></i>Contas Registradas</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="lista-contas" style="max-height: 400px; overflow-y: auto;">
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fas fa-file-invoice-dollar fa-3x mb-3"></i>
+                                        <p>Nenhuma conta registrada</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Relatórios Section -->
+            <section id="relatorios" class="mb-5">
+                <div class="row">
+                    <div class="col-12">
+                        <h3 class="nav-section"><i class="fas fa-chart-bar me-2"></i>Relatórios Avançados</h3>
+                        <p class="text-muted">Análises detalhadas do seu negócio</p>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtros de Relatório</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="filtro-relatorio" class="form-label">Tipo de Relatório</label>
+                                        <select class="form-select" id="filtro-relatorio">
+                                            <option value="vendas">Relatório de Vendas</option>
+                                            <option value="produtos">Relatório de Produtos</option>
+                                            <option value="financeiro">Fluxo de Caixa</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="data-inicio" class="form-label">Data Início</label>
+                                        <input type="date" class="form-control" id="data-inicio">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="data-fim" class="form-label">Data Fim</label>
+                                        <input type="date" class="form-control" id="data-fim">
+                                    </div>
+                                </div>
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <button class="btn btn-primary" onclick="gerarRelatorio(document.getElementById('filtro-relatorio').value)">
+                                        <i class="fas fa-chart-bar me-1"></i> Gerar Relatório
+                                    </button>
+                                    <button class="btn btn-success ms-2" onclick="exportarRelatorio()">
+                                        <i class="fas fa-download me-1"></i> Exportar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12">
+                        <div id="relatorio-container">
+                            <div class="text-center text-muted py-5">
+                                <i class="fas fa-chart-bar fa-4x mb-3"></i>
+                                <h4>Selecione um tipo de relatório para visualizar</h4>
+                                <p>Use os filtros acima para gerar relatórios personalizados</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
+
+        <!-- Footer -->
+        <footer class="bg-dark text-light py-4 mt-5">
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-chart-line me-2"></i>BizFlow</h5>
+                        <p class="mb-0">Sistema de Gestão Integrada - FASE 3</p>
+                        <small class="text-muted">Relatórios Avançados & Módulo Financeiro</small>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <p class="mb-0">
+                            <i class="fas fa-code me-1"></i> 
+                            Desenvolvido com 
+                            <i class="fas fa-heart text-danger mx-1"></i>
+                            para otimizar seu negócio
+                        </p>
+                        <small class="text-muted">&copy; <span id="ano-atual">2024</span> BizFlow - Todos os direitos reservados</small>
+                    </div>
+                </div>
+            </div>
+        </footer>
     </div>
 
     <!-- Scripts -->
@@ -403,6 +695,15 @@
                     e.preventDefault();
                     this.handleEstoque();
                 });
+
+                // Financeiro form
+                const financeiroForm = document.getElementById('financeiro-form');
+                if (financeiroForm) {
+                    financeiroForm.addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        this.handleFinanceiro();
+                    });
+                }
             }
 
             async checkAuthStatus() {
@@ -437,7 +738,7 @@
                     
                     if (data.status === 'OK') {
                         document.getElementById('system-status').innerHTML = 
-                            '<span class="badge bg-success">Sistema Online</span>';
+                            '<span class="badge bg-success">Sistema Online - FASE 3</span>';
                     } else {
                         document.getElementById('system-status').innerHTML = 
                             '<span class="badge bg-danger">Sistema Offline</span>';
@@ -479,7 +780,7 @@
                         localStorage.setItem('bizflow_user', JSON.stringify(this.user));
                         
                         this.showApp();
-                        this.showAlert('Login realizado com sucesso!', 'success');
+                        this.showAlert('Login realizado com sucesso! FASE 3 ativada.', 'success');
                     } else {
                         throw new Error(data.error || 'Erro no login');
                     }
@@ -549,7 +850,7 @@
                         form.reset();
                         this.showAlert('Venda registrada com sucesso!', 'success');
                         this.carregarVendas();
-                        this.carregarDashboard();
+                        this.carregarDashboardAvancado();
                     } else {
                         throw new Error(data.error || 'Erro ao registrar venda');
                     }
@@ -598,7 +899,7 @@
                         form.reset();
                         this.showAlert('Produto adicionado com sucesso!', 'success');
                         this.carregarEstoque();
-                        this.carregarDashboard();
+                        this.carregarDashboardAvancado();
                     } else {
                         throw new Error(data.error || 'Erro ao adicionar produto');
                     }
@@ -609,6 +910,57 @@
                 }
             }
 
+            async handleFinanceiro() {
+                const form = document.getElementById('financeiro-form');
+                const nome = document.getElementById('conta-nome').value;
+                const tipo = document.getElementById('conta-tipo').value;
+                const categoria = document.getElementById('conta-categoria').value;
+                const valor = parseFloat(document.getElementById('conta-valor').value);
+                const vencimento = document.getElementById('conta-vencimento').value;
+
+                if (!nome || !valor || !vencimento) {
+                    this.showAlert('Preencha todos os campos obrigatórios!', 'warning');
+                    return;
+                }
+
+                this.showLoading(form, 'Registrando...');
+
+                try {
+                    const contaData = {
+                        name: nome,
+                        type: tipo,
+                        category: categoria,
+                        amount: valor,
+                        due_date: vencimento,
+                        status: 'pendente'
+                    };
+
+                    const response = await fetch('/api/financeiro/contas', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.token}`
+                        },
+                        body: JSON.stringify(contaData)
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        form.reset();
+                        this.showAlert('Conta registrada com sucesso!', 'success');
+                        this.carregarContasFinanceiras();
+                        this.carregarDashboardAvancado();
+                    } else {
+                        throw new Error(data.error || 'Erro ao registrar conta');
+                    }
+                } catch (error) {
+                    this.showAlert(error.message, 'danger');
+                } finally {
+                    this.hideLoading(form, 'Registrar Conta');
+                }
+            }
+
             showApp() {
                 document.querySelector('.auth-container').style.display = 'none';
                 document.querySelector('.app-container').style.display = 'block';
@@ -616,10 +968,17 @@
                 // Atualizar interface
                 document.getElementById('user-name').textContent = this.user.full_name;
                 
+                // Inicializar BizFlow App FASE 3
+                if (window.bizFlowApp) {
+                    window.bizFlowApp.setAuthToken(this.token);
+                    window.bizFlowApp.init();
+                }
+                
                 // Carregar dados
-                this.carregarDashboard();
+                this.carregarDashboardAvancado();
                 this.carregarVendas();
                 this.carregarEstoque();
+                this.carregarContasFinanceiras();
             }
 
             showLogin() {
@@ -634,25 +993,20 @@
                 localStorage.removeItem('bizflow_user');
             }
 
-            async carregarDashboard() {
+            async carregarDashboardAvancado() {
                 try {
-                    const response = await fetch('/api/dashboard', {
+                    const response = await fetch('/api/dashboard/avancado?periodo=30', {
                         headers: {
                             'Authorization': `Bearer ${this.token}`
                         }
                     });
                     const data = await response.json();
 
-                    if (data.success) {
-                        document.getElementById('total-receita').textContent = 
-                            `R$ ${data.data.receitaTotal.toFixed(2)}`;
-                        document.getElementById('total-vendas').textContent = 
-                            data.data.totalVendas;
-                        document.getElementById('total-produtos').textContent = 
-                            data.data.totalProdutos;
+                    if (data.success && window.bizFlowApp) {
+                        window.bizFlowApp.atualizarDashboardAvancado(data.data);
                     }
                 } catch (error) {
-                    console.error('Erro ao carregar dashboard:', error);
+                    console.error('Erro ao carregar dashboard avançado:', error);
                 }
             }
 
@@ -665,8 +1019,8 @@
                     });
                     const data = await response.json();
 
-                    if (data.success) {
-                        this.exibirVendas(data.data);
+                    if (data.success && window.bizFlowApp) {
+                        window.bizFlowApp.exibirVendas(data.data);
                     }
                 } catch (error) {
                     console.error('Erro ao carregar vendas:', error);
@@ -682,80 +1036,29 @@
                     });
                     const data = await response.json();
 
-                    if (data.success) {
-                        this.exibirEstoque(data.data);
+                    if (data.success && window.bizFlowApp) {
+                        window.bizFlowApp.exibirEstoque(data.data);
                     }
                 } catch (error) {
                     console.error('Erro ao carregar estoque:', error);
                 }
             }
 
-            exibirVendas(vendas) {
-                const container = document.getElementById('lista-vendas');
-                
-                if (!vendas || vendas.length === 0) {
-                    container.innerHTML = `
-                        <div class="text-center text-muted py-4">
-                            <i class="fas fa-receipt fa-3x mb-3"></i>
-                            <p>Nenhuma venda registrada</p>
-                        </div>
-                    `;
-                    return;
+            async carregarContasFinanceiras() {
+                try {
+                    const response = await fetch('/api/financeiro/contas', {
+                        headers: {
+                            'Authorization': `Bearer ${this.token}`
+                        }
+                    });
+                    const data = await response.json();
+
+                    if (data.success && window.bizFlowApp) {
+                        window.bizFlowApp.exibirContasFinanceiras(data.data);
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar contas financeiras:', error);
                 }
-
-                const html = vendas.slice(0, 10).map(venda => `
-                    <div class="list-group-item">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="flex-grow-1">
-                                <h6 class="mb-1">Venda ${venda.sale_code}</h6>
-                                <small class="text-muted">
-                                    ${new Date(venda.sale_date).toLocaleDateString('pt-BR')}
-                                </small>
-                            </div>
-                            <div class="text-end">
-                                <strong class="text-success">R$ ${venda.total_amount}</strong>
-                                <br>
-                                <small class="text-muted">${venda.total_items} itens</small>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-
-                container.innerHTML = html;
-            }
-
-            exibirEstoque(produtos) {
-                const container = document.getElementById('lista-estoque');
-                
-                if (!produtos || produtos.length === 0) {
-                    container.innerHTML = `
-                        <div class="text-center text-muted py-4">
-                            <i class="fas fa-box-open fa-3x mb-3"></i>
-                            <p>Nenhum produto cadastrado</p>
-                        </div>
-                    `;
-                    return;
-                }
-
-                const html = produtos.map(produto => `
-                    <div class="list-group-item">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="flex-grow-1">
-                                <h6 class="mb-1">${produto.name}</h6>
-                                <small class="text-muted">
-                                    ${produto.categoria || 'Geral'}
-                                </small>
-                            </div>
-                            <div class="text-end">
-                                <strong class="text-primary">R$ ${produto.price}</strong>
-                                <br>
-                                <small class="text-muted">Estoque: ${produto.stock_quantity}</small>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-
-                container.innerHTML = html;
             }
 
             showAlert(message, type = 'info') {
@@ -806,8 +1109,20 @@
 
         function carregarDashboard() {
             if (window.authSystem) {
-                window.authSystem.carregarDashboard();
+                window.authSystem.carregarDashboardAvancado();
                 window.authSystem.showAlert('Dados atualizados!', 'success');
+            }
+        }
+
+        function gerarRelatorio(tipo) {
+            if (window.bizFlowApp) {
+                window.bizFlowApp.carregarRelatorios(tipo);
+            }
+        }
+
+        function exportarRelatorio() {
+            if (window.bizFlowApp) {
+                window.bizFlowApp.mostrarAlerta('Exportação de relatórios em desenvolvimento!', 'info');
             }
         }
 
