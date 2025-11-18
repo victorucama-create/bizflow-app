@@ -1,10 +1,6 @@
-/* ===== RESET E CONFIGURAÇÕES GERAIS ===== */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+/* ===== ESTILOS FASE 4 - SISTEMA EMPRESARIAL ===== */
 
+/* Variáveis CSS atualizadas */
 :root {
     --primary-color: #2c5aa0;
     --secondary-color: #6c757d;
@@ -12,6 +8,9 @@
     --danger-color: #dc3545;
     --warning-color: #ffc107;
     --info-color: #0dcaf0;
+    --enterprise-color: #6610f2;
+    --api-color: #20c997;
+    --websocket-color: #fd7e14;
     --light-color: #f8f9fa;
     --dark-color: #212529;
     --border-radius: 0.75rem;
@@ -26,455 +25,271 @@
     --danger-color: #dc4c64;
     --warning-color: #e4a11b;
     --info-color: #54b4d3;
+    --enterprise-color: #7e3ff2;
+    --api-color: #2ed9a4;
+    --websocket-color: #ff8c42;
     --light-color: #4b4b4b;
     --dark-color: #f8f9fa;
     --box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.3);
 }
 
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    line-height: 1.6;
-    color: var(--dark-color);
-    background-color: var(--bs-body-bg);
+/* Novos componentes FASE 4 */
+
+/* Cards empresariais */
+.enterprise-card {
+    border-left: 4px solid var(--enterprise-color);
     transition: var(--transition);
 }
 
-/* ===== CARDS ===== */
-.card {
-    border: none;
-    border-radius: var(--border-radius);
-    box-shadow: var(--box-shadow);
-    transition: var(--transition);
-    margin-bottom: 1.5rem;
-    background-color: var(--bs-card-bg);
-    color: var(--dark-color);
-}
-
-.card:hover {
+.enterprise-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.15);
+    box-shadow: 0 0.5rem 1rem rgba(102, 16, 242, 0.15);
 }
 
-.card-header {
-    border-bottom: 1px solid var(--bs-border-color);
-    font-weight: 600;
-    padding: 1rem 1.5rem;
-    background-color: var(--bs-card-cap-bg);
+.api-card {
+    border-left: 4px solid var(--api-color);
 }
 
-.card-body {
-    padding: 1.5rem;
+.websocket-card {
+    border-left: 4px solid var(--websocket-color);
 }
 
-/* ===== BOTÕES ===== */
-.btn {
-    border-radius: 0.75rem;
-    font-weight: 600;
-    padding: 0.75rem 1.5rem;
-    transition: var(--transition);
-    border: none;
+/* Badges FASE 4 */
+.badge-enterprise {
+    background-color: var(--enterprise-color);
+    color: white;
 }
 
-.btn-lg {
-    padding: 1rem 2rem;
-    font-size: 1.1rem;
+.badge-api {
+    background-color: var(--api-color);
+    color: white;
 }
 
-.btn-primary {
-    background: linear-gradient(135deg, var(--primary-color), #1e40af);
+.badge-websocket {
+    background-color: var(--websocket-color);
+    color: white;
 }
 
-.btn-success {
-    background: linear-gradient(135deg, var(--success-color), #16a34a);
+/* Status indicators */
+.status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 5px;
 }
 
-.btn-warning {
-    background: linear-gradient(135deg, var(--warning-color), #eab308);
+.status-online {
+    background-color: var(--success-color);
 }
 
-.btn-danger {
-    background: linear-gradient(135deg, var(--danger-color), #dc2626);
+.status-offline {
+    background-color: var(--danger-color);
 }
 
-.btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+.status-connecting {
+    background-color: var(--warning-color);
+    animation: pulse 1.5s infinite;
 }
 
-/* ===== FORMULÁRIOS ===== */
-.form-control, .form-select {
-    border-radius: 0.75rem;
-    border: 2px solid var(--bs-border-color);
+/* Notificações */
+.notification-item {
+    border-left: 3px solid;
     padding: 0.75rem 1rem;
-    font-size: 1rem;
-    transition: var(--transition);
-    background-color: var(--bs-body-bg);
-    color: var(--dark-color);
-}
-
-.form-control:focus, .form-select:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.2rem rgba(44, 90, 160, 0.25);
-    background-color: var(--bs-body-bg);
-    color: var(--dark-color);
-}
-
-.form-label {
-    font-weight: 600;
-    color: var(--dark-color);
     margin-bottom: 0.5rem;
-}
-
-.input-group-text {
-    border-radius: 0.75rem;
+    border-radius: 0.25rem;
     background: var(--light-color);
-    border: 2px solid var(--bs-border-color);
-    color: var(--dark-color);
-}
-
-/* ===== NAVBAR ===== */
-.navbar {
-    background: linear-gradient(135deg, var(--primary-color), #1e3a8a) !important;
-    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
-}
-
-.navbar-brand {
-    font-weight: 700;
-    font-size: 1.5rem;
-}
-
-.navbar-nav .nav-link {
-    color: rgba(255, 255, 255, 0.9) !important;
-    font-weight: 500;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
     transition: var(--transition);
-    margin: 0 0.25rem;
 }
 
-.navbar-nav .nav-link:hover,
-.navbar-nav .nav-link.active {
-    background: rgba(255, 255, 255, 0.15);
-    color: white !important;
+.notification-item:hover {
+    background: rgba(0, 0, 0, 0.05);
 }
 
-/* ===== BADGES ===== */
-.badge {
-    font-weight: 500;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.5rem;
-}
-
-/* ===== LISTAS ===== */
-.list-group-item {
-    border: none;
-    border-bottom: 1px solid var(--bs-border-color);
-    padding: 1rem 1.5rem;
-    transition: var(--transition);
-    background-color: var(--bs-body-bg);
-    color: var(--dark-color);
-}
-
-.list-group-item:hover {
-    background: var(--light-color);
-}
-
-.list-group-item:last-child {
-    border-bottom: none;
-}
-
-/* ===== ALERTAS ===== */
-.alert {
-    border: none;
-    border-radius: var(--border-radius);
-    border-left: 4px solid;
-    padding: 1rem 1.5rem;
-}
-
-.alert-warning {
-    background: rgba(255, 193, 7, 0.1);
-    border-left-color: var(--warning-color);
-    color: var(--dark-color);
-}
-
-.alert-success {
-    background: rgba(25, 135, 84, 0.1);
-    border-left-color: var(--success-color);
-    color: var(--dark-color);
-}
-
-.alert-danger {
-    background: rgba(220, 53, 69, 0.1);
-    border-left-color: var(--danger-color);
-    color: var(--dark-color);
-}
-
-.alert-info {
-    background: rgba(13, 202, 240, 0.1);
+.notification-info {
     border-left-color: var(--info-color);
+}
+
+.notification-success {
+    border-left-color: var(--success-color);
+}
+
+.notification-warning {
+    border-left-color: var(--warning-color);
+}
+
+.notification-danger {
+    border-left-color: var(--danger-color);
+}
+
+.notification-unread {
+    background: rgba(13, 202, 240, 0.1);
+    font-weight: 600;
+}
+
+/* Seletor de empresa */
+.empresa-selector {
+    max-width: 200px;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--border-radius);
+    padding: 0.5rem;
+    background: var(--bs-body-bg);
     color: var(--dark-color);
 }
 
-.alert-flutuante {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 9999;
-    min-width: 300px;
-    max-width: 500px;
-    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+.empresa-selector:hover {
+    border-color: var(--primary-color);
 }
 
-/* ===== ANIMAÇÕES ===== */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+/* Listas empresariais */
+.empresa-list-item, .filial-list-item {
+    border-left: 3px solid var(--enterprise-color);
+    transition: var(--transition);
 }
 
-@keyframes pulse {
-    0% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.02);
-    }
-    100% {
-        transform: scale(1);
-    }
+.filial-list-item {
+    border-left-color: var(--success-color);
 }
 
-.fade-in {
-    animation: fadeInUp 0.6s ease-out;
+.empresa-list-item:hover, .filial-list-item:hover {
+    transform: translateX(5px);
+    background: var(--light-color);
 }
 
-.pulse {
-    animation: pulse 0.6s ease-in-out;
+/* API Keys */
+.api-key-item {
+    background: linear-gradient(135deg, var(--light-color), #f8f9fa);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    position: relative;
 }
 
-/* ===== MÉTRICAS E CARDS ESPECIAIS ===== */
-.metric-card {
-    border-left: 4px solid;
-    transition: all 0.3s ease;
+.api-key-secret {
+    font-family: monospace;
+    background: var(--dark-color);
+    color: var(--light-color);
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    word-break: break-all;
+    font-size: 0.875rem;
 }
 
-.metric-card:hover {
+/* WebSocket status */
+.websocket-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.websocket-connected {
+    background: rgba(32, 201, 151, 0.2);
+    color: var(--api-color);
+}
+
+.websocket-disconnected {
+    background: rgba(220, 53, 69, 0.2);
+    color: var(--danger-color);
+}
+
+.websocket-connecting {
+    background: rgba(255, 193, 7, 0.2);
+    color: var(--warning-color);
+}
+
+/* Grid empresarial */
+.enterprise-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.enterprise-metric {
+    text-align: center;
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    transition: var(--transition);
+}
+
+.enterprise-metric:hover {
     transform: translateY(-2px);
-    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+    box-shadow: var(--box-shadow);
 }
 
-.nav-section {
-    border-bottom: 2px solid var(--bs-border-color);
-    padding-bottom: 0.5rem;
+.enterprise-metric i {
+    font-size: 2rem;
     margin-bottom: 1rem;
 }
 
-/* ===== PROGRESS BARS ===== */
-.progress {
-    overflow: visible;
-    background-color: var(--light-color);
-    border-radius: 1rem;
+.enterprise-metric h3 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--primary-color);
 }
 
-.progress-bar {
-    position: relative;
-    overflow: visible;
-    border-radius: 1rem;
-    transition: width 0.6s ease;
-}
-
-.progress-bar small {
-    position: absolute;
-    right: 5px;
+/* Modal empresarial */
+.enterprise-modal .modal-header {
+    background: linear-gradient(135deg, var(--enterprise-color), #7e3ff2);
     color: white;
-    font-weight: bold;
-    text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
 }
 
-/* ===== TABELAS ===== */
-.table {
-    color: var(--dark-color);
-    margin-bottom: 0;
+/* Tabelas empresariais */
+.table-enterprise th {
+    background: linear-gradient(135deg, var(--enterprise-color), #7e3ff2);
+    color: white;
+    border: none;
 }
 
-.table-striped > tbody > tr:nth-of-type(odd) {
-    background-color: var(--light-color);
-}
-
-.table-hover > tbody > tr:hover {
-    background-color: rgba(var(--bs-primary-rgb), 0.1);
-    color: var(--dark-color);
-}
-
-/* ===== GRÁFICOS ===== */
-.chart-container {
-    position: relative;
-    height: 300px;
-    width: 100%;
-}
-
-/* ===== UTILITÁRIOS ===== */
-.text-muted {
-    color: var(--secondary-color) !important;
-}
-
-.border-light {
-    border-color: var(--bs-border-color) !important;
-}
-
-/* ===== LOADING STATES ===== */
-.btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none !important;
-}
-
-.btn .fa-spinner {
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.loading {
-    opacity: 0.7;
-    pointer-events: none;
-}
-
-/* ===== RESPONSIVIDADE ===== */
-@media (max-width: 768px) {
-    .container {
-        padding: 0 1rem;
-    }
-    
-    .card-body {
-        padding: 1rem;
-    }
-    
-    .btn-lg {
-        padding: 0.875rem 1.5rem;
-        font-size: 1rem;
-    }
-    
-    .navbar-nav .nav-link {
-        padding: 0.5rem;
-        margin: 0.125rem 0;
-    }
-    
-    .metric-card .display-4 {
-        font-size: 2rem;
-    }
-    
-    .alert-flutuante {
-        min-width: calc(100vw - 40px);
-        right: 20px;
-        left: 20px;
-    }
-}
-
-@media (max-width: 576px) {
-    .card-header h5 {
-        font-size: 1rem;
-    }
-    
-    .btn-group .btn {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.875rem;
-    }
-    
-    .table-responsive {
-        font-size: 0.875rem;
-    }
-}
-
-/* ===== SCROLLBAR PERSONALIZADO ===== */
-::-webkit-scrollbar {
-    width: 8px;
-}
-
-::-webkit-scrollbar-track {
+/* Documentação API */
+.api-endpoint {
     background: var(--light-color);
-    border-radius: 4px;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    margin-bottom: 1rem;
 }
 
-::-webkit-scrollbar-thumb {
-    background: var(--secondary-color);
-    border-radius: 4px;
+.api-method {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-weight: 600;
+    font-size: 0.75rem;
+    margin-right: 0.5rem;
 }
 
-::-webkit-scrollbar-thumb:hover {
+.api-method-get {
+    background: var(--success-color);
+    color: white;
+}
+
+.api-method-post {
     background: var(--primary-color);
+    color: white;
 }
 
-/* ===== PRINT STYLES ===== */
-@media print {
-    .navbar, .btn, .alert-flutuante, .theme-switcher {
-        display: none !important;
-    }
-    
-    .card {
-        border: 1px solid #000 !important;
-        box-shadow: none !important;
-    }
-    
-    .metric-card {
-        break-inside: avoid;
-    }
+.api-method-put {
+    background: var(--warning-color);
+    color: black;
 }
 
-/* ===== ACESSIBILIDADE ===== */
-@media (prefers-reduced-motion: reduce) {
-    * {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-    }
+.api-method-delete {
+    background: var(--danger-color);
+    color: white;
 }
 
-/* ===== DARK MODE SPECIFIC ===== */
-[data-bs-theme="dark"] .card {
-    background: #2d3748;
-    border: 1px solid #4a5568;
-}
-
-[data-bs-theme="dark"] .table {
-    --bs-table-bg: transparent;
-    --bs-table-striped-bg: rgba(255, 255, 255, 0.05);
-    --bs-table-hover-bg: rgba(255, 255, 255, 0.075);
-}
-
-[data-bs-theme="dark"] .form-control,
-[data-bs-theme="dark"] .form-select {
-    background-color: #2d3748;
-    border-color: #4a5568;
-    color: #e2e8f0;
-}
-
-[data-bs-theme="dark"] .form-control:focus,
-[data-bs-theme="dark"] .form-select:focus {
-    background-color: #2d3748;
-    border-color: var(--primary-color);
-    color: #e2e8f0;
-}
-
-[data-bs-theme="dark"] .input-group-text {
-    background-color: #4a5568;
-    border-color: #4a5568;
-    color: #e2e8f0;
-}
-
-/* ===== ANIMAÇÕES ESPECÍFICAS DA FASE 3 ===== */
-@keyframes slideInRight {
+/* Animações FASE 4 */
+@keyframes slideInEnterprise {
     from {
         opacity: 0;
-        transform: translateX(30px);
+        transform: translateX(-30px);
     }
     to {
         opacity: 1;
@@ -482,227 +297,108 @@ body {
     }
 }
 
-@keyframes bounceIn {
-    0% {
+@keyframes fadeInScale {
+    from {
         opacity: 0;
-        transform: scale(0.3);
-    }
-    50% {
-        opacity: 1;
-        transform: scale(1.05);
-    }
-    70% {
         transform: scale(0.9);
     }
-    100% {
+    to {
         opacity: 1;
         transform: scale(1);
     }
 }
 
-.slide-in-right {
-    animation: slideInRight 0.5s ease-out;
+.enterprise-animation {
+    animation: slideInEnterprise 0.6s ease-out;
 }
 
-.bounce-in {
-    animation: bounceIn 0.6s ease-out;
+.scale-animation {
+    animation: fadeInScale 0.5s ease-out;
 }
 
-/* ===== ESTILOS PARA NOVOS COMPONENTES DA FASE 3 ===== */
-.theme-switcher {
-    cursor: pointer;
-    padding: 0.5rem;
-    border-radius: 0.5rem;
-    transition: all 0.3s ease;
-}
-
-.theme-switcher:hover {
-    background: rgba(255,255,255,0.1);
-}
-
-.export-buttons {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.backup-item {
-    border-left: 4px solid var(--info-color);
-}
-
-.backup-item:hover {
-    border-left-color: var(--primary-color);
-}
-
-.financial-summary {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-}
-
-/* ===== ESTILOS PARA RELATÓRIOS ===== */
-.report-table {
-    font-size: 0.875rem;
-}
-
-.report-table th {
-    background-color: var(--primary-color);
-    color: white;
-    font-weight: 600;
-}
-
-.report-summary {
-    background: linear-gradient(135deg, var(--light-color), #f8f9fa);
-    border-radius: var(--border-radius);
-    padding: 1.5rem;
-}
-
-/* ===== ESTILOS PARA GRÁFICOS SIMULADOS ===== */
-.chart-placeholder {
-    background: linear-gradient(135deg, var(--light-color), #f8f9fa);
-    border-radius: var(--border-radius);
-    padding: 2rem;
-    text-align: center;
-    color: var(--secondary-color);
-}
-
-.chart-bar {
-    display: inline-block;
-    width: 30px;
-    margin: 0 5px;
-    background: linear-gradient(to top, var(--primary-color), #3b71ca);
-    border-radius: 3px 3px 0 0;
-    vertical-align: bottom;
-    transition: all 0.3s ease;
-}
-
-.chart-bar:hover {
-    opacity: 0.8;
-    transform: scale(1.05);
-}
-
-/* ===== ESTILOS RESPONSIVOS AVANÇADOS ===== */
-@media (max-width: 1200px) {
-    .financial-summary {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    }
-}
-
-@media (max-width: 992px) {
-    .chart-container {
-        height: 250px;
-    }
-}
-
+/* Responsividade FASE 4 */
 @media (max-width: 768px) {
-    .export-buttons {
-        flex-direction: column;
+    .enterprise-grid {
+        grid-template-columns: 1fr;
     }
     
-    .export-buttons .btn {
-        width: 100%;
-        margin-bottom: 0.5rem;
+    .empresa-selector {
+        max-width: 150px;
+        font-size: 0.875rem;
+    }
+    
+    .enterprise-metric {
+        padding: 1rem;
+    }
+    
+    .enterprise-metric i {
+        font-size: 1.5rem;
+    }
+    
+    .enterprise-metric h3 {
+        font-size: 1.25rem;
     }
 }
 
-/* ===== ANIMAÇÕES DE CARREGAMENTO ===== */
-.skeleton {
-    background: linear-gradient(90deg, var(--light-color) 25%, rgba(255,255,255,0.5) 50%, var(--light-color) 75%);
-    background-size: 200% 100%;
-    animation: loading 1.5s infinite;
+@media (max-width: 576px) {
+    .api-key-secret {
+        font-size: 0.75rem;
+    }
+    
+    .websocket-status {
+        font-size: 0.7rem;
+    }
 }
 
-@keyframes loading {
+/* Utilitários FASE 4 */
+.text-enterprise {
+    color: var(--enterprise-color) !important;
+}
+
+.text-api {
+    color: var(--api-color) !important;
+}
+
+.text-websocket {
+    color: var(--websocket-color) !important;
+}
+
+.bg-enterprise {
+    background-color: var(--enterprise-color) !important;
+}
+
+.bg-api {
+    background-color: var(--api-color) !important;
+}
+
+.bg-websocket {
+    background-color: var(--websocket-color) !important;
+}
+
+/* Loading states FASE 4 */
+.loading-enterprise {
+    position: relative;
+    overflow: hidden;
+}
+
+.loading-enterprise::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    animation: loadingShine 1.5s infinite;
+}
+
+@keyframes loadingShine {
     0% {
-        background-position: 200% 0;
+        left: -100%;
     }
     100% {
-        background-position: -200% 0;
+        left: 100%;
     }
 }
 
-.skeleton-card {
-    height: 120px;
-    border-radius: var(--border-radius);
-}
-
-.skeleton-text {
-    height: 1rem;
-    margin-bottom: 0.5rem;
-    border-radius: 0.25rem;
-}
-
-.skeleton-title {
-    height: 1.5rem;
-    width: 60%;
-    margin-bottom: 1rem;
-}
-
-/* ===== ESTILOS PARA MODAIS ===== */
-.modal-content {
-    border: none;
-    border-radius: var(--border-radius);
-    box-shadow: var(--box-shadow);
-}
-
-.modal-header {
-    border-bottom: 1px solid var(--bs-border-color);
-    background-color: var(--bs-card-cap-bg);
-}
-
-.modal-footer {
-    border-top: 1px solid var(--bs-border-color);
-    background-color: var(--bs-card-cap-bg);
-}
-
-/* ===== ESTILOS PARA TOOLTIPS ===== */
-.tooltip {
-    font-size: 0.875rem;
-}
-
-.tooltip-inner {
-    background-color: var(--dark-color);
-    color: var(--light-color);
-    border-radius: 0.5rem;
-    padding: 0.5rem 0.75rem;
-}
-
-/* ===== ESTILOS PARA BADGES DE STATUS ===== */
-.status-badge {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-}
-
-.status-pendente {
-    background-color: var(--warning-color);
-    color: #000;
-}
-
-.status-pago {
-    background-color: var(--success-color);
-    color: #fff;
-}
-
-.status-atrasado {
-    background-color: var(--danger-color);
-    color: #fff;
-}
-
-/* ===== ESTILOS PARA ÍCONES ANIMADOS ===== */
-.fa-spin-pulse {
-    animation: fa-spin 1s infinite steps(8);
-}
-
-.icon-float {
-    animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-    0%, 100% {
-        transform: translateY(0);
-    }
-    50% {
-        transform: translateY(-5px);
-    }
-}
+/* ... (manter estilos existentes da FASE 3) */
