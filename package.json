@@ -12,7 +12,9 @@
     "build": "echo \"No build step required for Node.js app\"",
     "lint": "echo \"No linter configured\"",
     "setup": "npm install && echo \"Dependencies installed successfully\"",
-    "deploy": "npm run build && npm start"
+    "deploy": "npm run build && npm start",
+    "init-db": "node init-db.js",
+    "db-migrate": "node init-db.js"
   },
   "keywords": [
     "pdv",
@@ -27,7 +29,10 @@
     "negocios",
     "pmes",
     "rest-api",
-    "web-app"
+    "web-app",
+    "postgresql",
+    "database",
+    "postgres"
   ],
   "author": {
     "name": "BizFlow Team",
@@ -40,7 +45,9 @@
     "cors": "^2.8.5",
     "helmet": "^7.1.0",
     "compression": "^1.7.4",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "pg": "^8.11.3",
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.1",
@@ -64,7 +71,8 @@
     "package.json",
     "public/",
     "views/",
-    "README.md"
+    "README.md",
+    "init-db.js"
   ],
   "volta": {
     "node": "18.17.0",
