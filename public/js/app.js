@@ -1,20 +1,27 @@
 // BizFlow - Sistema de Gestão Integrada
-// JavaScript Application Controller - Versão PostgreSQL Compatible
+// JavaScript Application Controller - Versão com Autenticação
 
 class BizFlowApp {
     constructor() {
         this.API_BASE_URL = window.location.origin;
+        this.authToken = null;
+        this.currentUser = null;
         this.vendas = [];
         this.estoque = [];
         this.produtos = [];
         this.dashboardData = {};
         this.isOnline = false;
-        this.init();
     }
 
     async init() {
         try {
             console.log('🚀 Inicializando BizFlow App...');
+            
+            // Verificar autenticação
+            if (!this.authToken) {
+                console.warn('⚠️ Usuário não autenticado');
+                return;
+            }
             
             // Testar conexão com a API
             await this.testarConexao();
@@ -37,26 +44,40 @@ class BizFlowApp {
         }
     }
 
+    setAuthToken(token) {
+        this.authToken = token;
+        this.currentUser = JSON.parse(localStorage.getItem('bizflow_user') || 'null');
+    }
+
+    getAuthHeaders() {
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        if (this.authToken) {
+            headers['Authorization'] = `Bearer ${this.authToken}`;
+        }
+        
+        return headers;
+    }
+
     async testarConexao() {
         try {
             console.log('🔍 Testando conexão com a API...');
             
-            // Tentar health check primeiro
-            const healthResponse = await fetch(`${this.API_BASE_URL}/health`, {
+            const response = await fetch(`${this.API_BASE_URL}/health`, {
                 method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                },
+                headers: this.getAuthHeaders(),
                 timeout: 5000
             });
             
-            if (!healthResponse.ok) {
-                throw new Error(`Health check falhou: ${healthResponse.status}`);
+            if (!response.ok) {
+                throw new Error(`Health check falhou: ${response.status}`);
             }
             
-            const healthData = await healthResponse.json();
+            const data = await response.json();
             
-            if (healthData.status === 'OK') {
+            if (data.status === 'OK') {
                 this.isOnline = true;
                 this.atualizarStatusConexao('online', 'Conectado');
                 console.log('✅ Conexão estabelecida com sucesso');
@@ -67,10 +88,10 @@ class BizFlowApp {
         } catch (error) {
             console.warn('⚠️ Health check falhou, tentando rota alternativa...');
             
-            // Tentar rota alternativa
             try {
                 const testResponse = await fetch(`${this.API_BASE_URL}/api/test`, {
                     method: 'GET',
+                    headers: this.getAuthHeaders(),
                     timeout: 5000
                 });
                 
@@ -122,7 +143,6 @@ class BizFlowApp {
 
         // Atalhos de teclado
         document.addEventListener('keydown', (e) => {
-            // Ctrl + Enter para registrar venda rápida
             if (e.ctrlKey && e.key === 'Enter') {
                 const produto = document.getElementById('produto');
                 if (produto === document.activeElement) {
@@ -132,17 +152,9 @@ class BizFlowApp {
                 }
             }
             
-            // Escape para limpar formulários
             if (e.key === 'Escape') {
                 document.getElementById('venda-form').reset();
                 document.getElementById('estoque-form').reset();
-            }
-        });
-
-        // Atualizar dados quando a página ganha foco
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && this.isOnline) {
-                this.carregarDashboard();
             }
         });
 
@@ -182,13 +194,6 @@ class BizFlowApp {
         setInterval(() => {
             this.verificarAlertasEstoque();
         }, 60000);
-
-        // Verificar conexão a cada 2 minutos
-        setInterval(() => {
-            if (navigator.onLine && !this.isOnline) {
-                this.verificarConexao();
-            }
-        }, 120000);
     }
 
     // ================= VENDAS =================
@@ -199,9 +204,16 @@ class BizFlowApp {
         }
 
         try {
-            const response = await fetch(`${this.API_BASE_URL}/api/vendas`);
+            const response = await fetch(`${this.API_BASE_URL}/api/vendas`, {
+                headers: this.getAuthHeaders()
+            });
             
             if (!response.ok) {
+                if (response.status === 401) {
+                    this.mostrarAlerta('Sessão expirada. Faça login novamente.', 'warning');
+                    window.authManager.handleLogout();
+                    return;
+                }
                 throw new Error(`HTTP ${response.status}`);
             }
             
@@ -256,7 +268,6 @@ class BizFlowApp {
             let resultado;
             
             if (this.isOnline) {
-                // Formatar dados para nova API
                 const vendaData = {
                     items: [{
                         id: Date.now(),
@@ -273,13 +284,16 @@ class BizFlowApp {
 
                 const response = await fetch(`${this.API_BASE_URL}/api/vendas`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: this.getAuthHeaders(),
                     body: JSON.stringify(vendaData)
                 });
 
                 if (!response.ok) {
+                    if (response.status === 401) {
+                        this.mostrarAlerta('Sessão expirada. Faça login novamente.', 'warning');
+                        window.authManager.handleLogout();
+                        return;
+                    }
                     throw new Error(`HTTP ${response.status}`);
                 }
 
@@ -304,7 +318,6 @@ class BizFlowApp {
                     message: "Venda registrada (modo offline) 💰"
                 };
                 
-                // Adicionar à lista local
                 this.vendas.unshift(resultado.data);
             }
 
@@ -322,10 +335,7 @@ class BizFlowApp {
                 this.atualizarDashboardLocal();
             }
             
-            // Feedback
             this.mostrarAlerta(resultado.message, 'success');
-            
-            // Efeito visual
             this.animarRegistroSucesso();
 
         } catch (error) {
@@ -357,7 +367,6 @@ class BizFlowApp {
         }
 
         const html = vendas.slice(0, 10).map(venda => {
-            // Compatibilidade com formato antigo e novo
             const produto = venda.produto || (venda.items && venda.items[0]?.product_name) || 'Produto não informado';
             const valor = venda.valor || venda.total_amount || 0;
             const quantidade = venda.quantidade || venda.total_items || 1;
@@ -401,13 +410,20 @@ class BizFlowApp {
         }
 
         try {
-            // Primeiro tenta a nova rota /api/produtos
-            let response = await fetch(`${this.API_BASE_URL}/api/produtos`);
+            let response = await fetch(`${this.API_BASE_URL}/api/produtos`, {
+                headers: this.getAuthHeaders()
+            });
             
             if (!response.ok) {
-                // Se falhar, tenta a rota de compatibilidade /api/estoque
-                console.warn('Rota /api/produtos não disponível, tentando /api/estoque...');
-                response = await fetch(`${this.API_BASE_URL}/api/estoque`);
+                if (response.status === 401) {
+                    this.mostrarAlerta('Sessão expirada. Faça login novamente.', 'warning');
+                    window.authManager.handleLogout();
+                    return;
+                }
+                
+                response = await fetch(`${this.API_BASE_URL}/api/estoque`, {
+                    headers: this.getAuthHeaders()
+                });
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
@@ -417,13 +433,12 @@ class BizFlowApp {
             const data = await response.json();
             
             if (data.success) {
-                // Converter formato novo para formato antigo (compatibilidade)
                 if (response.url.includes('/api/produtos')) {
                     this.estoque = data.data.map(item => ({
                         id: item.id,
                         produto: item.name,
                         quantidade: item.stock_quantity,
-                        minimo: 5, // Valor padrão
+                        minimo: 5,
                         categoria: item.categoria || 'Geral',
                         preco: item.price || 0,
                         custo: item.cost || 0
@@ -432,7 +447,7 @@ class BizFlowApp {
                     this.estoque = data.data;
                 }
                 
-                this.produtos = data.data; // Manter dados originais
+                this.produtos = data.data;
                 this.exibirEstoque(this.estoque);
                 return true;
             } else {
@@ -479,14 +494,11 @@ class BizFlowApp {
             let resultado;
             
             if (this.isOnline) {
-                // Primeiro tenta a nova rota
                 let response;
                 try {
                     response = await fetch(`${this.API_BASE_URL}/api/produtos`, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                        headers: this.getAuthHeaders(),
                         body: JSON.stringify({ 
                             produto: produto,
                             quantidade: quantidade,
@@ -494,17 +506,19 @@ class BizFlowApp {
                         })
                     });
                 } catch (error) {
-                    // Se falhar, tenta rota de compatibilidade
                     response = await fetch(`${this.API_BASE_URL}/api/estoque`, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                        headers: this.getAuthHeaders(),
                         body: JSON.stringify({ produto, quantidade, minimo })
                     });
                 }
 
                 if (!response.ok) {
+                    if (response.status === 401) {
+                        this.mostrarAlerta('Sessão expirada. Faça login novamente.', 'warning');
+                        window.authManager.handleLogout();
+                        return;
+                    }
                     throw new Error(`HTTP ${response.status}`);
                 }
 
@@ -514,7 +528,6 @@ class BizFlowApp {
                     throw new Error(resultado.error || 'Erro ao adicionar item');
                 }
             } else {
-                // Modo offline - simular resposta
                 resultado = {
                     success: true,
                     data: {
@@ -528,16 +541,13 @@ class BizFlowApp {
                     message: "Item adicionado (modo offline) 📦"
                 };
                 
-                // Adicionar à lista local
                 this.estoque.unshift(resultado.data);
             }
 
-            // Limpar formulário
             form.reset();
             minimoInput.value = 5;
             produtoInput.focus();
 
-            // Recarregar dados
             if (this.isOnline) {
                 await this.carregarEstoque();
                 await this.carregarDashboard();
@@ -619,22 +629,83 @@ class BizFlowApp {
         container.innerHTML = html;
     }
 
-    verificarAlertasEstoque() {
-        const alertas = this.estoque.filter(item => item.quantidade <= item.minimo);
-        
-        if (alertas.length > 0 && document.visibilityState === 'visible') {
-            // Mostrar alerta apenas se não foi mostrado recentemente
-            const ultimoAlerta = localStorage.getItem('ultimoAlertaEstoque');
-            const agora = new Date().getTime();
-            
-            if (!ultimoAlerta || (agora - parseInt(ultimoAlerta)) > 300000) { // 5 minutos
-                this.mostrarAlerta(
-                    `${alertas.length} item(s) com estoque baixo! Verifique o módulo de estoque. ⚠️`,
-                    'warning'
-                );
-                localStorage.setItem('ultimoAlertaEstoque', agora.toString());
-            }
+    // ================= USUÁRIOS (ADMIN ONLY) =================
+
+    async carregarUsuarios() {
+        if (!this.isOnline || !this.currentUser || this.currentUser.role !== 'admin') {
+            return;
         }
+
+        try {
+            const response = await fetch(`${this.API_BASE_URL}/api/users`, {
+                headers: this.getAuthHeaders()
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                this.exibirUsuarios(data.data);
+            }
+        } catch (error) {
+            console.error('Erro ao carregar usuários:', error);
+            this.mostrarAlerta('Erro ao carregar lista de usuários', 'danger');
+        }
+    }
+
+    exibirUsuarios(usuarios) {
+        const container = document.getElementById('lista-usuarios');
+        
+        if (!usuarios || usuarios.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-users fa-3x mb-3"></i>
+                    <p>Nenhum usuário cadastrado</p>
+                </div>
+            `;
+            return;
+        }
+
+        const html = usuarios.map(usuario => {
+            const badgeClass = usuario.role === 'admin' ? 'bg-danger' : 'bg-primary';
+            const statusClass = usuario.is_active ? 'bg-success' : 'bg-secondary';
+            const statusText = usuario.is_active ? 'Ativo' : 'Inativo';
+            
+            return `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">${usuario.full_name}</h6>
+                            <small class="text-muted">
+                                <i class="fas fa-user me-1"></i>${usuario.username}
+                                <i class="fas fa-envelope ms-2 me-1"></i>${usuario.email}
+                            </small>
+                            <br>
+                            <span class="badge ${badgeClass} me-2">${usuario.role}</span>
+                            <span class="badge ${statusClass}">${statusText}</span>
+                            <small class="text-muted ms-2">
+                                <i class="fas fa-calendar me-1"></i>
+                                ${new Date(usuario.created_at).toLocaleDateString('pt-BR')}
+                            </small>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-outline-primary btn-sm" onclick="bizFlowApp.editarUsuario(${usuario.id})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = html;
+    }
+
+    editarUsuario(usuarioId) {
+        this.mostrarAlerta('Funcionalidade de edição em desenvolvimento', 'info');
     }
 
     // ================= DASHBOARD =================
@@ -646,7 +717,9 @@ class BizFlowApp {
         }
 
         try {
-            const response = await fetch(`${this.API_BASE_URL}/api/dashboard`);
+            const response = await fetch(`${this.API_BASE_URL}/api/dashboard`, {
+                headers: this.getAuthHeaders()
+            });
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
@@ -665,21 +738,16 @@ class BizFlowApp {
     }
 
     atualizarDashboard(data) {
-        // Atualizar cards principais
         this.atualizarElemento('total-receita', `R$ ${data.receitaTotal.toFixed(2)}`);
         this.atualizarElemento('total-vendas', data.totalVendas.toString());
         this.atualizarElemento('total-itens', data.totalItensEstoque.toString());
         this.atualizarElemento('total-alertas', data.alertasEstoque.toString());
 
-        // Atualizar resumo financeiro
         this.atualizarElemento('resumo-receita', `R$ ${data.receitaTotal.toFixed(2)}`);
         this.atualizarElemento('resumo-vendas', data.totalVendas.toString());
         this.atualizarElemento('resumo-ticket', `R$ ${data.ticketMedio.toFixed(2)}`);
 
-        // Atualizar transações recentes
         this.atualizarTransacoesRecentes();
-
-        // Animar mudanças
         this.animarAtualizacaoDashboard();
     }
 
@@ -741,6 +809,8 @@ class BizFlowApp {
         container.innerHTML = html;
     }
 
+    // ================= UTILITÁRIOS =================
+
     animarAtualizacaoDashboard() {
         const cards = document.querySelectorAll('#dashboard-cards .card');
         cards.forEach((card, index) => {
@@ -751,12 +821,9 @@ class BizFlowApp {
         });
     }
 
-    // ================= UTILITÁRIOS =================
-
     atualizarElemento(id, valor) {
         const elemento = document.getElementById(id);
         if (elemento) {
-            // Animação de contador se for número
             if (!isNaN(parseFloat(valor)) && isFinite(valor)) {
                 this.animarContador(elemento, parseFloat(valor));
             } else {
@@ -769,7 +836,6 @@ class BizFlowApp {
         const valorTexto = elemento.textContent;
         let valorAtual;
         
-        // Extrair número do texto atual
         if (valorTexto.includes('R$')) {
             valorAtual = parseFloat(valorTexto.replace('R$', '').replace(',', '').trim()) || 0;
         } else {
@@ -786,7 +852,6 @@ class BizFlowApp {
             if (frame < frames) {
                 valorAtualAnimado += incremento;
                 
-                // Formatar como moeda se for o card de receita
                 if (elemento.id.includes('receita') || elemento.id.includes('ticket')) {
                     elemento.textContent = `R$ ${valorAtualAnimado.toFixed(2)}`;
                 } else {
@@ -796,7 +861,6 @@ class BizFlowApp {
                 frame++;
                 setTimeout(animar, duracao / frames);
             } else {
-                // Garantir o valor final exato
                 if (elemento.id.includes('receita') || elemento.id.includes('ticket')) {
                     elemento.textContent = `R$ ${valorFinal.toFixed(2)}`;
                 } else {
@@ -809,14 +873,6 @@ class BizFlowApp {
     }
 
     mostrarAlerta(mensagem, tipo = 'info') {
-        // Remover alertas anteriores do mesmo tipo
-        const alertasExistentes = document.querySelectorAll('.alert-flutuante');
-        alertasExistentes.forEach(alerta => {
-            if (alerta.textContent.includes(mensagem.substring(0, 20))) {
-                alerta.remove();
-            }
-        });
-
         const alerta = document.createElement('div');
         alerta.className = `alert alert-${tipo} alert-flutuante alert-dismissible fade show`;
         alerta.style.cssText = `
@@ -841,15 +897,12 @@ class BizFlowApp {
 
         document.body.appendChild(alerta);
 
-        // Auto-remover após 5 segundos (10 para warnings)
         const timeout = tipo === 'warning' ? 10000 : 5000;
         setTimeout(() => {
             if (alerta.parentNode) {
                 try {
                     alerta.remove();
-                } catch (e) {
-                    // Ignora erro se o elemento já foi removido
-                }
+                } catch (e) {}
             }
         }, timeout);
     }
@@ -901,18 +954,29 @@ class BizFlowApp {
             const isOnline = status === 'online';
             elemento.className = `badge bg-${isOnline ? 'success' : 'warning'}`;
             elemento.innerHTML = `<i class="fas fa-${isOnline ? 'wifi' : 'exclamation-triangle'} me-1"></i>${mensagem}`;
+        }
+    }
+
+    verificarAlertasEstoque() {
+        const alertas = this.estoque.filter(item => item.quantidade <= item.minimo);
+        
+        if (alertas.length > 0 && document.visibilityState === 'visible') {
+            const ultimoAlerta = localStorage.getItem('ultimoAlertaEstoque');
+            const agora = new Date().getTime();
             
-            // Atualizar ícones de status em outros lugares
-            document.querySelectorAll('.status-indicator').forEach(indicator => {
-                indicator.className = `status-${status}`;
-            });
+            if (!ultimoAlerta || (agora - parseInt(ultimoAlerta)) > 300000) {
+                this.mostrarAlerta(
+                    `${alertas.length} item(s) com estoque baixo! Verifique o módulo de estoque. ⚠️`,
+                    'warning'
+                );
+                localStorage.setItem('ultimoAlertaEstoque', agora.toString());
+            }
         }
     }
 
     carregarDadosLocais() {
         console.log('📂 Carregando dados locais...');
         
-        // Dados de exemplo para modo offline
         this.vendas = [
             { id: 1, produto: "Café Expresso", valor: 5.00, quantidade: 1, data: "2024-01-15", hora: "10:30" },
             { id: 2, produto: "Pão de Queijo", valor: 4.50, quantidade: 2, data: "2024-01-15", hora: "11:15" }
@@ -939,85 +1003,11 @@ class BizFlowApp {
         
         console.log('✅ Dados locais carregados');
     }
-
-    // ================= EXPORTAÇÃO =================
-
-    async exportarVendasCSV() {
-        try {
-            if (this.isOnline) {
-                const response = await fetch(`${this.API_BASE_URL}/api/export/vendas`);
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `vendas-bizflow-${new Date().toISOString().split('T')[0]}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-            } else {
-                // Exportação offline
-                const csvData = this.vendas.map(v => {
-                    const produto = v.produto || (v.items && v.items[0]?.product_name) || 'Produto não informado';
-                    const valor = v.valor || v.total_amount || 0;
-                    const quantidade = v.quantidade || v.total_items || 1;
-                    const data = v.data || (v.sale_date ? new Date(v.sale_date).toISOString().split('T')[0] : 'N/D');
-                    const hora = v.hora || (v.sale_date ? new Date(v.sale_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/D');
-                    
-                    return `"${data}","${hora}","${produto}",${quantidade},${valor},${valor * quantidade}`;
-                }).join('\n');
-                
-                const csvHeader = 'Data,Hora,Produto,Quantidade,Valor Unitário,Valor Total\n';
-                const csv = csvHeader + csvData;
-                
-                const blob = new Blob([csv], { type: 'text/csv' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `vendas-bizflow-offline-${new Date().toISOString().split('T')[0]}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-            }
-            
-            this.mostrarAlerta('Vendas exportadas com sucesso! 📊', 'success');
-        } catch (error) {
-            console.error('Erro ao exportar vendas:', error);
-            this.mostrarAlerta('Erro ao exportar vendas', 'danger');
-        }
-    }
-
-    exportarEstoqueJSON() {
-        try {
-            const dados = {
-                estoque: this.estoque,
-                exportadoEm: new Date().toISOString(),
-                totalItens: this.estoque.length,
-                modo: this.isOnline ? 'online' : 'offline'
-            };
-            
-            const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `estoque-bizflow-${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            
-            this.mostrarAlerta('Estoque exportado com sucesso! 📦', 'success');
-        } catch (error) {
-            console.error('Erro ao exportar estoque:', error);
-            this.mostrarAlerta('Erro ao exportar estoque', 'danger');
-        }
-    }
 }
 
 // ================= INICIALIZAÇÃO DA APLICAÇÃO =================
 
-// Funções globais para os botões
+// Funções globais
 function exportarVendas() {
     if (window.bizFlowApp) {
         window.bizFlowApp.exportarVendasCSV();
@@ -1047,10 +1037,8 @@ function scrollToSection(sectionId) {
 document.addEventListener('DOMContentLoaded', function() {
     window.bizFlowApp = new BizFlowApp();
     
-    // Configurar ano atual no footer
     document.getElementById('ano-atual').textContent = new Date().getFullYear();
     
-    // Efeito de fade-in para as seções
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -1060,7 +1048,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }, { threshold: 0.1 });
 
-    // Observar todas as seções
     document.querySelectorAll('section').forEach(section => {
         section.style.opacity = '0';
         section.style.transform = 'translateY(20px)';
@@ -1075,16 +1062,3 @@ document.addEventListener('keydown', function(e) {
         e.preventDefault();
     }
 });
-
-// Service Worker registration (para futura implementação PWA)
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-        navigator.serviceWorker.register('/sw.js')
-            .then(function(registration) {
-                console.log('ServiceWorker registration successful');
-            })
-            .catch(function(error) {
-                console.log('ServiceWorker registration failed');
-            });
-    });
-}
