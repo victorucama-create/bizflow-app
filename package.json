@@ -15,7 +15,8 @@
     "deploy": "npm run build && npm start",
     "init-db": "node init-db.js",
     "db-migrate": "node init-db.js",
-    "db-reset": "node init-db.js"
+    "db-reset": "node init-db.js",
+    "fix-admin": "node fix-admin.js"
   },
   "keywords": [
     "pdv",
