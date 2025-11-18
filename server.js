@@ -1,4 +1,4 @@
-// server.js - ATUALIZADO COM SISTEMA DE AUTENTICAÇÃO COMPLETO E CORREÇÕES
+// server.js - VERSÃO ESTABILIZADA COM AUTENTICAÇÃO
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -9,7 +9,6 @@ import compression from 'compression';
 import morgan from 'morgan';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import cookieParser from 'cookie-parser';
 
 // ✅ CONFIGURAÇÃO ES6 MODULES
 const __filename = fileURLToPath(import.meta.url);
@@ -21,22 +20,31 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 const HOST = '0.0.0.0';
 
-// ✅ CONFIGURAÇÃO POSTGRESQL
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+// ✅ CONFIGURAÇÃO POSTGRESQL COM FALLBACK
+let pool;
+try {
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    // Configurações para prevenir timeouts
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+    max: 20
+  });
 
-// Testar conexão com o banco
-pool.on('connect', () => {
-  console.log('✅ Conectado ao PostgreSQL');
-});
+  pool.on('connect', () => {
+    console.log('✅ Conectado ao PostgreSQL');
+  });
 
-pool.on('error', (err) => {
-  console.error('❌ Erro na conexão PostgreSQL:', err);
-});
+  pool.on('error', (err) => {
+    console.error('❌ Erro na conexão PostgreSQL:', err);
+  });
+} catch (error) {
+  console.error('❌ Erro ao criar pool do PostgreSQL:', error);
+  process.exit(1);
+}
 
-// ================= CONFIGURAÇÃO CSP (CONTENT SECURITY POLICY) =================
+// ================= CONFIGURAÇÃO CSP =================
 app.use((req, res, next) => {
   res.setHeader(
     'Content-Security-Policy',
@@ -46,31 +54,28 @@ app.use((req, res, next) => {
 });
 
 // ================= MIDDLEWARES =================
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cors());
 app.use(helmet({
   contentSecurityPolicy: false
 }));
 app.use(compression());
 app.use(morgan('combined'));
-app.use(cookieParser());
 
 // Servir arquivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname, 'views')));
 
-// ✅ FAVICON - Elimina erro 404
+// ✅ FAVICON
 app.get('/favicon.ico', (req, res) => {
-    res.status(204).end();
+  res.status(204).end();
 });
 
 // ================= MIDDLEWARE DE AUTENTICAÇÃO =================
-
-// Middleware para verificar sessão
 async function requireAuth(req, res, next) {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.session_token;
+    const token = req.headers.authorization?.replace('Bearer ', '');
     
     if (!token) {
       return res.status(401).json({ 
@@ -79,7 +84,6 @@ async function requireAuth(req, res, next) {
       });
     }
 
-    // Verificar sessão no banco
     const sessionResult = await pool.query(
       `SELECT u.*, us.expires_at 
        FROM user_sessions us 
@@ -106,7 +110,6 @@ async function requireAuth(req, res, next) {
   }
 }
 
-// Middleware para verificar permissões de admin
 function requireAdmin(req, res, next) {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ 
@@ -117,192 +120,173 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// ================= INICIALIZAÇÃO AUTOMÁTICA DO BANCO =================
-async function initializeDatabaseIfNeeded() {
-    try {
-        console.log('🔍 Verificando se o banco precisa de inicialização...');
-        
-        // Testar se a tabela users existe
-        const result = await pool.query(`
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_schema = 'public' 
-                AND table_name = 'users'
-            );
-        `);
-        
-        const tablesExist = result.rows[0].exists;
-        
-        if (!tablesExist) {
-            console.log('🔄 Tabelas não encontradas. Inicializando banco...');
-            await executeInitSQL();
-        } else {
-            console.log('✅ Tabelas já existem. Verificando usuário admin...');
-            await verifyAdminUser();
-        }
-    } catch (error) {
-        console.error('❌ Erro ao verificar banco:', error);
+// ================= INICIALIZAÇÃO DO BANCO =================
+async function initializeDatabase() {
+  try {
+    console.log('🔍 Verificando banco de dados...');
+    
+    // Testar conexão
+    await pool.query('SELECT 1');
+    
+    // Verificar se tabelas existem
+    const tablesCheck = await pool.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+      AND table_name IN ('users', 'products', 'categories')
+    `);
+    
+    const existingTables = tablesCheck.rows.map(row => row.table_name);
+    console.log('📊 Tabelas existentes:', existingTables);
+    
+    if (!existingTables.includes('users')) {
+      console.log('🔄 Criando tabelas...');
+      await createTables();
+    } else {
+      console.log('✅ Tabelas já existem');
+      await ensureAdminUser();
     }
+    
+  } catch (error) {
+    console.error('❌ Erro na inicialização do banco:', error);
+    throw error;
+  }
 }
 
-async function verifyAdminUser() {
-    try {
-        const result = await pool.query(
-            'SELECT id, username, password_hash FROM users WHERE username = $1',
-            ['admin']
-        );
-        
-        if (result.rows.length === 0) {
-            console.log('❌ Usuário admin não encontrado. Criando...');
-            await createAdminUser();
-        } else {
-            console.log('✅ Usuário admin verificado');
-        }
-    } catch (error) {
-        console.error('❌ Erro ao verificar usuário admin:', error);
-    }
+async function createTables() {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const tablesSQL = `
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        full_name VARCHAR(100) NOT NULL,
+        role VARCHAR(20) DEFAULT 'user',
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS user_sessions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        session_token VARCHAR(255) UNIQUE NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS categories (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS products (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(200) NOT NULL,
+        description TEXT,
+        price DECIMAL(10,2) NOT NULL,
+        cost DECIMAL(10,2),
+        stock_quantity INTEGER DEFAULT 0,
+        category_id INTEGER REFERENCES categories(id),
+        sku VARCHAR(100),
+        barcode VARCHAR(100),
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS sales (
+        id SERIAL PRIMARY KEY,
+        sale_code VARCHAR(50) UNIQUE NOT NULL,
+        total_amount DECIMAL(10,2) NOT NULL,
+        total_items INTEGER NOT NULL,
+        payment_method VARCHAR(50) NOT NULL,
+        sale_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        status VARCHAR(20) DEFAULT 'completed',
+        notes TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS sale_items (
+        id SERIAL PRIMARY KEY,
+        sale_id INTEGER REFERENCES sales(id) ON DELETE CASCADE,
+        product_id INTEGER REFERENCES products(id),
+        product_name VARCHAR(200) NOT NULL,
+        quantity INTEGER NOT NULL,
+        unit_price DECIMAL(10,2) NOT NULL,
+        total_price DECIMAL(10,2) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      INSERT INTO categories (name, description) VALUES 
+      ('Geral', 'Produtos diversos'),
+      ('Eletrônicos', 'Dispositivos eletrônicos'),
+      ('Alimentação', 'Produtos alimentícios'),
+      ('Limpeza', 'Produtos de limpeza')
+      ON CONFLICT DO NOTHING;
+
+      INSERT INTO products (name, description, price, cost, stock_quantity, category_id, sku) VALUES 
+      ('Smartphone Android', 'Smartphone Android 128GB', 899.90, 650.00, 15, 2, 'SP-AND001'),
+      ('Notebook i5', 'Notebook Core i5 8GB RAM', 1899.90, 1400.00, 8, 2, 'NB-I5001'),
+      ('Café Premium', 'Café em grãos 500g', 24.90, 15.00, 50, 3, 'CF-PREM01'),
+      ('Detergente', 'Detergente líquido 500ml', 3.90, 1.80, 100, 4, 'DT-LIQ01'),
+      ('Água Mineral', 'Água mineral 500ml', 2.50, 0.80, 200, 3, 'AG-MIN01')
+      ON CONFLICT DO NOTHING;
+    `;
+
+    await client.query(tablesSQL);
+    await ensureAdminUser(client);
+    await client.query('COMMIT');
+    
+    console.log('✅ Banco inicializado com sucesso!');
+    
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Erro ao criar tabelas:', error);
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
-async function createAdminUser() {
-    try {
-        const passwordHash = await bcrypt.hash('admin123', 10);
-        await pool.query(
-            `INSERT INTO users (username, email, password_hash, full_name, role) 
-             VALUES ($1, $2, $3, $4, $5)`,
-            ['admin', 'admin@bizflow.com', passwordHash, 'Administrador do Sistema', 'admin']
-        );
-        console.log('✅ Usuário admin criado com sucesso!');
-    } catch (error) {
-        console.error('❌ Erro ao criar usuário admin:', error);
+async function ensureAdminUser(client = pool) {
+  try {
+    const adminCheck = await client.query(
+      'SELECT id FROM users WHERE username = $1',
+      ['admin']
+    );
+    
+    if (adminCheck.rows.length === 0) {
+      console.log('👤 Criando usuário admin...');
+      const passwordHash = await bcrypt.hash('admin123', 10);
+      
+      await client.query(
+        `INSERT INTO users (username, email, password_hash, full_name, role) 
+         VALUES ($1, $2, $3, $4, $5)`,
+        ['admin', 'admin@bizflow.com', passwordHash, 'Administrador do Sistema', 'admin']
+      );
+      
+      console.log('✅ Usuário admin criado: admin / admin123');
+    } else {
+      console.log('✅ Usuário admin já existe');
     }
-}
-
-async function executeInitSQL() {
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-        
-        const initSQL = `
-        -- Criar tabela de usuários
-        CREATE TABLE users (
-            id SERIAL PRIMARY KEY,
-            username VARCHAR(50) UNIQUE NOT NULL,
-            email VARCHAR(100) UNIQUE NOT NULL,
-            password_hash VARCHAR(255) NOT NULL,
-            full_name VARCHAR(100) NOT NULL,
-            role VARCHAR(20) DEFAULT 'user',
-            is_active BOOLEAN DEFAULT true,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-
-        -- Criar tabela de sessões
-        CREATE TABLE user_sessions (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-            session_token VARCHAR(255) UNIQUE NOT NULL,
-            expires_at TIMESTAMP NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-
-        -- Criar tabela de categorias
-        CREATE TABLE categories (
-            id SERIAL PRIMARY KEY,
-            name VARCHAR(100) NOT NULL,
-            description TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-
-        -- Criar tabela de produtos
-        CREATE TABLE products (
-            id SERIAL PRIMARY KEY,
-            name VARCHAR(200) NOT NULL,
-            description TEXT,
-            price DECIMAL(10,2) NOT NULL,
-            cost DECIMAL(10,2),
-            stock_quantity INTEGER DEFAULT 0,
-            category_id INTEGER REFERENCES categories(id),
-            sku VARCHAR(100),
-            barcode VARCHAR(100),
-            is_active BOOLEAN DEFAULT true,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-
-        -- Criar tabela de vendas
-        CREATE TABLE sales (
-            id SERIAL PRIMARY KEY,
-            sale_code VARCHAR(50) UNIQUE NOT NULL,
-            total_amount DECIMAL(10,2) NOT NULL,
-            total_items INTEGER NOT NULL,
-            payment_method VARCHAR(50) NOT NULL,
-            sale_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            status VARCHAR(20) DEFAULT 'completed',
-            notes TEXT
-        );
-
-        -- Criar tabela de itens da venda
-        CREATE TABLE sale_items (
-            id SERIAL PRIMARY KEY,
-            sale_id INTEGER REFERENCES sales(id) ON DELETE CASCADE,
-            product_id INTEGER REFERENCES products(id),
-            product_name VARCHAR(200) NOT NULL,
-            quantity INTEGER NOT NULL,
-            unit_price DECIMAL(10,2) NOT NULL,
-            total_price DECIMAL(10,2) NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-
-        -- Inserir categorias iniciais
-        INSERT INTO categories (name, description) VALUES 
-        ('Geral', 'Produtos diversos'),
-        ('Eletrônicos', 'Dispositivos eletrônicos'),
-        ('Alimentação', 'Produtos alimentícios'),
-        ('Limpeza', 'Produtos de limpeza');
-
-        -- Inserir produtos de exemplo
-        INSERT INTO products (name, description, price, cost, stock_quantity, category_id, sku) VALUES 
-        ('Smartphone Android', 'Smartphone Android 128GB', 899.90, 650.00, 15, 2, 'SP-AND001'),
-        ('Notebook i5', 'Notebook Core i5 8GB RAM', 1899.90, 1400.00, 8, 2, 'NB-I5001'),
-        ('Café Premium', 'Café em grãos 500g', 24.90, 15.00, 50, 3, 'CF-PREM01'),
-        ('Detergente', 'Detergente líquido 500ml', 3.90, 1.80, 100, 4, 'DT-LIQ01'),
-        ('Água Mineral', 'Água mineral 500ml', 2.50, 0.80, 200, 3, 'AG-MIN01');
-        `;
-
-        await client.query(initSQL);
-        
-        // Criar usuário admin separadamente
-        const passwordHash = await bcrypt.hash('admin123', 10);
-        await client.query(
-            `INSERT INTO users (username, email, password_hash, full_name, role) 
-             VALUES ($1, $2, $3, $4, $5)`,
-            ['admin', 'admin@bizflow.com', passwordHash, 'Administrador do Sistema', 'admin']
-        );
-
-        await client.query('COMMIT');
-        
-        console.log('✅ Banco inicializado automaticamente com sucesso!');
-        console.log('📊 Tabelas criadas: users, user_sessions, categories, products, sales, sale_items');
-        console.log('👤 Usuário admin criado: admin / admin123');
-        console.log('🎯 Dados iniciais: 4 categorias, 5 produtos exemplo');
-    } catch (error) {
-        await client.query('ROLLBACK');
-        console.error('❌ Erro na inicialização automática:', error);
-        throw error;
-    } finally {
-        client.release();
-    }
+  } catch (error) {
+    console.error('❌ Erro ao verificar usuário admin:', error);
+    throw error;
+  }
 }
 
 // ================= ROTAS DE AUTENTICAÇÃO =================
-
-// POST - Login
 app.post('/api/auth/login', async (req, res) => {
-  let client;
+  console.log('🔐 Recebida requisição de login');
+  
   try {
     const { username, password } = req.body;
-
-    console.log('🔐 Tentativa de login para usuário:', username);
 
     if (!username || !password) {
       return res.status(400).json({ 
@@ -311,10 +295,10 @@ app.post('/api/auth/login', async (req, res) => {
       });
     }
 
-    client = await pool.connect();
+    console.log('👤 Tentando login para:', username);
 
     // Buscar usuário
-    const userResult = await client.query(
+    const userResult = await pool.query(
       'SELECT * FROM users WHERE username = $1 AND is_active = true',
       [username]
     );
@@ -332,21 +316,23 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Verificar senha
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
-    console.log('🔑 Verificação de senha:', isValidPassword);
     
     if (!isValidPassword) {
+      console.log('❌ Senha inválida para:', username);
       return res.status(401).json({ 
         success: false, 
         error: 'Credenciais inválidas' 
       });
     }
 
+    console.log('✅ Senha válida para:', username);
+
     // Gerar token de sessão
     const sessionToken = crypto.randomBytes(64).toString('hex');
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 horas
 
     // Salvar sessão
-    await client.query(
+    await pool.query(
       'INSERT INTO user_sessions (user_id, session_token, expires_at) VALUES ($1, $2, $3)',
       [user.id, sessionToken, expiresAt]
     );
@@ -354,7 +340,7 @@ app.post('/api/auth/login', async (req, res) => {
     // Remover password hash da resposta
     const { password_hash, ...userWithoutPassword } = user;
 
-    console.log('✅ Login realizado com sucesso para:', user.username);
+    console.log('🎉 Login bem-sucedido para:', user.username);
 
     res.json({
       success: true,
@@ -367,23 +353,17 @@ app.post('/api/auth/login', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Erro no login:', error);
+    console.error('💥 ERRO NO LOGIN:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Erro interno do servidor: ' + error.message 
+      error: 'Erro interno do servidor' 
     });
-  } finally {
-    if (client) client.release();
   }
 });
 
-// POST - Registrar novo usuário
 app.post('/api/auth/register', async (req, res) => {
-  let client;
   try {
     const { username, email, password, full_name } = req.body;
-
-    console.log('👤 Tentativa de registro:', username);
 
     if (!username || !email || !password || !full_name) {
       return res.status(400).json({ 
@@ -399,10 +379,8 @@ app.post('/api/auth/register', async (req, res) => {
       });
     }
 
-    client = await pool.connect();
-
     // Verificar se usuário já existe
-    const existingUser = await client.query(
+    const existingUser = await pool.query(
       'SELECT id FROM users WHERE username = $1 OR email = $2',
       [username, email]
     );
@@ -418,14 +396,12 @@ app.post('/api/auth/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
 
     // Criar usuário
-    const userResult = await client.query(
+    const userResult = await pool.query(
       `INSERT INTO users (username, email, password_hash, full_name) 
        VALUES ($1, $2, $3, $4) 
        RETURNING id, username, email, full_name, role, created_at`,
       [username, email, passwordHash, full_name]
     );
-
-    console.log('✅ Usuário registrado com sucesso:', username);
 
     res.status(201).json({
       success: true,
@@ -434,20 +410,17 @@ app.post('/api/auth/register', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Erro no registro:', error);
+    console.error('Erro no registro:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Erro interno do servidor: ' + error.message 
+      error: 'Erro interno do servidor' 
     });
-  } finally {
-    if (client) client.release();
   }
 });
 
-// POST - Logout
 app.post('/api/auth/logout', requireAuth, async (req, res) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.session_token;
+    const token = req.headers.authorization?.replace('Bearer ', '');
     
     await pool.query(
       'DELETE FROM user_sessions WHERE session_token = $1',
@@ -468,7 +441,6 @@ app.post('/api/auth/logout', requireAuth, async (req, res) => {
   }
 });
 
-// GET - Perfil do usuário
 app.get('/api/auth/me', requireAuth, async (req, res) => {
   try {
     const { password_hash, ...userWithoutPassword } = req.user;
@@ -486,58 +458,43 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
   }
 });
 
-// ================= ROTAS PRINCIPAIS =================
-
-// ✅ ROTA PRINCIPAL
+// ================= ROTAS PÚBLICAS =================
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'views', 'index.html'));
+  res.sendFile(path.join(__dirname, 'views', 'index.html'));
 });
 
-// ✅ HEALTH CHECK (CRÍTICO PARA RENDER)
 app.get('/health', async (req, res) => {
-    try {
-        // Testar conexão com o banco
-        await pool.query('SELECT 1');
-        console.log('✅ Health check executado - Banco OK');
-        res.status(200).json({ 
-            status: 'OK', 
-            service: 'BizFlow API',
-            timestamp: new Date().toISOString(),
-            version: '2.0.0',
-            environment: process.env.NODE_ENV || 'development',
-            database: 'connected',
-            features: 'authentication-enabled'
-        });
-    } catch (error) {
-        console.error('❌ Health check - Erro no banco:', error);
-        res.status(500).json({ 
-            status: 'ERROR', 
-            service: 'BizFlow API',
-            database: 'disconnected',
-            error: error.message 
-        });
-    }
-});
-
-// ✅ ROTA DE TESTE SIMPLES
-app.get('/api/test', (req, res) => {
-    res.json({ 
-        success: true, 
-        message: '🚀 BizFlow API funcionando perfeitamente!',
-        data: {
-            vendas: 3,
-            estoque: 4,
-            online: true,
-            database: 'PostgreSQL',
-            authentication: 'enabled'
-        }
+  try {
+    await pool.query('SELECT 1');
+    res.status(200).json({ 
+      status: 'OK', 
+      service: 'BizFlow API',
+      timestamp: new Date().toISOString(),
+      version: '2.0.0',
+      database: 'connected'
     });
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(500).json({ 
+      status: 'ERROR', 
+      database: 'disconnected',
+      error: error.message 
+    });
+  }
 });
 
-// ================= DEBUG ROTAS =================
+app.get('/api/test', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: '🚀 BizFlow API funcionando!',
+    authentication: 'enabled'
+  });
+});
+
+// ================= ROTAS DEBUG =================
 app.get('/api/debug/users', async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, username, email, role, is_active FROM users');
+    const result = await pool.query('SELECT id, username, email, role FROM users');
     res.json({
       success: true,
       data: result.rows,
@@ -555,30 +512,21 @@ app.get('/api/debug/users', async (req, res) => {
 app.get('/api/debug/check-admin', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, username, password_hash FROM users WHERE username = $1', 
+      'SELECT id, username FROM users WHERE username = $1', 
       ['admin']
     );
     
     if (result.rows.length === 0) {
       return res.json({
         success: false,
-        message: 'Usuário admin não encontrado',
-        suggestion: 'Execute a inicialização do banco'
+        message: 'Usuário admin não encontrado'
       });
     }
-
-    const user = result.rows[0];
-    const testPassword = 'admin123';
-    const isPasswordValid = await bcrypt.compare(testPassword, user.password_hash);
 
     res.json({
       success: true,
       userExists: true,
-      passwordValid: isPasswordValid,
-      userId: user.id,
-      suggestion: isPasswordValid ? 
-        'Senha está correta' : 
-        'Senha não corresponde.'
+      user: result.rows[0]
     });
 
   } catch (error) {
@@ -590,378 +538,88 @@ app.get('/api/debug/check-admin', async (req, res) => {
   }
 });
 
-// ================= API - PRODUTOS (ESTOQUE) =================
-
-// GET - Listar produtos
+// ================= ROTAS PROTEGIDAS =================
 app.get('/api/produtos', requireAuth, async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT p.*, c.name as categoria 
-            FROM products p 
-            LEFT JOIN categories c ON p.category_id = c.id 
-            WHERE p.is_active = true 
-            ORDER BY p.name
-        `);
-        
-        const alertas = result.rows.filter(item => item.stock_quantity <= 5);
-        
-        res.json({
-            success: true,
-            data: result.rows,
-            totalItens: result.rows.length,
-            alertas: alertas.length,
-            itensBaixoEstoque: alertas
-        });
-    } catch (error) {
-        console.error('Erro ao buscar produtos:', error);
-        res.status(500).json({ success: false, error: 'Erro interno do servidor' });
-    }
-});
-
-// POST - Criar produto
-app.post('/api/produtos', requireAuth, async (req, res) => {
-    try {
-        const { produto: name, quantidade: stock_quantity, minimo, categoria: category_id, preco: price, custo: cost, sku, codigo_barras: barcode } = req.body;
-        
-        if (!name || stock_quantity === undefined) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Produto e quantidade são obrigatórios' 
-            });
-        }
-
-        const result = await pool.query(
-            `INSERT INTO products (name, price, cost, stock_quantity, category_id, sku, barcode) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7) 
-             RETURNING *`,
-            [name.trim(), parseFloat(price) || 0, parseFloat(cost) || 0, parseInt(stock_quantity), category_id || 1, sku, barcode]
-        );
-
-        res.json({
-            success: true,
-            data: result.rows[0],
-            message: "Item adicionado ao estoque! 📦"
-        });
-    } catch (error) {
-        console.error('Erro ao criar produto:', error);
-        res.status(500).json({ success: false, error: 'Erro interno do servidor' });
-    }
-});
-
-// PUT - Atualizar produto
-app.put('/api/produtos/:id', requireAuth, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { produto: name, quantidade: stock_quantity, preco: price, custo: cost } = req.body;
-        
-        const result = await pool.query(
-            `UPDATE products 
-             SET name = $1, price = $2, cost = $3, stock_quantity = $4, updated_at = CURRENT_TIMESTAMP
-             WHERE id = $5 
-             RETURNING *`,
-            [name, parseFloat(price), parseFloat(cost), parseInt(stock_quantity), id]
-        );
-        
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, error: 'Produto não encontrado' });
-        }
-        
-        res.json({
-            success: true,
-            data: result.rows[0],
-            message: "Produto atualizado com sucesso! ✅"
-        });
-    } catch (error) {
-        console.error('Erro ao atualizar produto:', error);
-        res.status(500).json({ success: false, error: 'Erro interno do servidor' });
-    }
-});
-
-// DELETE - Deletar produto (soft delete)
-app.delete('/api/produtos/:id', requireAuth, async (req, res) => {
-    try {
-        const { id } = req.params;
-        
-        const result = await pool.query(
-            'UPDATE products SET is_active = false WHERE id = $1 RETURNING *',
-            [id]
-        );
-        
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, error: 'Produto não encontrado' });
-        }
-        
-        res.json({
-            success: true,
-            message: "Produto deletado com sucesso! 🗑️"
-        });
-    } catch (error) {
-        console.error('Erro ao deletar produto:', error);
-        res.status(500).json({ success: false, error: 'Erro interno do servidor' });
-    }
-});
-
-// ================= API - VENDAS =================
-
-// GET - Listar vendas
-app.get('/api/vendas', requireAuth, async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT s.*, 
-                   COUNT(si.id) as items_count,
-                   JSON_AGG(
-                     JSON_BUILD_OBJECT(
-                       'product_name', si.product_name,
-                       'quantity', si.quantity,
-                       'unit_price', si.unit_price,
-                       'total_price', si.total_price
-                     )
-                   ) as items
-            FROM sales s
-            LEFT JOIN sale_items si ON s.id = si.sale_id
-            GROUP BY s.id
-            ORDER BY s.sale_date DESC
-            LIMIT 50
-        `);
-        
-        const receitaTotal = result.rows.reduce((sum, v) => sum + parseFloat(v.total_amount), 0);
-        
-        res.json({
-            success: true,
-            data: result.rows,
-            total: result.rows.length,
-            receitaTotal: receitaTotal
-        });
-    } catch (error) {
-        console.error('Erro ao buscar vendas:', error);
-        res.status(500).json({ success: false, error: 'Erro interno do servidor' });
-    }
-});
-
-// POST - Registrar venda
-app.post('/api/vendas', requireAuth, async (req, res) => {
-    const client = await pool.connect();
+  try {
+    const result = await pool.query(`
+      SELECT p.*, c.name as categoria 
+      FROM products p 
+      LEFT JOIN categories c ON p.category_id = c.id 
+      WHERE p.is_active = true 
+      ORDER BY p.name
+    `);
     
-    try {
-        await client.query('BEGIN');
-        
-        const { items, total_amount, total_items, payment_method, notes } = req.body;
-        
-        // Gerar código da venda
-        const saleCode = 'V' + Date.now();
-        
-        // Inserir venda
-        const saleResult = await client.query(
-            `INSERT INTO sales (sale_code, total_amount, total_items, payment_method, notes) 
-             VALUES ($1, $2, $3, $4, $5) 
-             RETURNING *`,
-            [saleCode, parseFloat(total_amount), parseInt(total_items), payment_method, notes]
-        );
-        
-        const sale = saleResult.rows[0];
-        
-        // Inserir itens da venda e atualizar estoque
-        for (const item of items) {
-            await client.query(
-                `INSERT INTO sale_items (sale_id, product_id, product_name, quantity, unit_price, total_price) 
-                 VALUES ($1, $2, $3, $4, $5, $6)`,
-                [sale.id, item.id, item.name, item.quantity, item.price, item.total]
-            );
-            
-            await client.query(
-                'UPDATE products SET stock_quantity = stock_quantity - $1 WHERE id = $2',
-                [item.quantity, item.id]
-            );
-        }
-        
-        await client.query('COMMIT');
-        
-        res.json({
-            success: true,
-            data: sale,
-            message: "Venda registrada com sucesso! 💰"
-        });
-        
-    } catch (error) {
-        await client.query('ROLLBACK');
-        console.error('Erro ao registrar venda:', error);
-        res.status(500).json({ success: false, error: 'Erro interno do servidor' });
-    } finally {
-        client.release();
-    }
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Erro ao buscar produtos:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
 });
 
-// ================= API - DASHBOARD =================
+app.get('/api/vendas', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM sales 
+      ORDER BY sale_date DESC 
+      LIMIT 20
+    `);
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Erro ao buscar vendas:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
 app.get('/api/dashboard', requireAuth, async (req, res) => {
-    try {
-        // Total de vendas do dia
-        const salesResult = await pool.query(`
-            SELECT COUNT(*) as total_vendas, 
-                   COALESCE(SUM(total_amount), 0) as receita_total,
-                   COALESCE(SUM(total_items), 0) as total_itens_vendidos,
-                   COALESCE(AVG(total_amount), 0) as ticket_medio
-            FROM sales 
-            WHERE sale_date >= CURRENT_DATE
-        `);
-        
-        // Produtos com estoque baixo
-        const lowStockResult = await pool.query(`
-            SELECT COUNT(*) as alertas_estoque
-            FROM products 
-            WHERE stock_quantity <= 5 AND is_active = true
-        `);
-        
-        // Total de produtos
-        const totalProductsResult = await pool.query(`
-            SELECT COUNT(*) as total_itens_estoque
-            FROM products 
-            WHERE is_active = true
-        `);
-        
-        // Vendas dos últimos 7 dias
-        const salesTrendResult = await pool.query(`
-            SELECT DATE(sale_date) as date, 
-                   COUNT(*) as sales_count,
-                   SUM(total_amount) as daily_revenue
-            FROM sales 
-            WHERE sale_date >= CURRENT_DATE - INTERVAL '7 days'
-            GROUP BY DATE(sale_date)
-            ORDER BY date
-        `);
-        
-        const data = {
-            receitaTotal: parseFloat(salesResult.rows[0].receita_total),
-            totalVendas: parseInt(salesResult.rows[0].total_vendas),
-            totalItensVendidos: parseInt(salesResult.rows[0].total_itens_vendidos),
-            ticketMedio: parseFloat(salesResult.rows[0].ticket_medio),
-            alertasEstoque: parseInt(lowStockResult.rows[0].alertas_estoque),
-            totalItensEstoque: parseInt(totalProductsResult.rows[0].total_itens_estoque),
-            tendenciaVendas: salesTrendResult.rows
-        };
-        
-        res.json({
-            success: true,
-            data: data
-        });
-        
-    } catch (error) {
-        console.error('Erro ao buscar dados do dashboard:', error);
-        res.status(500).json({ success: false, error: 'Erro interno do servidor' });
-    }
-});
-
-// ================= API - CATEGORIAS =================
-app.get('/api/categorias', requireAuth, async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM categories ORDER BY name');
-        res.json({
-            success: true,
-            data: result.rows
-        });
-    } catch (error) {
-        console.error('Erro ao buscar categorias:', error);
-        res.status(500).json({ success: false, error: 'Erro interno do servidor' });
-    }
-});
-
-// ================= API - GESTÃO DE USUÁRIOS (APENAS ADMIN) =================
-
-// GET - Listar usuários
-app.get('/api/users', requireAuth, requireAdmin, async (req, res) => {
-    try {
-        const result = await pool.query(
-            'SELECT id, username, email, full_name, role, is_active, created_at FROM users ORDER BY created_at DESC'
-        );
-        
-        res.json({
-            success: true,
-            data: result.rows
-        });
-    } catch (error) {
-        console.error('Erro ao buscar usuários:', error);
-        res.status(500).json({ success: false, error: 'Erro interno do servidor' });
-    }
-});
-
-// PUT - Atualizar usuário
-app.put('/api/users/:id', requireAuth, requireAdmin, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { role, is_active } = req.body;
-        
-        const result = await pool.query(
-            'UPDATE users SET role = $1, is_active = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING id, username, email, full_name, role, is_active',
-            [role, is_active, id]
-        );
-        
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
-        }
-        
-        res.json({
-            success: true,
-            data: result.rows[0],
-            message: 'Usuário atualizado com sucesso!'
-        });
-    } catch (error) {
-        console.error('Erro ao atualizar usuário:', error);
-        res.status(500).json({ success: false, error: 'Erro interno do servidor' });
-    }
-});
-
-// ================= ROTA DE INICIALIZAÇÃO MANUAL =================
-app.post('/api/init-db', async (req, res) => {
-    const { secret } = req.body;
-    if (secret !== 'bizflow-init-2024') {
-        return res.status(401).json({ success: false, error: 'Não autorizado' });
-    }
-
-    try {
-        console.log('🔄 Inicializando banco de dados via HTTP...');
-        await executeInitSQL();
-        
-        res.json({
-            success: true,
-            message: 'Banco de dados inicializado com sucesso!',
-            tables: ['users', 'user_sessions', 'categories', 'products', 'sales', 'sale_items'],
-            sample_data: 'Usuário admin (admin/admin123), 5 produtos e 4 categorias inseridos'
-        });
-
-    } catch (error) {
-        console.error('❌ Erro ao inicializar banco via HTTP:', error);
-        res.status(500).json({ 
-            success: false, 
-            error: 'Erro ao inicializar banco: ' + error.message 
-        });
-    }
-});
-
-// ================= MANIPULAÇÃO DE ERROS =================
-app.use('*', (req, res) => {
-    res.status(404).json({ 
-        success: false, 
-        error: 'Rota não encontrada',
-        path: req.originalUrl 
+  try {
+    const salesResult = await pool.query(`
+      SELECT COUNT(*) as total_vendas, 
+             COALESCE(SUM(total_amount), 0) as receita_total
+      FROM sales 
+      WHERE sale_date >= CURRENT_DATE
+    `);
+    
+    const lowStockResult = await pool.query(`
+      SELECT COUNT(*) as alertas_estoque
+      FROM products 
+      WHERE stock_quantity <= 5 AND is_active = true
+    `);
+    
+    const data = {
+      receitaTotal: parseFloat(salesResult.rows[0].receita_total),
+      totalVendas: parseInt(salesResult.rows[0].total_vendas),
+      alertasEstoque: parseInt(lowStockResult.rows[0].alertas_estoque)
+    };
+    
+    res.json({
+      success: true,
+      data: data
     });
-});
-
-app.use((error, req, res, next) => {
-    console.error('Erro no servidor:', error);
-    res.status(500).json({ 
-        success: false, 
-        error: 'Erro interno do servidor'
-    });
+    
+  } catch (error) {
+    console.error('Erro ao buscar dashboard:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
 });
 
 // ================= INICIALIZAÇÃO DO SERVIDOR =================
 async function startServer() {
-    try {
-        // Inicializar banco se necessário
-        await initializeDatabaseIfNeeded();
-        
-        // Iniciar servidor
-        app.listen(PORT, HOST, () => {
-            console.log(`
+  try {
+    console.log('🚀 Iniciando BizFlow Server...');
+    
+    // Inicializar banco de dados
+    await initializeDatabase();
+    
+    // Iniciar servidor
+    app.listen(PORT, HOST, () => {
+      console.log(`
 ╔══════════════════════════════════════╗
 ║            🚀 BIZFLOW API           ║
 ║        Sistema de Gestão Integrada   ║
@@ -974,15 +632,28 @@ async function startServer() {
 ║ 🔑 Login: POST /api/auth/login       ║
 ║ 👤 Register: POST /api/auth/register ║
 ║ 🐛 Debug: /api/debug/*               ║
-║ 📊 Dashboard: /                      ║
 ╚══════════════════════════════════════╝
-            `);
-        });
-    } catch (error) {
-        console.error('❌ Erro ao iniciar servidor:', error);
-        process.exit(1);
-    }
+      `);
+    });
+    
+  } catch (error) {
+    console.error('❌ Falha crítica ao iniciar servidor:', error);
+    process.exit(1);
+  }
 }
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('🛑 Recebido SIGTERM, encerrando servidor...');
+  await pool.end();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('🛑 Recebido SIGINT, encerrando servidor...');
+  await pool.end();
+  process.exit(0);
+});
 
 // Iniciar o servidor
 startServer();
