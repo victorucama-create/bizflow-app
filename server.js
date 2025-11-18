@@ -1,14 +1,45 @@
-const express = require('express');
-const path = require('path');
+// server.js - ATUALIZADO PARA ES6 MODULES + POSTGRESQL
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { Pool } from 'pg';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import morgan from 'morgan';
+
+// ✅ CONFIGURAÇÃO ES6 MODULES
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 
 // ✅ CONFIGURAÇÃO RENDER-COMPATIBLE
 const PORT = process.env.PORT || 10000;
 const HOST = '0.0.0.0';
 
+// ✅ CONFIGURAÇÃO POSTGRESQL
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+// Testar conexão com o banco
+pool.on('connect', () => {
+  console.log('✅ Conectado ao PostgreSQL');
+});
+
+pool.on('error', (err) => {
+  console.error('❌ Erro na conexão PostgreSQL:', err);
+});
+
 // Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cors());
+app.use(helmet());
+app.use(compression());
+app.use(morgan('combined'));
 
 // Servir arquivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
@@ -27,15 +58,28 @@ app.get('/', (req, res) => {
 });
 
 // ✅ HEALTH CHECK (CRÍTICO PARA RENDER)
-app.get('/health', (req, res) => {
-    console.log('✅ Health check executado');
-    res.status(200).json({ 
-        status: 'OK', 
-        service: 'BizFlow API',
-        timestamp: new Date().toISOString(),
-        version: '1.0.0',
-        environment: process.env.NODE_ENV || 'development'
-    });
+app.get('/health', async (req, res) => {
+    try {
+        // Testar conexão com o banco
+        await pool.query('SELECT 1');
+        console.log('✅ Health check executado - Banco OK');
+        res.status(200).json({ 
+            status: 'OK', 
+            service: 'BizFlow API',
+            timestamp: new Date().toISOString(),
+            version: '1.0.0',
+            environment: process.env.NODE_ENV || 'development',
+            database: 'connected'
+        });
+    } catch (error) {
+        console.error('❌ Health check - Erro no banco:', error);
+        res.status(500).json({ 
+            status: 'ERROR', 
+            service: 'BizFlow API',
+            database: 'disconnected',
+            error: error.message 
+        });
+    }
 });
 
 // ✅ ROTA DE TESTE SIMPLES
@@ -46,141 +90,249 @@ app.get('/api/test', (req, res) => {
         data: {
             vendas: 3,
             estoque: 4,
-            online: true
+            online: true,
+            database: 'PostgreSQL'
         }
     });
 });
 
-// ================= DADOS EM MEMÓRIA =================
-let vendas = [
-    { id: 1, produto: "Café Expresso", valor: 5.00, quantidade: 1, data: "2024-01-15", hora: "10:30" },
-    { id: 2, produto: "Pão de Queijo", valor: 4.50, quantidade: 2, data: "2024-01-15", hora: "11:15" },
-    { id: 3, produto: "Capuccino", valor: 8.00, quantidade: 1, data: "2024-01-15", hora: "14:20" }
-];
+// ================= API - PRODUTOS (ESTOQUE) =================
 
-let estoque = [
-    { id: 1, produto: "Café em Grãos", quantidade: 50, minimo: 10, categoria: "Matéria-prima" },
-    { id: 2, produto: "Leite", quantidade: 25, minimo: 15, categoria: "Laticínios" },
-    { id: 3, produto: "Açúcar", quantidade: 8, minimo: 5, categoria: "Matéria-prima" },
-    { id: 4, produto: "Copos Descartáveis", quantidade: 200, minimo: 50, categoria: "Embalagem" }
-];
-
-// ================= API - VENDAS =================
-app.get('/api/vendas', (req, res) => {
+// GET - Listar produtos
+app.get('/api/produtos', async (req, res) => {
     try {
-        const receitaTotal = vendas.reduce((sum, v) => sum + (v.valor * v.quantidade), 0);
+        const result = await pool.query(`
+            SELECT p.*, c.name as categoria 
+            FROM products p 
+            LEFT JOIN categories c ON p.category_id = c.id 
+            WHERE p.is_active = true 
+            ORDER BY p.name
+        `);
+        
+        const alertas = result.rows.filter(item => item.stock_quantity <= 5);
         
         res.json({
             success: true,
-            data: vendas,
-            total: vendas.length,
-            receitaTotal: receitaTotal
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-app.post('/api/vendas', (req, res) => {
-    try {
-        const { produto, valor, quantidade = 1 } = req.body;
-        
-        if (!produto || !valor) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Produto e valor são obrigatórios' 
-            });
-        }
-
-        const novaVenda = {
-            id: Date.now(),
-            produto: produto.trim(),
-            valor: parseFloat(valor),
-            quantidade: parseInt(quantidade),
-            data: new Date().toISOString().split('T')[0],
-            hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-        };
-
-        vendas.unshift(novaVenda);
-
-        res.json({
-            success: true,
-            data: novaVenda,
-            message: "Venda registrada com sucesso! 💰"
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ================= API - ESTOQUE =================
-app.get('/api/estoque', (req, res) => {
-    try {
-        const alertas = estoque.filter(item => item.quantidade <= item.minimo);
-        
-        res.json({
-            success: true,
-            data: estoque,
-            totalItens: estoque.length,
+            data: result.rows,
+            totalItens: result.rows.length,
             alertas: alertas.length,
             itensBaixoEstoque: alertas
         });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        console.error('Erro ao buscar produtos:', error);
+        res.status(500).json({ success: false, error: 'Erro interno do servidor' });
     }
 });
 
-app.post('/api/estoque', (req, res) => {
+// POST - Criar produto
+app.post('/api/produtos', async (req, res) => {
     try {
-        const { produto, quantidade, minimo } = req.body;
+        const { produto: name, quantidade: stock_quantity, minimo, categoria: category_id, preco: price, custo: cost, sku, codigo_barras: barcode } = req.body;
         
-        if (!produto || quantidade === undefined || minimo === undefined) {
+        if (!name || stock_quantity === undefined) {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Produto, quantidade e estoque mínimo são obrigatórios' 
+                error: 'Produto e quantidade são obrigatórios' 
             });
         }
 
-        const novoItem = {
-            id: Date.now(),
-            produto: produto.trim(),
-            quantidade: parseInt(quantidade),
-            minimo: parseInt(minimo),
-            categoria: "Geral"
-        };
-
-        estoque.unshift(novoItem);
+        const result = await pool.query(
+            `INSERT INTO products (name, price, cost, stock_quantity, category_id, sku, barcode) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7) 
+             RETURNING *`,
+            [name.trim(), parseFloat(price) || 0, parseFloat(cost) || 0, parseInt(stock_quantity), category_id || 1, sku, barcode]
+        );
 
         res.json({
             success: true,
-            data: novoItem,
+            data: result.rows[0],
             message: "Item adicionado ao estoque! 📦"
         });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        console.error('Erro ao criar produto:', error);
+        res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    }
+});
+
+// PUT - Atualizar produto
+app.put('/api/produtos/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { produto: name, quantidade: stock_quantity, preco: price, custo: cost } = req.body;
+        
+        const result = await pool.query(
+            `UPDATE products 
+             SET name = $1, price = $2, cost = $3, stock_quantity = $4, updated_at = CURRENT_TIMESTAMP
+             WHERE id = $5 
+             RETURNING *`,
+            [name, parseFloat(price), parseFloat(cost), parseInt(stock_quantity), id]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Produto não encontrado' });
+        }
+        
+        res.json({
+            success: true,
+            data: result.rows[0],
+            message: "Produto atualizado com sucesso! ✅"
+        });
+    } catch (error) {
+        console.error('Erro ao atualizar produto:', error);
+        res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    }
+});
+
+// ================= API - VENDAS =================
+
+// GET - Listar vendas
+app.get('/api/vendas', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT s.*, 
+                   COUNT(si.id) as items_count,
+                   JSON_AGG(
+                     JSON_BUILD_OBJECT(
+                       'product_name', si.product_name,
+                       'quantity', si.quantity,
+                       'unit_price', si.unit_price,
+                       'total_price', si.total_price
+                     )
+                   ) as items
+            FROM sales s
+            LEFT JOIN sale_items si ON s.id = si.sale_id
+            GROUP BY s.id
+            ORDER BY s.sale_date DESC
+            LIMIT 50
+        `);
+        
+        const receitaTotal = result.rows.reduce((sum, v) => sum + parseFloat(v.total_amount), 0);
+        
+        res.json({
+            success: true,
+            data: result.rows,
+            total: result.rows.length,
+            receitaTotal: receitaTotal
+        });
+    } catch (error) {
+        console.error('Erro ao buscar vendas:', error);
+        res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    }
+});
+
+// POST - Registrar venda
+app.post('/api/vendas', async (req, res) => {
+    const client = await pool.connect();
+    
+    try {
+        await client.query('BEGIN');
+        
+        const { items, total_amount, total_items, payment_method, notes } = req.body;
+        
+        // Gerar código da venda
+        const saleCode = 'V' + Date.now();
+        
+        // Inserir venda
+        const saleResult = await client.query(
+            `INSERT INTO sales (sale_code, total_amount, total_items, payment_method, notes) 
+             VALUES ($1, $2, $3, $4, $5) 
+             RETURNING *`,
+            [saleCode, parseFloat(total_amount), parseInt(total_items), payment_method, notes]
+        );
+        
+        const sale = saleResult.rows[0];
+        
+        // Inserir itens da venda e atualizar estoque
+        for (const item of items) {
+            // Inserir item da venda
+            await client.query(
+                `INSERT INTO sale_items (sale_id, product_id, product_name, quantity, unit_price, total_price) 
+                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                [sale.id, item.id, item.name, item.quantity, item.price, item.total]
+            );
+            
+            // Atualizar estoque
+            await client.query(
+                'UPDATE products SET stock_quantity = stock_quantity - $1 WHERE id = $2',
+                [item.quantity, item.id]
+            );
+        }
+        
+        await client.query('COMMIT');
+        
+        res.json({
+            success: true,
+            data: sale,
+            message: "Venda registrada com sucesso! 💰"
+        });
+        
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Erro ao registrar venda:', error);
+        res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    } finally {
+        client.release();
     }
 });
 
 // ================= API - DASHBOARD =================
-app.get('/api/dashboard', (req, res) => {
+app.get('/api/dashboard', async (req, res) => {
     try {
-        const receitaTotal = vendas.reduce((sum, v) => sum + (v.valor * v.quantidade), 0);
-        const totalVendas = vendas.length;
-        const alertasEstoque = estoque.filter(item => item.quantidade <= item.minimo).length;
+        // Total de vendas do dia
+        const salesResult = await pool.query(`
+            SELECT COUNT(*) as total_vendas, 
+                   COALESCE(SUM(total_amount), 0) as receita_total,
+                   COALESCE(SUM(total_items), 0) as total_itens_vendidos,
+                   COALESCE(AVG(total_amount), 0) as ticket_medio
+            FROM sales 
+            WHERE sale_date >= CURRENT_DATE
+        `);
+        
+        // Produtos com estoque baixo
+        const lowStockResult = await pool.query(`
+            SELECT COUNT(*) as alertas_estoque
+            FROM products 
+            WHERE stock_quantity <= 5 AND is_active = true
+        `);
+        
+        // Total de produtos
+        const totalProductsResult = await pool.query(`
+            SELECT COUNT(*) as total_itens_estoque
+            FROM products 
+            WHERE is_active = true
+        `);
+        
+        const data = {
+            receitaTotal: parseFloat(salesResult.rows[0].receita_total),
+            totalVendas: parseInt(salesResult.rows[0].total_vendas),
+            totalItensVendidos: parseInt(salesResult.rows[0].total_itens_vendidos),
+            ticketMedio: parseFloat(salesResult.rows[0].ticket_medio),
+            alertasEstoque: parseInt(lowStockResult.rows[0].alertas_estoque),
+            totalItensEstoque: parseInt(totalProductsResult.rows[0].total_itens_estoque)
+        };
         
         res.json({
             success: true,
-            data: {
-                receitaTotal,
-                totalVendas,
-                totalItensVendidos: vendas.reduce((sum, v) => sum + v.quantidade, 0),
-                ticketMedio: totalVendas > 0 ? receitaTotal / totalVendas : 0,
-                alertasEstoque,
-                totalItensEstoque: estoque.length
-            }
+            data: data
+        });
+        
+    } catch (error) {
+        console.error('Erro ao buscar dados do dashboard:', error);
+        res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    }
+});
+
+// ================= API - CATEGORIAS =================
+app.get('/api/categorias', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM categories ORDER BY name');
+        res.json({
+            success: true,
+            data: result.rows
         });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        console.error('Erro ao buscar categorias:', error);
+        res.status(500).json({ success: false, error: 'Erro interno do servidor' });
     }
 });
 
@@ -210,10 +362,11 @@ app.listen(PORT, HOST, () => {
 ╠══════════════════════════════════════╣
 ║ 📍 Porta: ${PORT}                          ║
 ║ 🌐 Host: ${HOST}                         ║
+║ 🗄️  Banco: PostgreSQL                 ║
 ║ 🩺 Health: /health                    ║
 ║ 📊 Dashboard: /                       ║
 ╚══════════════════════════════════════╝
     `);
 });
 
-module.exports = app;
+export default app;
