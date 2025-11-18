@@ -985,7 +985,117 @@ app.post('/api/auth/login', empresaContext, async (req, res) => {
     });
   }
 });
+// ================= ROTAS DE AUTENTICAÇÃO ADICIONAIS FASE 4 =================
 
+// Rota /api/auth/me (FALTANTE)
+app.get('/api/auth/me', requireAuth, async (req, res) => {
+  try {
+    const { password_hash, ...userWithoutPassword } = req.user;
+    
+    res.json({
+      success: true,
+      data: userWithoutPassword
+    });
+  } catch (error) {
+    console.error('Erro ao buscar perfil:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erro interno do servidor' 
+    });
+  }
+});
+
+// Rota de registro (FALTANTE)
+app.post('/api/auth/register', empresaContext, async (req, res) => {
+  try {
+    const { username, email, password, full_name, filial_id } = req.body;
+
+    if (!username || !email || !password || !full_name) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Todos os campos são obrigatórios' 
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'A senha deve ter pelo menos 6 caracteres' 
+      });
+    }
+
+    // Verificar se usuário já existe
+    const existingUser = await pool.query(
+      'SELECT id FROM users WHERE username = $1 AND empresa_id = $2',
+      [username, req.empresa_id]
+    );
+
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Username já está em uso' 
+      });
+    }
+
+    // Hash da senha
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Criar usuário
+    const userResult = await pool.query(
+      `INSERT INTO users (empresa_id, filial_id, username, email, password_hash, full_name) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
+       RETURNING id, username, email, full_name, role, created_at`,
+      [req.empresa_id, filial_id || 1, username, email, passwordHash, full_name]
+    );
+
+    const newUser = userResult.rows[0];
+
+    // Registrar auditoria
+    await logAudit('REGISTER', 'users', newUser.id, null, { username, email, full_name }, req);
+
+    res.status(201).json({
+      success: true,
+      message: 'Usuário criado com sucesso!',
+      data: newUser
+    });
+
+  } catch (error) {
+    console.error('Erro no registro:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erro interno do servidor' 
+    });
+  }
+});
+
+// Rota de logout (FALTANTE)
+app.post('/api/auth/logout', requireAuth, async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    await pool.query(
+      'DELETE FROM user_sessions WHERE session_token = $1',
+      [token]
+    );
+
+    // Registrar auditoria
+    await logAudit('LOGOUT', 'users', req.user.id, null, null, req);
+
+    res.json({
+      success: true,
+      message: 'Logout realizado com sucesso!'
+    });
+
+  } catch (error) {
+    console.error('Erro no logout:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erro interno do servidor' 
+    });
+  }
+});
+
+// ================= ROTAS MULTI-EMPRESA FASE 4 =================
 // ================= ROTAS MULTI-EMPRESA FASE 4 =================
 
 // Empresas
