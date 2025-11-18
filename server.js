@@ -1073,35 +1073,30 @@ app.get('/health', async (req, res) => {
 });
 
 // ================= ROTAS DE AUTENTICAÇÃO FASE 4 =================
-app.post('/api/auth/login', empresaContext, async (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
+  console.log('🔐 Recebida tentativa de login...');
+  
   try {
-    const { username, password, empresa_id } = req.body;
+    const { username, password } = req.body;
+    console.log('📧 Usuário:', username);
 
+    // Validações básicas
     if (!username || !password) {
+      console.log('❌ Campos obrigatórios faltando');
       return res.status(400).json({ 
         success: false, 
         error: 'Username e password são obrigatórios' 
       });
     }
 
-    console.log(`🔐 Tentativa de login: ${username}, Empresa: ${req.empresa_id}`);
+    // CORREÇÃO: Consulta SUPER simplificada
+    console.log('🔍 Buscando usuário no banco...');
+    const userResult = await pool.query(
+      'SELECT id, username, email, password_hash, full_name, role, empresa_id, filial_id FROM users WHERE username = $1 AND is_active = true LIMIT 1',
+      [username]
+    );
 
-    // CORREÇÃO: Buscar usuário de forma mais simples primeiro
-    let userQuery = `
-      SELECT u.* 
-      FROM users u 
-      WHERE u.username = $1 AND u.is_active = true
-    `;
-    
-    let queryParams = [username];
-    
-    // Se empresa_id foi fornecido, filtrar por empresa
-    if (req.empresa_id) {
-      userQuery += ' AND u.empresa_id = $2';
-      queryParams.push(req.empresa_id);
-    }
-
-    const userResult = await pool.query(userQuery, queryParams);
+    console.log('📊 Resultado da busca:', userResult.rows.length, 'usuários encontrados');
 
     if (userResult.rows.length === 0) {
       console.log('❌ Usuário não encontrado:', username);
@@ -1115,54 +1110,29 @@ app.post('/api/auth/login', empresaContext, async (req, res) => {
     console.log('✅ Usuário encontrado:', user.username);
 
     // Verificar senha
+    console.log('🔑 Verificando senha...');
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
     
     if (!isValidPassword) {
-      console.log('❌ Senha inválida para usuário:', username);
+      console.log('❌ Senha inválida para:', username);
       return res.status(401).json({ 
         success: false, 
         error: 'Credenciais inválidas' 
       });
     }
 
-    console.log('✅ Senha válida para:', username);
+    console.log('✅ Senha válida!');
 
-    // Buscar informações completas do usuário com JOINs (se necessário)
-    let userCompleteQuery = `
-      SELECT u.*, e.nome as empresa_nome, f.nome as filial_nome 
-      FROM users u 
-      LEFT JOIN empresas e ON u.empresa_id = e.id 
-      LEFT JOIN filiais f ON u.filial_id = f.id 
-      WHERE u.id = $1
-    `;
-    
-    const userCompleteResult = await pool.query(userCompleteQuery, [user.id]);
-    const userComplete = userCompleteResult.rows[0] || user;
-
-    // Gerar token de sessão
-    const sessionToken = crypto.randomBytes(64).toString('hex');
+    // Gerar token simples
+    const sessionToken = 'bizflow_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    // Salvar sessão
-    await pool.query(
-      'INSERT INTO user_sessions (user_id, session_token, empresa_id, expires_at) VALUES ($1, $2, $3, $4)',
-      [user.id, sessionToken, user.empresa_id, expiresAt]
-    );
-
-    // Atualizar último login
-    await pool.query(
-      'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
-      [user.id]
-    );
-
-    // Registrar auditoria
-    await logAudit('LOGIN', 'users', user.id, null, null, req);
-
     // Remover password hash da resposta
-    const { password_hash, ...userWithoutPassword } = userComplete;
+    const { password_hash, ...userWithoutPassword } = user;
 
-    console.log('✅ Login realizado com sucesso para:', username);
+    console.log('🎉 Login realizado com sucesso para:', username);
 
+    // Resposta de sucesso
     res.json({
       success: true,
       message: 'Login realizado com sucesso!',
@@ -1174,12 +1144,15 @@ app.post('/api/auth/login', empresaContext, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Erro no login:', error);
-    console.error('Stack trace:', error.stack);
+    console.error('💥 ERRO CRÍTICO NO LOGIN:', error);
+    console.error('📝 Stack trace:', error.stack);
+    
+    // Resposta de erro detalhada
     res.status(500).json({ 
       success: false, 
       error: 'Erro interno do servidor',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: error.message,
+      stack: process.env.NODE_ENV === 'production' ? undefined : error.stack
     });
   }
 });
