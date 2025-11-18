@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BizFlow - Sistema de Gestão Integrada FASE 3</title>
+    <title>BizFlow - Sistema de Gestão Integrada FASE 3 COMPLETA</title>
     
     <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>📊</text></svg>">
@@ -42,9 +42,37 @@
             box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
         }
         .nav-section {
-            border-bottom: 2px solid #e9ecef;
+            border-bottom: 2px solid var(--bs-border-color);
             padding-bottom: 0.5rem;
             margin-bottom: 1rem;
+        }
+        .progress {
+            overflow: visible;
+        }
+        .progress-bar {
+            position: relative;
+            overflow: visible;
+        }
+        .progress-bar small {
+            position: absolute;
+            right: 5px;
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+        }
+        [data-bs-theme="dark"] {
+            --bs-body-bg: #1a1d20;
+            --bs-body-color: #e9ecef;
+            --bs-border-color: #495057;
+        }
+        .theme-switcher {
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        .theme-switcher:hover {
+            background: rgba(255,255,255,0.1);
         }
     </style>
 </head>
@@ -56,7 +84,7 @@
                 <h1 class="text-primary">
                     <i class="fas fa-chart-line me-2"></i>BizFlow
                 </h1>
-                <p class="text-muted">Sistema de Gestão Integrada - FASE 3</p>
+                <p class="text-muted">Sistema de Gestão Integrada - FASE 3 COMPLETA</p>
             </div>
 
             <!-- Formulário de Login -->
@@ -108,7 +136,7 @@
                 <a class="navbar-brand" href="#">
                     <i class="fas fa-chart-line me-2"></i> 
                     <strong>BizFlow</strong>
-                    <small class="ms-2 opacity-75">FASE 3</small>
+                    <small class="ms-2 opacity-75">FASE 3 COMPLETA</small>
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                     <span class="navbar-toggler-icon"></span>
@@ -140,13 +168,27 @@
                                 <i class="fas fa-chart-bar me-1"></i> Relatórios
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#backup">
+                                <i class="fas fa-database me-1"></i> Backup
+                            </a>
+                        </li>
                     </ul>
                     <ul class="navbar-nav">
+                        <li class="nav-item">
+                            <span class="nav-link theme-switcher" onclick="alternarTema()">
+                                <i class="fas fa-moon"></i>
+                            </span>
+                        </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                                 <i class="fas fa-user me-1"></i> <span id="user-name">Usuário</span>
                             </a>
                             <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#configModal">
+                                    <i class="fas fa-cog me-2"></i>Configurações
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item text-danger" href="#" id="btn-logout">
                                     <i class="fas fa-sign-out-alt me-2"></i>Sair
                                 </a></li>
@@ -169,7 +211,7 @@
                                 <i class="fas fa-circle me-1"></i> Online
                             </span>
                         </div>
-                        <p class="text-muted">Visão completa do seu negócio - FASE 3</p>
+                        <p class="text-muted">Visão completa do seu negócio - FASE 3 COMPLETA</p>
                     </div>
                 </div>
 
@@ -244,55 +286,53 @@
                     </div>
                 </div>
 
-                <!-- Métricas Financeiras -->
+                <!-- Métricas Secundárias -->
                 <div class="row mt-3">
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-2 mb-3">
                         <div class="card border-success metric-card">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <h5 class="text-success"><i class="fas fa-arrow-down"></i> Receitas</h5>
-                                        <h3 class="text-success" id="receitas-card">R$ 0,00</h3>
-                                    </div>
-                                    <div class="display-4 text-success opacity-50">
-                                        <i class="fas fa-money-bill"></i>
-                                    </div>
-                                </div>
-                                <small class="text-muted">Total recebido</small>
+                            <div class="card-body text-center">
+                                <h5 class="text-success" id="vendas-hoje">0</h5>
+                                <small class="text-muted">Vendas Hoje</small>
                             </div>
                         </div>
                     </div>
-
-                    <div class="col-md-4 mb-3">
-                        <div class="card border-danger metric-card">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <h5 class="text-danger"><i class="fas fa-arrow-up"></i> Despesas</h5>
-                                        <h3 class="text-danger" id="despesas-card">R$ 0,00</h3>
-                                    </div>
-                                    <div class="display-4 text-danger opacity-50">
-                                        <i class="fas fa-file-invoice-dollar"></i>
-                                    </div>
-                                </div>
-                                <small class="text-muted">Total pago</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-2 mb-3">
                         <div class="card border-primary metric-card">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <h5 class="text-primary"><i class="fas fa-balance-scale"></i> Lucro</h5>
-                                        <h3 class="text-primary" id="lucro-card">R$ 0,00</h3>
-                                    </div>
-                                    <div class="display-4 text-primary opacity-50">
-                                        <i class="fas fa-chart-line"></i>
-                                    </div>
-                                </div>
-                                <small class="text-muted">Resultado líquido</small>
+                            <div class="card-body text-center">
+                                <h5 class="text-primary" id="receita-hoje">R$ 0</h5>
+                                <small class="text-muted">Receita Hoje</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="card border-warning metric-card">
+                            <div class="card-body text-center">
+                                <h5 class="text-warning" id="contas-pendentes">0</h5>
+                                <small class="text-muted">Contas Pendentes</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="card border-danger metric-card">
+                            <div class="card-body text-center">
+                                <h5 class="text-danger" id="alertas-estoque">0</h5>
+                                <small class="text-muted">Alertas Estoque</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="card border-info metric-card">
+                            <div class="card-body text-center">
+                                <h5 class="text-info" id="receitas-card">R$ 0</h5>
+                                <small class="text-muted">Receitas</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="card border-dark metric-card">
+                            <div class="card-body text-center">
+                                <h5 class="text-dark" id="despesas-card">R$ 0</h5>
+                                <small class="text-muted">Despesas</small>
                             </div>
                         </div>
                     </div>
@@ -306,9 +346,10 @@
                         </div>
                     </div>
                     <div class="col-md-4 mb-4">
-                        <div class="card">
-                            <div class="card-header">
+                        <div class="card h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0"><i class="fas fa-trophy me-2"></i>Top Produtos</h6>
+                                <span class="badge bg-primary">5</span>
                             </div>
                             <div class="card-body">
                                 <div id="top-produtos" style="max-height: 300px; overflow-y: auto;">
@@ -319,21 +360,16 @@
                     </div>
                 </div>
 
-                <!-- Alertas e Notificações -->
+                <!-- Métodos de Pagamento e Ações Rápidas -->
                 <div class="row mt-3">
                     <div class="col-md-6 mb-3">
-                        <div class="card border-warning">
-                            <div class="card-header bg-warning text-dark">
-                                <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Alertas</h6>
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-credit-card me-2"></i>Métodos de Pagamento</h6>
                             </div>
                             <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <span>Contas Pendentes:</span>
-                                    <strong class="text-warning" id="contas-pendentes">0</strong>
-                                </div>
-                                <div class="d-flex justify-content-between mt-2">
-                                    <span>Alertas de Estoque:</span>
-                                    <strong class="text-danger" id="alertas-estoque">0</strong>
+                                <div id="metodos-pagamento">
+                                    <p class="text-muted text-center">Carregando...</p>
                                 </div>
                             </div>
                         </div>
@@ -363,6 +399,16 @@
                                     <div class="col-6">
                                         <button class="btn btn-outline-warning w-100" onclick="scrollToSection('relatorios')">
                                             <i class="fas fa-chart-bar me-1"></i>Relatórios
+                                        </button>
+                                    </div>
+                                    <div class="col-6">
+                                        <button class="btn btn-outline-secondary w-100" onclick="scrollToSection('backup')">
+                                            <i class="fas fa-database me-1"></i>Backup
+                                        </button>
+                                    </div>
+                                    <div class="col-6">
+                                        <button class="btn btn-outline-dark w-100" onclick="carregarDashboard()">
+                                            <i class="fas fa-sync me-1"></i>Atualizar
                                         </button>
                                     </div>
                                 </div>
@@ -411,6 +457,11 @@
                                         <button type="submit" class="btn btn-success btn-lg">
                                             <i class="fas fa-check me-1"></i> Registrar Venda
                                         </button>
+                                    </div>
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <kbd>Ctrl + Enter</kbd> para registrar rápido
+                                        </small>
                                     </div>
                                 </form>
                             </div>
@@ -504,6 +555,15 @@
                     </div>
                 </div>
 
+                <!-- Resumo Financeiro -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div id="resumo-financeiro">
+                            <!-- Resumo será carregado aqui -->
+                        </div>
+                    </div>
+                </div>
+
                 <div class="row">
                     <div class="col-md-6">
                         <div class="card">
@@ -586,7 +646,7 @@
                             </div>
                             <div class="card-body">
                                 <div class="row">
-                                    <div class="col-md-4 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <label for="filtro-relatorio" class="form-label">Tipo de Relatório</label>
                                         <select class="form-select" id="filtro-relatorio">
                                             <option value="vendas">Relatório de Vendas</option>
@@ -594,13 +654,21 @@
                                             <option value="financeiro">Fluxo de Caixa</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-4 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <label for="data-inicio" class="form-label">Data Início</label>
                                         <input type="date" class="form-control" id="data-inicio">
                                     </div>
-                                    <div class="col-md-4 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <label for="data-fim" class="form-label">Data Fim</label>
                                         <input type="date" class="form-control" id="data-fim">
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label for="agrupamento-relatorio" class="form-label">Agrupamento</label>
+                                        <select class="form-select" id="agrupamento-relatorio">
+                                            <option value="dia">Por Dia</option>
+                                            <option value="mes">Por Mês</option>
+                                            <option value="ano">Por Ano</option>
+                                        </select>
                                     </div>
                                 </div>
                                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
@@ -628,6 +696,67 @@
                     </div>
                 </div>
             </section>
+
+            <!-- Backup Section -->
+            <section id="backup" class="mb-5">
+                <div class="row">
+                    <div class="col-12">
+                        <h3 class="nav-section"><i class="fas fa-database me-2"></i>Sistema de Backup</h3>
+                        <p class="text-muted">Cópia de segurança e restauração de dados</p>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Backups do Sistema</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Backups automáticos</strong> são realizados a cada 6 horas para administradores.
+                                </div>
+                                <div id="lista-backups" style="max-height: 400px; overflow-y: auto;">
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fas fa-database fa-3x mb-3"></i>
+                                        <p>Nenhum backup encontrado</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Ações de Backup</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-success btn-lg" onclick="gerarBackup()">
+                                        <i class="fas fa-database me-2"></i>Gerar Backup
+                                    </button>
+                                    <button class="btn btn-outline-primary" onclick="bizFlowApp.exportarPDF('completo')">
+                                        <i class="fas fa-file-pdf me-2"></i>Exportar PDF Completo
+                                    </button>
+                                    <button class="btn btn-outline-success" onclick="bizFlowApp.exportarExcel('completo')">
+                                        <i class="fas fa-file-excel me-2"></i>Exportar Excel Completo
+                                    </button>
+                                </div>
+                                <div class="mt-3">
+                                    <div class="alert alert-warning">
+                                        <small>
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                            <strong>Atenção:</strong> Backups contêm todos os dados do sistema. 
+                                            Mantenha-os em local seguro.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
 
         <!-- Footer -->
@@ -636,8 +765,8 @@
                 <div class="row">
                     <div class="col-md-6">
                         <h5><i class="fas fa-chart-line me-2"></i>BizFlow</h5>
-                        <p class="mb-0">Sistema de Gestão Integrada - FASE 3</p>
-                        <small class="text-muted">Relatórios Avançados & Módulo Financeiro</small>
+                        <p class="mb-0">Sistema de Gestão Integrada - FASE 3 COMPLETA</p>
+                        <small class="text-muted">Dashboard Avançado, Módulo Financeiro, Relatórios PDF/Excel, Sistema de Backup</small>
                     </div>
                     <div class="col-md-6 text-md-end">
                         <p class="mb-0">
@@ -651,6 +780,53 @@
                 </div>
             </div>
         </footer>
+    </div>
+
+    <!-- Modal de Configurações -->
+    <div class="modal fade" id="configModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-cog me-2"></i>Configurações do Sistema</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="config-tema" class="form-label">Tema da Interface</label>
+                        <select class="form-select" id="config-tema">
+                            <option value="light">Claro</option>
+                            <option value="dark">Escuro</option>
+                            <option value="auto">Automático</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="config-notificacoes" checked>
+                            <label class="form-check-label" for="config-notificacoes">
+                                Notificações do Sistema
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="config-atualizacao" checked>
+                            <label class="form-check-label" for="config-atualizacao">
+                                Atualização Automática
+                            </label>
+                        </div>
+                    </div>
+                    <div class="alert alert-info">
+                        <small>
+                            <i class="fas fa-info-circle me-2"></i>
+                            As configurações são salvas automaticamente para seu usuário.
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Scripts -->
@@ -704,6 +880,17 @@
                         this.handleFinanceiro();
                     });
                 }
+
+                // Configurações
+                const atualizacaoSwitch = document.getElementById('config-atualizacao');
+                if (atualizacaoSwitch) {
+                    atualizacaoSwitch.addEventListener('change', (e) => {
+                        if (window.bizFlowApp) {
+                            window.bizFlowApp.configuracoes.atualizacaoAuto = e.target.checked;
+                            window.bizFlowApp.salvarConfiguracoes();
+                        }
+                    });
+                }
             }
 
             async checkAuthStatus() {
@@ -738,7 +925,7 @@
                     
                     if (data.status === 'OK') {
                         document.getElementById('system-status').innerHTML = 
-                            '<span class="badge bg-success">Sistema Online - FASE 3</span>';
+                            '<span class="badge bg-success">Sistema Online - FASE 3 COMPLETA</span>';
                     } else {
                         document.getElementById('system-status').innerHTML = 
                             '<span class="badge bg-danger">Sistema Offline</span>';
@@ -780,7 +967,7 @@
                         localStorage.setItem('bizflow_user', JSON.stringify(this.user));
                         
                         this.showApp();
-                        this.showAlert('Login realizado com sucesso! FASE 3 ativada.', 'success');
+                        this.showAlert('Login realizado com sucesso! FASE 3 COMPLETA ativada.', 'success');
                     } else {
                         throw new Error(data.error || 'Erro no login');
                     }
@@ -968,7 +1155,7 @@
                 // Atualizar interface
                 document.getElementById('user-name').textContent = this.user.full_name;
                 
-                // Inicializar BizFlow App FASE 3
+                // Inicializar BizFlow App FASE 3 COMPLETA
                 if (window.bizFlowApp) {
                     window.bizFlowApp.setAuthToken(this.token);
                     window.bizFlowApp.init();
@@ -979,6 +1166,12 @@
                 this.carregarVendas();
                 this.carregarEstoque();
                 this.carregarContasFinanceiras();
+                
+                // Configurar tema automático se necessário
+                if (window.bizFlowApp.configuracoes.tema === 'auto') {
+                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    document.body.setAttribute('data-bs-theme', prefersDark ? 'dark' : 'light');
+                }
             }
 
             showLogin() {
@@ -1012,7 +1205,7 @@
 
             async carregarVendas() {
                 try {
-                    const response = await fetch('/api/vendas', {
+                    const response = await fetch('/api/vendas?limit=10', {
                         headers: {
                             'Authorization': `Bearer ${this.token}`
                         }
@@ -1054,7 +1247,8 @@
                     const data = await response.json();
 
                     if (data.success && window.bizFlowApp) {
-                        window.bizFlowApp.exibirContasFinanceiras(data.data);
+                        window.bizFlowApp.exibirContasFinanceiras(data.data.contas);
+                        window.bizFlowApp.atualizarResumoFinanceiro(data.data.resumo);
                     }
                 } catch (error) {
                     console.error('Erro ao carregar contas financeiras:', error);
@@ -1063,17 +1257,20 @@
 
             showAlert(message, type = 'info') {
                 // Remove alertas anteriores
-                const existingAlert = document.querySelector('.alert-dismissible');
+                const existingAlert = document.querySelector('.alert-flutuante');
                 if (existingAlert) {
                     existingAlert.remove();
                 }
 
                 const alert = document.createElement('div');
-                alert.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+                alert.className = `alert alert-${type} alert-flutuante alert-dismissible fade show`;
                 alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
                 alert.innerHTML = `
-                    ${message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-${this.obterIconeAlerta(type)} me-2"></i>
+                        <div class="flex-grow-1">${message}</div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
                 `;
 
                 document.body.appendChild(alert);
@@ -1084,6 +1281,16 @@
                         alert.remove();
                     }
                 }, 5000);
+            }
+
+            obterIconeAlerta(tipo) {
+                const icones = {
+                    success: 'check-circle',
+                    danger: 'exclamation-triangle',
+                    warning: 'exclamation-circle',
+                    info: 'info-circle'
+                };
+                return icones[tipo] || 'info-circle';
             }
 
             showLoading(form, text) {
@@ -1122,7 +1329,27 @@
 
         function exportarRelatorio() {
             if (window.bizFlowApp) {
-                window.bizFlowApp.mostrarAlerta('Exportação de relatórios em desenvolvimento!', 'info');
+                const tipo = document.getElementById('filtro-relatorio')?.value || 'vendas';
+                window.bizFlowApp.exportarPDF(tipo);
+            }
+        }
+
+        function gerarBackup() {
+            if (window.bizFlowApp) {
+                window.bizFlowApp.gerarBackup();
+            }
+        }
+
+        function alternarTema() {
+            const body = document.body;
+            const temaAtual = body.getAttribute('data-bs-theme');
+            const novoTema = temaAtual === 'dark' ? 'light' : 'dark';
+            
+            body.setAttribute('data-bs-theme', novoTema);
+            
+            if (window.bizFlowApp) {
+                window.bizFlowApp.configuracoes.tema = novoTema;
+                window.bizFlowApp.salvarConfiguracoes();
             }
         }
 
