@@ -1,11 +1,12 @@
 // BizFlow - Sistema de Gestão Integrada
-// JavaScript Application Controller - Versão Render Compatible
+// JavaScript Application Controller - Versão PostgreSQL Compatible
 
 class BizFlowApp {
     constructor() {
         this.API_BASE_URL = window.location.origin;
         this.vendas = [];
         this.estoque = [];
+        this.produtos = [];
         this.dashboardData = {};
         this.isOnline = false;
         this.init();
@@ -255,12 +256,27 @@ class BizFlowApp {
             let resultado;
             
             if (this.isOnline) {
+                // Formatar dados para nova API
+                const vendaData = {
+                    items: [{
+                        id: Date.now(),
+                        name: produto,
+                        price: valor,
+                        quantity: quantidade,
+                        total: valor * quantidade
+                    }],
+                    total_amount: valor * quantidade,
+                    total_items: quantidade,
+                    payment_method: 'dinheiro',
+                    notes: ''
+                };
+
                 const response = await fetch(`${this.API_BASE_URL}/api/vendas`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ produto, valor, quantidade })
+                    body: JSON.stringify(vendaData)
                 });
 
                 if (!response.ok) {
@@ -295,7 +311,7 @@ class BizFlowApp {
             // Limpar formulário
             form.reset();
             quantidadeInput.value = 1;
-            produtoInput.focus(); // Voltar foco para o primeiro campo
+            produtoInput.focus();
 
             // Recarregar dados
             if (this.isOnline) {
@@ -340,30 +356,39 @@ class BizFlowApp {
             return;
         }
 
-        const html = vendas.slice(0, 10).map(venda => `
-            <div class="list-group-item fade-in">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="flex-grow-1">
-                        <h6 class="mb-1">${venda.produto}</h6>
-                        <small class="text-muted">
-                            <i class="fas fa-calendar me-1"></i>${venda.data} 
-                            <i class="fas fa-clock ms-2 me-1"></i>${venda.hora}
-                            ${!this.isOnline ? '<span class="badge bg-warning ms-2">Local</span>' : ''}
+        const html = vendas.slice(0, 10).map(venda => {
+            // Compatibilidade com formato antigo e novo
+            const produto = venda.produto || (venda.items && venda.items[0]?.product_name) || 'Produto não informado';
+            const valor = venda.valor || venda.total_amount || 0;
+            const quantidade = venda.quantidade || venda.total_items || 1;
+            const data = venda.data || (venda.sale_date ? new Date(venda.sale_date).toISOString().split('T')[0] : 'N/D');
+            const hora = venda.hora || (venda.sale_date ? new Date(venda.sale_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/D');
+            
+            return `
+                <div class="list-group-item fade-in">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">${produto}</h6>
+                            <small class="text-muted">
+                                <i class="fas fa-calendar me-1"></i>${data} 
+                                <i class="fas fa-clock ms-2 me-1"></i>${hora}
+                                ${!this.isOnline ? '<span class="badge bg-warning ms-2">Local</span>' : ''}
+                            </small>
+                        </div>
+                        <div class="text-end">
+                            <strong class="text-success">R$ ${valor.toFixed(2)}</strong>
+                            <br>
+                            <small class="text-muted">Qtd: ${quantidade}</small>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-primary">
+                            Total: <strong>R$ ${(valor * quantidade).toFixed(2)}</strong>
                         </small>
                     </div>
-                    <div class="text-end">
-                        <strong class="text-success">R$ ${venda.valor.toFixed(2)}</strong>
-                        <br>
-                        <small class="text-muted">Qtd: ${venda.quantidade}</small>
-                    </div>
                 </div>
-                <div class="mt-2">
-                    <small class="text-primary">
-                        Total: <strong>R$ ${(venda.valor * venda.quantidade).toFixed(2)}</strong>
-                    </small>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
         container.innerHTML = html;
     }
@@ -376,16 +401,38 @@ class BizFlowApp {
         }
 
         try {
-            const response = await fetch(`${this.API_BASE_URL}/api/estoque`);
+            // Primeiro tenta a nova rota /api/produtos
+            let response = await fetch(`${this.API_BASE_URL}/api/produtos`);
             
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+                // Se falhar, tenta a rota de compatibilidade /api/estoque
+                console.warn('Rota /api/produtos não disponível, tentando /api/estoque...');
+                response = await fetch(`${this.API_BASE_URL}/api/estoque`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
             }
             
             const data = await response.json();
             
             if (data.success) {
-                this.estoque = data.data;
+                // Converter formato novo para formato antigo (compatibilidade)
+                if (response.url.includes('/api/produtos')) {
+                    this.estoque = data.data.map(item => ({
+                        id: item.id,
+                        produto: item.name,
+                        quantidade: item.stock_quantity,
+                        minimo: 5, // Valor padrão
+                        categoria: item.categoria || 'Geral',
+                        preco: item.price || 0,
+                        custo: item.cost || 0
+                    }));
+                } else {
+                    this.estoque = data.data;
+                }
+                
+                this.produtos = data.data; // Manter dados originais
                 this.exibirEstoque(this.estoque);
                 return true;
             } else {
@@ -432,13 +479,30 @@ class BizFlowApp {
             let resultado;
             
             if (this.isOnline) {
-                const response = await fetch(`${this.API_BASE_URL}/api/estoque`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ produto, quantidade, minimo })
-                });
+                // Primeiro tenta a nova rota
+                let response;
+                try {
+                    response = await fetch(`${this.API_BASE_URL}/api/produtos`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ 
+                            produto: produto,
+                            quantidade: quantidade,
+                            minimo: minimo
+                        })
+                    });
+                } catch (error) {
+                    // Se falhar, tenta rota de compatibilidade
+                    response = await fetch(`${this.API_BASE_URL}/api/estoque`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ produto, quantidade, minimo })
+                    });
+                }
 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
@@ -525,6 +589,7 @@ class BizFlowApp {
                             <h6 class="mb-1">${item.produto}</h6>
                             <small class="text-muted">
                                 <i class="fas fa-tag me-1"></i>${item.categoria || 'Geral'}
+                                ${item.preco ? `<br><i class="fas fa-dollar-sign me-1"></i>R$ ${item.preco.toFixed(2)}` : ''}
                                 ${!this.isOnline ? '<span class="badge bg-warning ms-2">Local</span>' : ''}
                             </small>
                         </div>
@@ -619,7 +684,12 @@ class BizFlowApp {
     }
 
     atualizarDashboardLocal() {
-        const receitaTotal = this.vendas.reduce((sum, v) => sum + (v.valor * v.quantidade), 0);
+        const receitaTotal = this.vendas.reduce((sum, v) => {
+            const valor = v.valor || v.total_amount || 0;
+            const quantidade = v.quantidade || v.total_items || 1;
+            return sum + (valor * quantidade);
+        }, 0);
+        
         const totalVendas = this.vendas.length;
         const totalItensEstoque = this.estoque.length;
         const alertasEstoque = this.estoque.filter(item => item.quantidade <= item.minimo).length;
@@ -645,20 +715,28 @@ class BizFlowApp {
             return;
         }
 
-        const html = vendasRecentes.map(venda => `
-            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
-                <div>
-                    <small class="fw-bold">${venda.produto}</small>
-                    <br>
-                    <small class="text-muted">${venda.data} ${venda.hora}</small>
+        const html = vendasRecentes.map(venda => {
+            const produto = venda.produto || (venda.items && venda.items[0]?.product_name) || 'Produto não informado';
+            const valor = venda.valor || venda.total_amount || 0;
+            const quantidade = venda.quantidade || venda.total_items || 1;
+            const data = venda.data || (venda.sale_date ? new Date(venda.sale_date).toISOString().split('T')[0] : 'N/D');
+            const hora = venda.hora || (venda.sale_date ? new Date(venda.sale_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/D');
+            
+            return `
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                    <div>
+                        <small class="fw-bold">${produto}</small>
+                        <br>
+                        <small class="text-muted">${data} ${hora}</small>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-success fw-bold">R$ ${valor.toFixed(2)}</small>
+                        <br>
+                        <small class="text-muted">x${quantidade}</small>
+                    </div>
                 </div>
-                <div class="text-end">
-                    <small class="text-success fw-bold">R$ ${venda.valor.toFixed(2)}</small>
-                    <br>
-                    <small class="text-muted">x${venda.quantidade}</small>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
         container.innerHTML = html;
     }
@@ -879,9 +957,15 @@ class BizFlowApp {
                 document.body.removeChild(a);
             } else {
                 // Exportação offline
-                const csvData = this.vendas.map(v => 
-                    `"${v.data}","${v.hora}","${v.produto}",${v.quantidade},${v.valor},${v.valor * v.quantidade}`
-                ).join('\n');
+                const csvData = this.vendas.map(v => {
+                    const produto = v.produto || (v.items && v.items[0]?.product_name) || 'Produto não informado';
+                    const valor = v.valor || v.total_amount || 0;
+                    const quantidade = v.quantidade || v.total_items || 1;
+                    const data = v.data || (v.sale_date ? new Date(v.sale_date).toISOString().split('T')[0] : 'N/D');
+                    const hora = v.hora || (v.sale_date ? new Date(v.sale_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/D');
+                    
+                    return `"${data}","${hora}","${produto}",${quantidade},${valor},${valor * quantidade}`;
+                }).join('\n');
                 
                 const csvHeader = 'Data,Hora,Produto,Quantidade,Valor Unitário,Valor Total\n';
                 const csv = csvHeader + csvData;
@@ -892,115 +976,4 @@ class BizFlowApp {
                 a.href = url;
                 a.download = `vendas-bizflow-offline-${new Date().toISOString().split('T')[0]}.csv`;
                 document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-            }
-            
-            this.mostrarAlerta('Vendas exportadas com sucesso! 📊', 'success');
-        } catch (error) {
-            console.error('Erro ao exportar vendas:', error);
-            this.mostrarAlerta('Erro ao exportar vendas', 'danger');
-        }
-    }
-
-    exportarEstoqueJSON() {
-        try {
-            const dados = {
-                estoque: this.estoque,
-                exportadoEm: new Date().toISOString(),
-                totalItens: this.estoque.length,
-                modo: this.isOnline ? 'online' : 'offline'
-            };
-            
-            const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `estoque-bizflow-${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            
-            this.mostrarAlerta('Estoque exportado com sucesso! 📦', 'success');
-        } catch (error) {
-            console.error('Erro ao exportar estoque:', error);
-            this.mostrarAlerta('Erro ao exportar estoque', 'danger');
-        }
-    }
-}
-
-// ================= INICIALIZAÇÃO DA APLICAÇÃO =================
-
-// Funções globais para os botões
-function exportarVendas() {
-    if (window.bizFlowApp) {
-        window.bizFlowApp.exportarVendasCSV();
-    }
-}
-
-function exportarEstoque() {
-    if (window.bizFlowApp) {
-        window.bizFlowApp.exportarEstoqueJSON();
-    }
-}
-
-function gerarRelatorio() {
-    if (window.bizFlowApp) {
-        window.bizFlowApp.mostrarAlerta('Relatório gerado com sucesso! 📋', 'info');
-    }
-}
-
-function scrollToSection(sectionId) {
-    document.getElementById(sectionId).scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'start'
-    });
-}
-
-// Inicializar aplicação quando o DOM estiver carregado
-document.addEventListener('DOMContentLoaded', function() {
-    window.bizFlowApp = new BizFlowApp();
-    
-    // Configurar ano atual no footer
-    document.getElementById('ano-atual').textContent = new Date().getFullYear();
-    
-    // Efeito de fade-in para as seções
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
-            }
-        });
-    }, { threshold: 0.1 });
-
-    // Observar todas as seções
-    document.querySelectorAll('section').forEach(section => {
-        section.style.opacity = '0';
-        section.style.transform = 'translateY(20px)';
-        section.style.transition = 'all 0.6s ease-out';
-        observer.observe(section);
-    });
-});
-
-// Prevenir envio de formulários com Enter (exceto textareas)
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && !e.target.classList.contains('btn')) {
-        e.preventDefault();
-    }
-});
-
-// Service Worker registration (para futura implementação PWA)
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-        navigator.serviceWorker.register('/sw.js')
-            .then(function(registration) {
-                console.log('ServiceWorker registration successful');
-            })
-            .catch(function(error) {
-                console.log('ServiceWorker registration failed');
-            });
-    });
-}
+               
