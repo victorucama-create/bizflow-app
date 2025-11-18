@@ -783,26 +783,53 @@ async function empresaContext(req, res, next) {
   try {
     let empresaId = req.headers['x-empresa-id'] || req.query.empresa_id || req.body.empresa_id;
     
+    console.log('🏢 Contexto empresarial - ID fornecido:', empresaId);
+    
     // Se não foi fornecido, usar empresa padrão
     if (!empresaId) {
-      // Tentar buscar empresa padrão
-      const empresaResult = await pool.query(
-        'SELECT id FROM empresas WHERE is_active = true ORDER BY id LIMIT 1'
-      );
+      console.log('🔍 Buscando empresa padrão...');
       
-      if (empresaResult.rows.length > 0) {
-        empresaId = empresaResult.rows[0].id;
-      } else {
-        empresaId = 1; // Fallback
+      try {
+        // Verificar se a tabela empresas existe
+        const tableExists = await pool.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name = 'empresas'
+          );
+        `);
+        
+        if (tableExists.rows[0].exists) {
+          // Tentar buscar empresa padrão
+          const empresaResult = await pool.query(
+            'SELECT id FROM empresas WHERE is_active = true ORDER BY id LIMIT 1'
+          );
+          
+          if (empresaResult.rows.length > 0) {
+            empresaId = empresaResult.rows[0].id;
+            console.log('✅ Empresa padrão encontrada:', empresaId);
+          } else {
+            empresaId = 1; // Fallback
+            console.log('⚠️ Nenhuma empresa encontrada, usando fallback:', empresaId);
+          }
+        } else {
+          empresaId = 1; // Fallback se tabela não existe
+          console.log('⚠️ Tabela empresas não existe, usando fallback:', empresaId);
+        }
+      } catch (dbError) {
+        console.error('❌ Erro ao buscar empresa padrão:', dbError);
+        empresaId = 1; // Fallback em caso de erro
       }
     }
     
     req.empresa_id = parseInt(empresaId);
+    console.log('🏢 Contexto empresarial definido:', req.empresa_id);
     next();
   } catch (error) {
-    console.error('Erro no contexto empresarial:', error);
+    console.error('❌ Erro no contexto empresarial:', error);
     // Continuar mesmo com erro no contexto
     req.empresa_id = 1;
+    console.log('🏢 Contexto empresarial de fallback:', req.empresa_id);
     next();
   }
 }
