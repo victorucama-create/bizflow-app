@@ -1,4 +1,4 @@
-// server.js - ATUALIZADO PARA ES6 MODULES + POSTGRESQL
+// server.js - ATUALIZADO PARA ES6 MODULES + POSTGRESQL + INICIALIZAÇÃO AUTOMÁTICA
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -32,6 +32,112 @@ pool.on('connect', () => {
 pool.on('error', (err) => {
   console.error('❌ Erro na conexão PostgreSQL:', err);
 });
+
+// ================= INICIALIZAÇÃO AUTOMÁTICA DO BANCO =================
+async function initializeDatabaseIfNeeded() {
+    try {
+        console.log('🔍 Verificando se o banco precisa de inicialização...');
+        
+        // Testar se a tabela products existe
+        const result = await pool.query(`
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'products'
+            );
+        `);
+        
+        const tablesExist = result.rows[0].exists;
+        
+        if (!tablesExist) {
+            console.log('🔄 Tabelas não encontradas. Inicializando banco...');
+            await executeInitSQL();
+        } else {
+            console.log('✅ Tabelas já existem. Inicialização não necessária.');
+        }
+    } catch (error) {
+        console.error('❌ Erro ao verificar banco:', error);
+    }
+}
+
+async function executeInitSQL() {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        
+        const initSQL = `
+        CREATE TABLE categories (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            description TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE products (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(200) NOT NULL,
+            description TEXT,
+            price DECIMAL(10,2) NOT NULL,
+            cost DECIMAL(10,2),
+            stock_quantity INTEGER DEFAULT 0,
+            category_id INTEGER REFERENCES categories(id),
+            sku VARCHAR(100),
+            barcode VARCHAR(100),
+            is_active BOOLEAN DEFAULT true,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE sales (
+            id SERIAL PRIMARY KEY,
+            sale_code VARCHAR(50) UNIQUE NOT NULL,
+            total_amount DECIMAL(10,2) NOT NULL,
+            total_items INTEGER NOT NULL,
+            payment_method VARCHAR(50) NOT NULL,
+            sale_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            status VARCHAR(20) DEFAULT 'completed',
+            notes TEXT
+        );
+
+        CREATE TABLE sale_items (
+            id SERIAL PRIMARY KEY,
+            sale_id INTEGER REFERENCES sales(id) ON DELETE CASCADE,
+            product_id INTEGER REFERENCES products(id),
+            product_name VARCHAR(200) NOT NULL,
+            quantity INTEGER NOT NULL,
+            unit_price DECIMAL(10,2) NOT NULL,
+            total_price DECIMAL(10,2) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        INSERT INTO categories (name, description) VALUES 
+        ('Geral', 'Produtos diversos'),
+        ('Eletrônicos', 'Dispositivos eletrônicos'),
+        ('Alimentação', 'Produtos alimentícios'),
+        ('Limpeza', 'Produtos de limpeza');
+
+        INSERT INTO products (name, description, price, cost, stock_quantity, category_id, sku) VALUES 
+        ('Smartphone Android', 'Smartphone Android 128GB', 899.90, 650.00, 15, 2, 'SP-AND001'),
+        ('Notebook i5', 'Notebook Core i5 8GB RAM', 1899.90, 1400.00, 8, 2, 'NB-I5001'),
+        ('Café Premium', 'Café em grãos 500g', 24.90, 15.00, 50, 3, 'CF-PREM01'),
+        ('Detergente', 'Detergente líquido 500ml', 3.90, 1.80, 100, 4, 'DT-LIQ01'),
+        ('Água Mineral', 'Água mineral 500ml', 2.50, 0.80, 200, 3, 'AG-MIN01');
+        `;
+
+        await client.query(initSQL);
+        await client.query('COMMIT');
+        
+        console.log('✅ Banco inicializado automaticamente com sucesso!');
+        console.log('📊 Tabelas criadas: categories, products, sales, sale_items');
+        console.log('🎯 Dados iniciais: 4 categorias, 5 produtos exemplo');
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('❌ Erro na inicialização automática:', error);
+        throw error;
+    } finally {
+        client.release();
+    }
+}
 
 // Middlewares
 app.use(express.json());
@@ -183,6 +289,30 @@ app.put('/api/produtos/:id', async (req, res) => {
     }
 });
 
+// DELETE - Deletar produto (soft delete)
+app.delete('/api/produtos/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const result = await pool.query(
+            'UPDATE products SET is_active = false WHERE id = $1 RETURNING *',
+            [id]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Produto não encontrado' });
+        }
+        
+        res.json({
+            success: true,
+            message: "Produto deletado com sucesso! 🗑️"
+        });
+    } catch (error) {
+        console.error('Erro ao deletar produto:', error);
+        res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    }
+});
+
 // ================= API - VENDAS =================
 
 // GET - Listar vendas
@@ -302,13 +432,25 @@ app.get('/api/dashboard', async (req, res) => {
             WHERE is_active = true
         `);
         
+        // Vendas dos últimos 7 dias
+        const salesTrendResult = await pool.query(`
+            SELECT DATE(sale_date) as date, 
+                   COUNT(*) as sales_count,
+                   SUM(total_amount) as daily_revenue
+            FROM sales 
+            WHERE sale_date >= CURRENT_DATE - INTERVAL '7 days'
+            GROUP BY DATE(sale_date)
+            ORDER BY date
+        `);
+        
         const data = {
             receitaTotal: parseFloat(salesResult.rows[0].receita_total),
             totalVendas: parseInt(salesResult.rows[0].total_vendas),
             totalItensVendidos: parseInt(salesResult.rows[0].total_itens_vendidos),
             ticketMedio: parseFloat(salesResult.rows[0].ticket_medio),
             alertasEstoque: parseInt(lowStockResult.rows[0].alertas_estoque),
-            totalItensEstoque: parseInt(totalProductsResult.rows[0].total_itens_estoque)
+            totalItensEstoque: parseInt(totalProductsResult.rows[0].total_itens_estoque),
+            tendenciaVendas: salesTrendResult.rows
         };
         
         res.json({
@@ -336,6 +478,34 @@ app.get('/api/categorias', async (req, res) => {
     }
 });
 
+// ================= ROTA DE INICIALIZAÇÃO MANUAL =================
+app.post('/api/init-db', async (req, res) => {
+    // 🔒 Segurança básica - você pode remover depois
+    const { secret } = req.body;
+    if (secret !== 'bizflow-init-2024') {
+        return res.status(401).json({ success: false, error: 'Não autorizado' });
+    }
+
+    try {
+        console.log('🔄 Inicializando banco de dados via HTTP...');
+        await executeInitSQL();
+        
+        res.json({
+            success: true,
+            message: 'Banco de dados inicializado com sucesso!',
+            tables: ['categories', 'products', 'sales', 'sale_items'],
+            sample_data: '5 produtos e 4 categorias inseridos'
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao inicializar banco via HTTP:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Erro ao inicializar banco: ' + error.message 
+        });
+    }
+});
+
 // ================= MANIPULAÇÃO DE ERROS =================
 app.use('*', (req, res) => {
     res.status(404).json({ 
@@ -353,9 +523,15 @@ app.use((error, req, res, next) => {
     });
 });
 
-// ================= INICIALIZAÇÃO =================
-app.listen(PORT, HOST, () => {
-    console.log(`
+// ================= INICIALIZAÇÃO DO SERVIDOR =================
+async function startServer() {
+    try {
+        // Inicializar banco se necessário
+        await initializeDatabaseIfNeeded();
+        
+        // Iniciar servidor
+        app.listen(PORT, HOST, () => {
+            console.log(`
 ╔══════════════════════════════════════╗
 ║            🚀 BIZFLOW API           ║
 ║        Sistema de Gestão Integrada   ║
@@ -365,8 +541,17 @@ app.listen(PORT, HOST, () => {
 ║ 🗄️  Banco: PostgreSQL                 ║
 ║ 🩺 Health: /health                    ║
 ║ 📊 Dashboard: /                       ║
+║ 🔧 Init DB: POST /api/init-db        ║
 ╚══════════════════════════════════════╝
-    `);
-});
+            `);
+        });
+    } catch (error) {
+        console.error('❌ Erro ao iniciar servidor:', error);
+        process.exit(1);
+    }
+}
+
+// Iniciar o servidor
+startServer();
 
 export default app;
