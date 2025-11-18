@@ -5,139 +5,90 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BizFlow - Sistema de Gestão Integrada</title>
     
-    <!-- Favicon Solutions -->
+    <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>📊</text></svg>">
-    <link rel="shortcut icon" href="#">
-    <link rel="apple-touch-icon" href="#">
     
     <!-- CSS Libraries -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css" rel="stylesheet">
     <link href="/css/style.css" rel="stylesheet">
+    
+    <style>
+        .auth-container {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .auth-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 1rem;
+            box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175);
+            backdrop-filter: blur(10px);
+            width: 100%;
+            max-width: 400px;
+        }
+        .app-container {
+            display: none;
+        }
+    </style>
 </head>
 <body>
-    <!-- Login Modal -->
-    <div class="modal fade" id="loginModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">
-                        <i class="fas fa-lock me-2"></i>Login - BizFlow
-                    </h5>
+    <!-- Container de Autenticação -->
+    <div class="auth-container">
+        <div class="auth-card p-4">
+            <div class="text-center mb-4">
+                <h1 class="text-primary">
+                    <i class="fas fa-chart-line me-2"></i>BizFlow
+                </h1>
+                <p class="text-muted">Sistema de Gestão Integrada</p>
+            </div>
+
+            <!-- Formulário de Login -->
+            <form id="login-form">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Usuário</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-user"></i></span>
+                        <input type="text" class="form-control" id="username" 
+                               placeholder="Digite seu usuário" required
+                               autocomplete="username">
+                    </div>
                 </div>
-                <div class="modal-body">
-                    <form id="login-form">
-                        <div class="mb-3">
-                            <label for="username" class="form-label">Usuário</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-user"></i></span>
-                                <input type="text" class="form-control" id="username" 
-                                       placeholder="Digite seu usuário" required
-                                       autocomplete="username">
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Senha</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-key"></i></span>
-                                <input type="password" class="form-control" id="password" 
-                                       placeholder="Digite sua senha" required
-                                       autocomplete="current-password">
-                            </div>
-                        </div>
-                        <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="remember-me">
-                            <label class="form-check-label" for="remember-me">Lembrar de mim</label>
-                        </div>
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-sign-in-alt me-2"></i>Entrar
-                            </button>
-                        </div>
-                    </form>
-                    
-                    <div class="text-center mt-3">
-                        <small class="text-muted">
-                            Usuário demo: <strong>admin</strong> | Senha: <strong>admin123</strong>
-                        </small>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Senha</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-key"></i></span>
+                        <input type="password" class="form-control" id="password" 
+                               placeholder="Digite sua senha" required
+                               autocomplete="current-password">
                     </div>
-                    
-                    <div class="mt-4 p-3 bg-light rounded">
-                        <h6 class="mb-2">📋 Primeiro Acesso?</h6>
-                        <button class="btn btn-outline-secondary btn-sm w-100" id="btn-show-register">
-                            <i class="fas fa-user-plus me-1"></i>Criar Nova Conta
-                        </button>
-                    </div>
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-sign-in-alt me-2"></i>Entrar
+                    </button>
+                </div>
+            </form>
+
+            <div class="text-center mt-3">
+                <small class="text-muted">
+                    Usuário demo: <strong>admin</strong> | Senha: <strong>admin123</strong>
+                </small>
+            </div>
+
+            <div class="mt-4 p-3 bg-light rounded">
+                <div id="system-status" class="text-center">
+                    <span class="badge bg-warning">Verificando sistema...</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Register Modal -->
-    <div class="modal fade" id="registerModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">
-                        <i class="fas fa-user-plus me-2"></i>Criar Conta
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="register-form">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="reg-username" class="form-label">Usuário *</label>
-                                <input type="text" class="form-control" id="reg-username" 
-                                       placeholder="nome.usuario" required
-                                       autocomplete="username">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="reg-email" class="form-label">Email *</label>
-                                <input type="email" class="form-control" id="reg-email" 
-                                       placeholder="seu@email.com" required
-                                       autocomplete="email">
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="reg-fullname" class="form-label">Nome Completo *</label>
-                            <input type="text" class="form-control" id="reg-fullname" 
-                                   placeholder="Seu nome completo" required
-                                   autocomplete="name">
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="reg-password" class="form-label">Senha *</label>
-                                <input type="password" class="form-control" id="reg-password" 
-                                       placeholder="Mínimo 6 caracteres" required minlength="6"
-                                       autocomplete="new-password">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="reg-confirm-password" class="form-label">Confirmar Senha *</label>
-                                <input type="password" class="form-control" id="reg-confirm-password" 
-                                       placeholder="Digite novamente" required
-                                       autocomplete="new-password">
-                            </div>
-                        </div>
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-success btn-lg">
-                                <i class="fas fa-user-plus me-2"></i>Criar Conta
-                            </button>
-                        </div>
-                    </form>
-                    
-                    <div class="text-center mt-3">
-                        <button class="btn btn-link btn-sm" id="btn-show-login">
-                            <i class="fas fa-arrow-left me-1"></i>Voltar para o Login
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Application (Hidden until authenticated) -->
-    <div id="app-content" style="display: none;">
+    <!-- Container da Aplicação -->
+    <div class="app-container">
         <!-- Navigation -->
         <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
             <div class="container">
@@ -149,7 +100,7 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav ms-auto">
+                    <ul class="navbar-nav me-auto">
                         <li class="nav-item">
                             <a class="nav-link active" href="#dashboard">
                                 <i class="fas fa-home me-1"></i> Dashboard
@@ -165,23 +116,13 @@
                                 <i class="fas fa-boxes me-1"></i> Estoque
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#financeiro">
-                                <i class="fas fa-dollar-sign me-1"></i> Financeiro
-                            </a>
-                        </li>
+                    </ul>
+                    <ul class="navbar-nav">
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                                 <i class="fas fa-user me-1"></i> <span id="user-name">Usuário</span>
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#" id="btn-profile">
-                                    <i class="fas fa-user-circle me-2"></i>Meu Perfil
-                                </a></li>
-                                <li><a class="dropdown-item" href="#" id="btn-users" style="display: none;">
-                                    <i class="fas fa-users me-2"></i>Gerenciar Usuários
-                                </a></li>
-                                <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item text-danger" href="#" id="btn-logout">
                                     <i class="fas fa-sign-out-alt me-2"></i>Sair
                                 </a></li>
@@ -200,22 +141,16 @@
                     <div class="col-12">
                         <div class="d-flex justify-content-between align-items-center">
                             <h2><i class="fas fa-tachometer-alt me-2"></i> Dashboard</h2>
-                            <div>
-                                <span class="badge bg-success me-2" id="status-conexao">
-                                    <i class="fas fa-circle me-1"></i> Online
-                                </span>
-                                <span class="badge bg-info" id="user-role">
-                                    <i class="fas fa-shield-alt me-1"></i> Admin
-                                </span>
-                            </div>
+                            <span class="badge bg-success" id="status-conexao">
+                                <i class="fas fa-circle me-1"></i> Online
+                            </span>
                         </div>
-                        <p class="text-muted">Visão geral do seu negócio em tempo real</p>
+                        <p class="text-muted">Visão geral do seu negócio</p>
                     </div>
                 </div>
 
                 <div class="row" id="dashboard-cards">
-                    <!-- Cards will be populated by JavaScript -->
-                    <div class="col-md-3 mb-3">
+                    <div class="col-md-4 mb-3">
                         <div class="card text-white bg-primary">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between">
@@ -232,7 +167,7 @@
                         </div>
                     </div>
                     
-                    <div class="col-md-3 mb-3">
+                    <div class="col-md-4 mb-3">
                         <div class="card text-white bg-success">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between">
@@ -249,36 +184,19 @@
                         </div>
                     </div>
                     
-                    <div class="col-md-3 mb-3">
+                    <div class="col-md-4 mb-3">
                         <div class="card text-white bg-warning">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between">
                                     <div>
-                                        <h5><i class="fas fa-boxes"></i> Estoque</h5>
-                                        <h3 id="total-itens">0</h3>
+                                        <h5><i class="fas fa-boxes"></i> Produtos</h5>
+                                        <h3 id="total-produtos">0</h3>
                                     </div>
                                     <div class="display-4 opacity-50">
                                         <i class="fas fa-warehouse"></i>
                                     </div>
                                 </div>
                                 <small>Itens cadastrados</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-3 mb-3">
-                        <div class="card text-white bg-danger">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <h5><i class="fas fa-exclamation-triangle"></i> Alertas</h5>
-                                        <h3 id="total-alertas">0</h3>
-                                    </div>
-                                    <div class="display-4 opacity-50">
-                                        <i class="fas fa-bell"></i>
-                                    </div>
-                                </div>
-                                <small>Itens com baixo estoque</small>
                             </div>
                         </div>
                     </div>
@@ -293,28 +211,22 @@
                             </div>
                             <div class="card-body">
                                 <div class="row">
-                                    <div class="col-md-3 text-center mb-3">
-                                        <button class="btn btn-outline-primary btn-lg p-3" id="btn-nova-venda">
+                                    <div class="col-md-4 text-center mb-3">
+                                        <button class="btn btn-outline-primary btn-lg p-3" onclick="scrollToSection('vendas')">
                                             <i class="fas fa-cash-register fa-2x mb-2"></i><br>
                                             Nova Venda
                                         </button>
                                     </div>
-                                    <div class="col-md-3 text-center mb-3">
-                                        <button class="btn btn-outline-success btn-lg p-3" id="btn-add-estoque">
+                                    <div class="col-md-4 text-center mb-3">
+                                        <button class="btn btn-outline-success btn-lg p-3" onclick="scrollToSection('estoque')">
                                             <i class="fas fa-plus-circle fa-2x mb-2"></i><br>
                                             Add Estoque
                                         </button>
                                     </div>
-                                    <div class="col-md-3 text-center mb-3">
-                                        <button class="btn btn-outline-info btn-lg p-3" id="btn-relatorios">
-                                            <i class="fas fa-chart-bar fa-2x mb-2"></i><br>
-                                            Relatórios
-                                        </button>
-                                    </div>
-                                    <div class="col-md-3 text-center mb-3">
-                                        <button class="btn btn-outline-warning btn-lg p-3" id="btn-exportar">
-                                            <i class="fas fa-download fa-2x mb-2"></i><br>
-                                            Exportar
+                                    <div class="col-md-4 text-center mb-3">
+                                        <button class="btn btn-outline-info btn-lg p-3" onclick="carregarDashboard()">
+                                            <i class="fas fa-sync fa-2x mb-2"></i><br>
+                                            Atualizar
                                         </button>
                                     </div>
                                 </div>
@@ -342,9 +254,9 @@
                             <div class="card-body">
                                 <form id="venda-form">
                                     <div class="mb-3">
-                                        <label for="produto" class="form-label">Produto/Serviço *</label>
+                                        <label for="produto" class="form-label">Produto *</label>
                                         <input type="text" class="form-control" id="produto" 
-                                               placeholder="Ex: Café Expresso, Consultoria..." required>
+                                               placeholder="Nome do produto" required>
                                     </div>
                                     <div class="mb-3">
                                         <label for="valor" class="form-label">Valor (R$) *</label>
@@ -378,7 +290,7 @@
                                 <div id="lista-vendas" style="max-height: 400px; overflow-y: auto;">
                                     <div class="text-center text-muted py-4">
                                         <i class="fas fa-receipt fa-3x mb-3"></i>
-                                        <p>Nenhuma venda registrada ainda</p>
+                                        <p>Nenhuma venda registrada</p>
                                     </div>
                                 </div>
                             </div>
@@ -392,7 +304,7 @@
                 <div class="row">
                     <div class="col-12">
                         <h3><i class="fas fa-boxes me-2"></i>Gestão de Estoque</h3>
-                        <p class="text-muted">Controle seus produtos e alertas</p>
+                        <p class="text-muted">Controle seus produtos</p>
                     </div>
                 </div>
 
@@ -400,29 +312,28 @@
                     <div class="col-md-6">
                         <div class="card">
                             <div class="card-header bg-primary text-white">
-                                <h5 class="mb-0"><i class="fas fa-plus me-1"></i>Adicionar Item</h5>
+                                <h5 class="mb-0"><i class="fas fa-plus me-1"></i>Adicionar Produto</h5>
                             </div>
                             <div class="card-body">
                                 <form id="estoque-form">
                                     <div class="mb-3">
                                         <label for="produto-estoque" class="form-label">Nome do Produto *</label>
                                         <input type="text" class="form-control" id="produto-estoque" 
-                                               placeholder="Ex: Café em Grãos, Leite..." required>
+                                               placeholder="Nome do produto" required>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="quantidade" class="form-label">Quantidade Inicial *</label>
+                                        <label for="preco" class="form-label">Preço (R$) *</label>
+                                        <input type="number" class="form-control" id="preco" 
+                                               step="0.01" min="0.01" placeholder="0,00" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="quantidade" class="form-label">Quantidade *</label>
                                         <input type="number" class="form-control" id="quantidade" 
                                                min="0" value="0" required>
                                     </div>
-                                    <div class="mb-3">
-                                        <label for="minimo" class="form-label">Estoque Mínimo *</label>
-                                        <input type="number" class="form-control" id="minimo" 
-                                               min="1" value="5" required>
-                                        <div class="form-text">Alerta será acionado quando chegar neste nível</div>
-                                    </div>
                                     <div class="d-grid gap-2">
                                         <button type="submit" class="btn btn-primary btn-lg">
-                                            <i class="fas fa-save me-1"></i> Adicionar ao Estoque
+                                            <i class="fas fa-save me-1"></i> Adicionar Produto
                                         </button>
                                     </div>
                                 </form>
@@ -433,110 +344,13 @@
                     <div class="col-md-6">
                         <div class="card">
                             <div class="card-header bg-warning text-dark">
-                                <h5 class="mb-0"><i class="fas fa-clipboard-list me-1"></i>Itens em Estoque</h5>
+                                <h5 class="mb-0"><i class="fas fa-clipboard-list me-1"></i>Produtos em Estoque</h5>
                             </div>
                             <div class="card-body">
                                 <div id="lista-estoque" style="max-height: 400px; overflow-y: auto;">
                                     <div class="text-center text-muted py-4">
                                         <i class="fas fa-box-open fa-3x mb-3"></i>
-                                        <p>Nenhum item cadastrado</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Users Management Section (Admin Only) -->
-            <section id="usuarios" class="mb-5" style="display: none;">
-                <div class="row">
-                    <div class="col-12">
-                        <h3><i class="fas fa-users me-2"></i>Gestão de Usuários</h3>
-                        <p class="text-muted">Gerencie usuários e permissões do sistema</p>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-header bg-dark text-white">
-                                <h5 class="mb-0"><i class="fas fa-user-cog me-1"></i>Lista de Usuários</h5>
-                            </div>
-                            <div class="card-body">
-                                <div id="lista-usuarios">
-                                    <div class="text-center text-muted py-4">
-                                        <i class="fas fa-users fa-3x mb-3"></i>
-                                        <p>Carregando usuários...</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- About Section -->
-            <section id="sobre" class="mb-5">
-                <div class="row">
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-header bg-light">
-                                <h4 class="mb-0"><i class="fas fa-info-circle me-2"></i>Sobre o BizFlow</h4>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <h5>🚀 Sistema de Gestão Integrada</h5>
-                                        <p>O BizFlow é uma solução completa para gestão de pequenos e médios negócios, integrando PDV, controle de estoque e análise financeira em uma única plataforma.</p>
-                                        
-                                        <h6 class="mt-4">📊 Funcionalidades Principais:</h6>
-                                        <ul>
-                                            <li>Ponto de Venda (PDV) simples e intuitivo</li>
-                                            <li>Controle de estoque com alertas automáticos</li>
-                                            <li>Relatórios financeiros em tempo real</li>
-                                            <li>Sistema de autenticação seguro</li>
-                                            <li>Gestão multi-usuário</li>
-                                            <li>Interface responsiva para todos os dispositivos</li>
-                                        </ul>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <h5>🛠 Tecnologias Utilizadas</h5>
-                                        <div class="row text-center">
-                                            <div class="col-4 mb-3">
-                                                <i class="fab fa-html5 fa-3x text-danger"></i>
-                                                <div>HTML5</div>
-                                            </div>
-                                            <div class="col-4 mb-3">
-                                                <i class="fab fa-css3-alt fa-3x text-primary"></i>
-                                                <div>CSS3</div>
-                                            </div>
-                                            <div class="col-4 mb-3">
-                                                <i class="fab fa-js-square fa-3x text-warning"></i>
-                                                <div>JavaScript</div>
-                                            </div>
-                                            <div class="col-4 mb-3">
-                                                <i class="fab fa-node-js fa-3x text-success"></i>
-                                                <div>Node.js</div>
-                                            </div>
-                                            <div class="col-4 mb-3">
-                                                <i class="fas fa-database fa-3x text-info"></i>
-                                                <div>PostgreSQL</div>
-                                            </div>
-                                            <div class="col-4 mb-3">
-                                                <i class="fas fa-shield-alt fa-3x text-purple"></i>
-                                                <div>Autenticação</div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="mt-4 p-3 bg-light rounded">
-                                            <h6>📈 Status do Sistema</h6>
-                                            <div id="status-sistema">
-                                                <span class="badge bg-success">Online</span>
-                                                <small class="text-muted ms-2">Versão 2.0.0</small>
-                                                <small class="text-muted ms-2">| Autenticação Ativa</small>
-                                            </div>
-                                        </div>
+                                        <p>Nenhum produto cadastrado</p>
                                     </div>
                                 </div>
                             </div>
@@ -545,68 +359,24 @@
                 </div>
             </section>
         </div>
-
-        <!-- Footer -->
-        <footer class="bg-dark text-white mt-5 py-4">
-            <div class="container">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h5><i class="fas fa-chart-line me-2"></i>BizFlow</h5>
-                        <p class="mb-0">Sistema de Gestão Integrada para PMEs</p>
-                        <small class="text-muted">Transformando a gestão do seu negócio</small>
-                    </div>
-                    <div class="col-md-6 text-md-end">
-                        <p class="mb-1">
-                            <i class="fas fa-code me-1"></i>
-                            Desenvolvido com 
-                            <i class="fas fa-heart text-danger mx-1"></i>
-                            para empreendedores
-                        </p>
-                        <p class="mb-0">
-                            <i class="fas fa-shield-alt me-1"></i>
-                            Seguro • 
-                            <i class="fas fa-bolt me-1"></i>
-                            Rápido • 
-                            <i class="fas fa-mobile-alt me-1"></i>
-                            Responsivo
-                        </p>
-                    </div>
-                </div>
-                <hr class="my-3 bg-secondary">
-                <div class="row">
-                    <div class="col-12 text-center">
-                        <p class="mb-0">
-                            &copy; 2024 BizFlow. Todos os direitos reservados. 
-                            <span class="text-muted">|</span> 
-                            <span id="ano-atual">2024</span>
-                            <span class="text-muted">|</span> 
-                            <span id="user-info">Usuário: <span id="current-user">Não logado</span></span>
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </footer>
     </div>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/js/app.js"></script>
     
-    <!-- Inline Script for Authentication -->
     <script>
-        // Authentication state management
-        class AuthManager {
+        // Sistema de Autenticação
+        class AuthSystem {
             constructor() {
-                this.currentUser = null;
-                this.sessionToken = localStorage.getItem('bizflow_session_token');
-                this.loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
-                this.registerModal = new bootstrap.Modal(document.getElementById('registerModal'));
+                this.token = localStorage.getItem('bizflow_token');
+                this.user = JSON.parse(localStorage.getItem('bizflow_user') || 'null');
                 this.init();
             }
 
             init() {
+                this.checkAuthStatus();
                 this.setupEventListeners();
-                this.checkAuthentication();
+                this.checkSystemStatus();
             }
 
             setupEventListeners() {
@@ -616,60 +386,65 @@
                     this.handleLogin();
                 });
 
-                // Register form
-                document.getElementById('register-form').addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    this.handleRegister();
-                });
-
-                // Modal navigation
-                document.getElementById('btn-show-register').addEventListener('click', () => {
-                    this.loginModal.hide();
-                    this.registerModal.show();
-                });
-
-                document.getElementById('btn-show-login').addEventListener('click', () => {
-                    this.registerModal.hide();
-                    this.loginModal.show();
-                });
-
                 // Logout
                 document.getElementById('btn-logout').addEventListener('click', (e) => {
                     e.preventDefault();
                     this.handleLogout();
                 });
 
-                // Users management (admin only)
-                document.getElementById('btn-users').addEventListener('click', (e) => {
+                // Venda form
+                document.getElementById('venda-form').addEventListener('submit', (e) => {
                     e.preventDefault();
-                    this.showUsersManagement();
+                    this.handleVenda();
+                });
+
+                // Estoque form
+                document.getElementById('estoque-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleEstoque();
                 });
             }
 
-            async checkAuthentication() {
-                if (this.sessionToken) {
+            async checkAuthStatus() {
+                if (this.token && this.user) {
+                    // Verificar se o token ainda é válido
                     try {
                         const response = await fetch('/api/auth/me', {
                             headers: {
-                                'Authorization': `Bearer ${this.sessionToken}`
+                                'Authorization': `Bearer ${this.token}`
                             }
                         });
 
                         if (response.ok) {
-                            const data = await response.json();
-                            this.currentUser = data.data;
-                            this.showApplication();
+                            this.showApp();
                         } else {
-                            this.clearSession();
+                            this.clearAuth();
                             this.showLogin();
                         }
                     } catch (error) {
-                        console.error('Erro ao verificar autenticação:', error);
-                        this.clearSession();
+                        this.clearAuth();
                         this.showLogin();
                     }
                 } else {
                     this.showLogin();
+                }
+            }
+
+            async checkSystemStatus() {
+                try {
+                    const response = await fetch('/health');
+                    const data = await response.json();
+                    
+                    if (data.status === 'OK') {
+                        document.getElementById('system-status').innerHTML = 
+                            '<span class="badge bg-success">Sistema Online</span>';
+                    } else {
+                        document.getElementById('system-status').innerHTML = 
+                            '<span class="badge bg-danger">Sistema Offline</span>';
+                    }
+                } catch (error) {
+                    document.getElementById('system-status').innerHTML = 
+                        '<span class="badge bg-danger">Erro de Conexão</span>';
                 }
             }
 
@@ -697,15 +472,14 @@
                     const data = await response.json();
 
                     if (data.success) {
-                        this.sessionToken = data.data.session_token;
-                        this.currentUser = data.data.user;
+                        this.token = data.data.session_token;
+                        this.user = data.data.user;
                         
-                        localStorage.setItem('bizflow_session_token', this.sessionToken);
-                        localStorage.setItem('bizflow_user', JSON.stringify(this.currentUser));
+                        localStorage.setItem('bizflow_token', this.token);
+                        localStorage.setItem('bizflow_user', JSON.stringify(this.user));
                         
-                        this.loginModal.hide();
-                        this.showApplication();
-                        this.showAlert('Login realizado com sucesso! 🎉', 'success');
+                        this.showApp();
+                        this.showAlert('Login realizado com sucesso!', 'success');
                     } else {
                         throw new Error(data.error || 'Erro no login');
                     }
@@ -716,119 +490,297 @@
                 }
             }
 
-            async handleRegister() {
-                const form = document.getElementById('register-form');
-                const username = document.getElementById('reg-username').value;
-                const email = document.getElementById('reg-email').value;
-                const fullName = document.getElementById('reg-fullname').value;
-                const password = document.getElementById('reg-password').value;
-                const confirmPassword = document.getElementById('reg-confirm-password').value;
-
-                // Validation
-                if (!username || !email || !fullName || !password || !confirmPassword) {
-                    this.showAlert('Preencha todos os campos!', 'warning');
-                    return;
-                }
-
-                if (password !== confirmPassword) {
-                    this.showAlert('As senhas não coincidem!', 'warning');
-                    return;
-                }
-
-                if (password.length < 6) {
-                    this.showAlert('A senha deve ter pelo menos 6 caracteres!', 'warning');
-                    return;
-                }
-
-                this.showLoading(form, 'Criando conta...');
-
-                try {
-                    const response = await fetch('/api/auth/register', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ username, email, password, full_name: fullName })
-                    });
-
-                    const data = await response.json();
-
-                    if (data.success) {
-                        this.showAlert('Conta criada com sucesso! Faça login para continuar.', 'success');
-                        this.registerModal.hide();
-                        this.loginModal.show();
-                        document.getElementById('register-form').reset();
-                    } else {
-                        throw new Error(data.error || 'Erro no registro');
-                    }
-                } catch (error) {
-                    this.showAlert(error.message, 'danger');
-                } finally {
-                    this.hideLoading(form, 'Criar Conta');
-                }
-            }
-
             async handleLogout() {
                 try {
                     await fetch('/api/auth/logout', {
                         method: 'POST',
                         headers: {
-                            'Authorization': `Bearer ${this.sessionToken}`
+                            'Authorization': `Bearer ${this.token}`
                         }
                     });
                 } catch (error) {
                     console.error('Erro no logout:', error);
                 } finally {
-                    this.clearSession();
+                    this.clearAuth();
                     this.showLogin();
                     this.showAlert('Logout realizado com sucesso!', 'info');
                 }
             }
 
-            clearSession() {
-                this.sessionToken = null;
-                this.currentUser = null;
-                localStorage.removeItem('bizflow_session_token');
-                localStorage.removeItem('bizflow_user');
+            async handleVenda() {
+                const form = document.getElementById('venda-form');
+                const produto = document.getElementById('produto').value;
+                const valor = parseFloat(document.getElementById('valor').value);
+                const quantidade = parseInt(document.getElementById('quantidade-venda').value) || 1;
+
+                if (!produto || !valor) {
+                    this.showAlert('Preencha todos os campos!', 'warning');
+                    return;
+                }
+
+                this.showLoading(form, 'Registrando...');
+
+                try {
+                    const vendaData = {
+                        items: [{
+                            id: Date.now(),
+                            name: produto,
+                            price: valor,
+                            quantity: quantidade,
+                            total: valor * quantidade
+                        }],
+                        total_amount: valor * quantidade,
+                        total_items: quantidade,
+                        payment_method: 'dinheiro'
+                    };
+
+                    const response = await fetch('/api/vendas', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.token}`
+                        },
+                        body: JSON.stringify(vendaData)
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        form.reset();
+                        this.showAlert('Venda registrada com sucesso!', 'success');
+                        this.carregarVendas();
+                        this.carregarDashboard();
+                    } else {
+                        throw new Error(data.error || 'Erro ao registrar venda');
+                    }
+                } catch (error) {
+                    this.showAlert(error.message, 'danger');
+                } finally {
+                    this.hideLoading(form, 'Registrar Venda');
+                }
             }
 
-            showApplication() {
-                document.getElementById('app-content').style.display = 'block';
-                document.getElementById('loginModal').style.display = 'none';
-                
-                // Update UI with user info
-                document.getElementById('user-name').textContent = this.currentUser.full_name;
-                document.getElementById('current-user').textContent = this.currentUser.username;
-                document.getElementById('user-role').innerHTML = `<i class="fas fa-shield-alt me-1"></i>${this.currentUser.role}`;
-                
-                // Show admin features
-                if (this.currentUser.role === 'admin') {
-                    document.getElementById('btn-users').style.display = 'block';
+            async handleEstoque() {
+                const form = document.getElementById('estoque-form');
+                const nome = document.getElementById('produto-estoque').value;
+                const preco = parseFloat(document.getElementById('preco').value);
+                const quantidade = parseInt(document.getElementById('quantidade').value);
+
+                if (!nome || !preco || quantidade === undefined) {
+                    this.showAlert('Preencha todos os campos!', 'warning');
+                    return;
                 }
 
-                // Initialize main application
-                if (window.bizFlowApp) {
-                    window.bizFlowApp.setAuthToken(this.sessionToken);
-                    window.bizFlowApp.init();
+                this.showLoading(form, 'Adicionando...');
+
+                try {
+                    const produtoData = {
+                        name: nome,
+                        price: preco,
+                        cost: preco * 0.7, // Custo estimado
+                        stock_quantity: quantidade,
+                        category_id: 1, // Geral
+                        sku: 'SKU' + Date.now()
+                    };
+
+                    const response = await fetch('/api/produtos', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.token}`
+                        },
+                        body: JSON.stringify(produtoData)
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        form.reset();
+                        this.showAlert('Produto adicionado com sucesso!', 'success');
+                        this.carregarEstoque();
+                        this.carregarDashboard();
+                    } else {
+                        throw new Error(data.error || 'Erro ao adicionar produto');
+                    }
+                } catch (error) {
+                    this.showAlert(error.message, 'danger');
+                } finally {
+                    this.hideLoading(form, 'Adicionar Produto');
                 }
+            }
+
+            showApp() {
+                document.querySelector('.auth-container').style.display = 'none';
+                document.querySelector('.app-container').style.display = 'block';
+                
+                // Atualizar interface
+                document.getElementById('user-name').textContent = this.user.full_name;
+                
+                // Carregar dados
+                this.carregarDashboard();
+                this.carregarVendas();
+                this.carregarEstoque();
             }
 
             showLogin() {
-                document.getElementById('app-content').style.display = 'none';
-                this.loginModal.show();
+                document.querySelector('.auth-container').style.display = 'flex';
+                document.querySelector('.app-container').style.display = 'none';
             }
 
-            showUsersManagement() {
-                document.getElementById('usuarios').style.display = 'block';
-                scrollToSection('usuarios');
-                if (window.bizFlowApp) {
-                    window.bizFlowApp.carregarUsuarios();
+            clearAuth() {
+                this.token = null;
+                this.user = null;
+                localStorage.removeItem('bizflow_token');
+                localStorage.removeItem('bizflow_user');
+            }
+
+            async carregarDashboard() {
+                try {
+                    const response = await fetch('/api/dashboard', {
+                        headers: {
+                            'Authorization': `Bearer ${this.token}`
+                        }
+                    });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        document.getElementById('total-receita').textContent = 
+                            `R$ ${data.data.receitaTotal.toFixed(2)}`;
+                        document.getElementById('total-vendas').textContent = 
+                            data.data.totalVendas;
+                        document.getElementById('total-produtos').textContent = 
+                            data.data.totalProdutos;
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar dashboard:', error);
                 }
             }
 
+            async carregarVendas() {
+                try {
+                    const response = await fetch('/api/vendas', {
+                        headers: {
+                            'Authorization': `Bearer ${this.token}`
+                        }
+                    });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.exibirVendas(data.data);
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar vendas:', error);
+                }
+            }
+
+            async carregarEstoque() {
+                try {
+                    const response = await fetch('/api/produtos', {
+                        headers: {
+                            'Authorization': `Bearer ${this.token}`
+                        }
+                    });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.exibirEstoque(data.data);
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar estoque:', error);
+                }
+            }
+
+            exibirVendas(vendas) {
+                const container = document.getElementById('lista-vendas');
+                
+                if (!vendas || vendas.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-receipt fa-3x mb-3"></i>
+                            <p>Nenhuma venda registrada</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const html = vendas.slice(0, 10).map(venda => `
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">Venda ${venda.sale_code}</h6>
+                                <small class="text-muted">
+                                    ${new Date(venda.sale_date).toLocaleDateString('pt-BR')}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <strong class="text-success">R$ ${venda.total_amount}</strong>
+                                <br>
+                                <small class="text-muted">${venda.total_items} itens</small>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                container.innerHTML = html;
+            }
+
+            exibirEstoque(produtos) {
+                const container = document.getElementById('lista-estoque');
+                
+                if (!produtos || produtos.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-box-open fa-3x mb-3"></i>
+                            <p>Nenhum produto cadastrado</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const html = produtos.map(produto => `
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">${produto.name}</h6>
+                                <small class="text-muted">
+                                    ${produto.categoria || 'Geral'}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <strong class="text-primary">R$ ${produto.price}</strong>
+                                <br>
+                                <small class="text-muted">Estoque: ${produto.stock_quantity}</small>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                container.innerHTML = html;
+            }
+
             showAlert(message, type = 'info') {
-                // Simple alert implementation - can be enhanced
-                alert(`[${type.toUpperCase()}] ${message}`);
+                // Remove alertas anteriores
+                const existingAlert = document.querySelector('.alert-dismissible');
+                if (existingAlert) {
+                    existingAlert.remove();
+                }
+
+                const alert = document.createElement('div');
+                alert.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+                alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+                alert.innerHTML = `
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+
+                document.body.appendChild(alert);
+
+                // Auto-remove após 5 segundos
+                setTimeout(() => {
+                    if (alert.parentNode) {
+                        alert.remove();
+                    }
+                }, 5000);
             }
 
             showLoading(form, text) {
@@ -840,33 +792,29 @@
             hideLoading(form, text) {
                 const button = form.querySelector('button[type="submit"]');
                 button.disabled = false;
-                button.innerHTML = text;
-            }
-
-            getAuthToken() {
-                return this.sessionToken;
-            }
-
-            getCurrentUser() {
-                return this.currentUser;
+                const icon = form.id === 'login-form' ? 'sign-in-alt' : 'check';
+                button.innerHTML = `<i class="fas fa-${icon} me-1"></i>${text}`;
             }
         }
 
-        // Initialize auth manager when DOM is loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            window.authManager = new AuthManager();
-            
-            // Set current year in footer
-            document.getElementById('ano-atual').textContent = new Date().getFullYear();
-        });
-
-        // Global functions
+        // Funções globais
         function scrollToSection(sectionId) {
             document.getElementById(sectionId).scrollIntoView({ 
-                behavior: 'smooth',
-                block: 'start'
+                behavior: 'smooth' 
             });
         }
+
+        function carregarDashboard() {
+            if (window.authSystem) {
+                window.authSystem.carregarDashboard();
+                window.authSystem.showAlert('Dados atualizados!', 'success');
+            }
+        }
+
+        // Inicializar quando o DOM estiver carregado
+        document.addEventListener('DOMContentLoaded', function() {
+            window.authSystem = new AuthSystem();
+        });
     </script>
 </body>
 </html>
