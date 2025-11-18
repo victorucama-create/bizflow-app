@@ -155,25 +155,25 @@
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-md-3 text-center mb-3">
-                                    <button class="btn btn-outline-primary btn-lg p-3" onclick="scrollToSection('vendas')">
+                                    <button class="btn btn-outline-primary btn-lg p-3" id="btn-nova-venda">
                                         <i class="fas fa-cash-register fa-2x mb-2"></i><br>
                                         Nova Venda
                                     </button>
                                 </div>
                                 <div class="col-md-3 text-center mb-3">
-                                    <button class="btn btn-outline-success btn-lg p-3" onclick="scrollToSection('estoque')">
+                                    <button class="btn btn-outline-success btn-lg p-3" id="btn-add-estoque">
                                         <i class="fas fa-plus-circle fa-2x mb-2"></i><br>
                                         Add Estoque
                                     </button>
                                 </div>
                                 <div class="col-md-3 text-center mb-3">
-                                    <button class="btn btn-outline-info btn-lg p-3" onclick="scrollToSection('financeiro')">
+                                    <button class="btn btn-outline-info btn-lg p-3" id="btn-relatorios">
                                         <i class="fas fa-chart-bar fa-2x mb-2"></i><br>
                                         Relatórios
                                     </button>
                                 </div>
                                 <div class="col-md-3 text-center mb-3">
-                                    <button class="btn btn-outline-warning btn-lg p-3" onclick="exportarDados()">
+                                    <button class="btn btn-outline-warning btn-lg p-3" id="btn-exportar">
                                         <i class="fas fa-download fa-2x mb-2"></i><br>
                                         Exportar
                                     </button>
@@ -388,13 +388,13 @@
                         </div>
                         <div class="card-body">
                             <div class="d-grid gap-2">
-                                <button class="btn btn-outline-primary" onclick="exportarVendas()">
+                                <button class="btn btn-outline-primary" id="btn-exportar-vendas">
                                     <i class="fas fa-file-csv me-1"></i> Vendas (CSV)
                                 </button>
-                                <button class="btn btn-outline-success" onclick="exportarEstoque()">
+                                <button class="btn btn-outline-success" id="btn-exportar-estoque">
                                     <i class="fas fa-file-excel me-1"></i> Estoque (JSON)
                                 </button>
-                                <button class="btn btn-outline-info" onclick="gerarRelatorio()">
+                                <button class="btn btn-outline-info" id="btn-gerar-relatorio">
                                     <i class="fas fa-chart-line me-1"></i> Relatório
                                 </button>
                             </div>
@@ -515,7 +515,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/app.js"></script>
     
-    <!-- Inline Script for Basic Functions -->
+    <!-- Inline Script for Event Listeners and Basic Functions -->
     <script>
         // Basic utility functions
         function scrollToSection(sectionId) {
@@ -567,6 +567,62 @@
                 .catch(error => {
                     console.warn('⚠️ API não disponível, usando modo offline');
                 });
+        });
+
+        // Event Listeners Configuration
+        document.addEventListener('DOMContentLoaded', function() {
+            // Navigation buttons
+            document.getElementById('btn-nova-venda').addEventListener('click', function() {
+                scrollToSection('vendas');
+            });
+
+            document.getElementById('btn-add-estoque').addEventListener('click', function() {
+                scrollToSection('estoque');
+            });
+
+            document.getElementById('btn-relatorios').addEventListener('click', function() {
+                scrollToSection('financeiro');
+            });
+
+            document.getElementById('btn-exportar').addEventListener('click', function() {
+                exportarDados();
+            });
+
+            // Export buttons
+            document.getElementById('btn-exportar-vendas').addEventListener('click', function() {
+                exportarVendas();
+            });
+
+            document.getElementById('btn-exportar-estoque').addEventListener('click', function() {
+                exportarEstoque();
+            });
+
+            document.getElementById('btn-gerar-relatorio').addEventListener('click', function() {
+                gerarRelatorio();
+            });
+
+            // Smooth navigation for navbar links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href').substring(1);
+                    if (targetId) {
+                        scrollToSection(targetId);
+                    }
+                });
+            });
+
+            // Initialize app after a short delay to ensure DOM is ready
+            setTimeout(() => {
+                if (window.app && typeof window.app.init === 'function') {
+                    window.app.init();
+                }
+            }, 500);
+        });
+
+        // Error handling for missing elements
+        window.addEventListener('error', function(e) {
+            console.warn('Error loading resource:', e);
         });
     </script>
 </body>
