@@ -1,4 +1,4 @@
-// server.js - VERSÃO ESTABILIZADA COM AUTENTICAÇÃO
+// server.js - SISTEMA COMPLETO BIZFLOW COM AUTENTICAÇÃO
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -20,42 +20,15 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 const HOST = '0.0.0.0';
 
-// ✅ CONFIGURAÇÃO POSTGRESQL COM FALLBACK
-let pool;
-try {
-  pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    // Configurações para prevenir timeouts
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
-    max: 20
-  });
-
-  pool.on('connect', () => {
-    console.log('✅ Conectado ao PostgreSQL');
-  });
-
-  pool.on('error', (err) => {
-    console.error('❌ Erro na conexão PostgreSQL:', err);
-  });
-} catch (error) {
-  console.error('❌ Erro ao criar pool do PostgreSQL:', error);
-  process.exit(1);
-}
-
-// ================= CONFIGURAÇÃO CSP =================
-app.use((req, res, next) => {
-  res.setHeader(
-    'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net; img-src 'self' data: https:;"
-  );
-  next();
+// ✅ CONFIGURAÇÃO POSTGRESQL
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 // ================= MIDDLEWARES =================
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(helmet({
   contentSecurityPolicy: false
@@ -72,74 +45,23 @@ app.get('/favicon.ico', (req, res) => {
   res.status(204).end();
 });
 
-// ================= MIDDLEWARE DE AUTENTICAÇÃO =================
-async function requireAuth(req, res, next) {
-  try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    
-    if (!token) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Acesso não autorizado. Faça login para continuar.' 
-      });
-    }
-
-    const sessionResult = await pool.query(
-      `SELECT u.*, us.expires_at 
-       FROM user_sessions us 
-       JOIN users u ON us.user_id = u.id 
-       WHERE us.session_token = $1 AND us.expires_at > NOW() AND u.is_active = true`,
-      [token]
-    );
-
-    if (sessionResult.rows.length === 0) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Sessão expirada. Faça login novamente.' 
-      });
-    }
-
-    req.user = sessionResult.rows[0];
-    next();
-  } catch (error) {
-    console.error('Erro na autenticação:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Erro interno do servidor' 
-    });
-  }
-}
-
-function requireAdmin(req, res, next) {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ 
-      success: false, 
-      error: 'Acesso negado. Permissões de administrador necessárias.' 
-    });
-  }
-  next();
-}
-
 // ================= INICIALIZAÇÃO DO BANCO =================
 async function initializeDatabase() {
   try {
-    console.log('🔍 Verificando banco de dados...');
-    
-    // Testar conexão
-    await pool.query('SELECT 1');
+    console.log('🔍 Inicializando banco de dados...');
     
     // Verificar se tabelas existem
-    const tablesCheck = await pool.query(`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public'
-      AND table_name IN ('users', 'products', 'categories')
+    const result = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'users'
+      );
     `);
     
-    const existingTables = tablesCheck.rows.map(row => row.table_name);
-    console.log('📊 Tabelas existentes:', existingTables);
+    const tablesExist = result.rows[0].exists;
     
-    if (!existingTables.includes('users')) {
+    if (!tablesExist) {
       console.log('🔄 Criando tabelas...');
       await createTables();
     } else {
@@ -149,7 +71,6 @@ async function initializeDatabase() {
     
   } catch (error) {
     console.error('❌ Erro na inicialização do banco:', error);
-    throw error;
   }
 }
 
@@ -159,7 +80,8 @@ async function createTables() {
     await client.query('BEGIN');
 
     const tablesSQL = `
-      CREATE TABLE IF NOT EXISTS users (
+      -- Tabela de usuários
+      CREATE TABLE users (
         id SERIAL PRIMARY KEY,
         username VARCHAR(50) UNIQUE NOT NULL,
         email VARCHAR(100) UNIQUE NOT NULL,
@@ -171,7 +93,8 @@ async function createTables() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE TABLE IF NOT EXISTS user_sessions (
+      -- Tabela de sessões
+      CREATE TABLE user_sessions (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         session_token VARCHAR(255) UNIQUE NOT NULL,
@@ -179,14 +102,16 @@ async function createTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE TABLE IF NOT EXISTS categories (
+      -- Tabela de categorias
+      CREATE TABLE categories (
         id SERIAL PRIMARY KEY,
         name VARCHAR(100) NOT NULL,
         description TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE TABLE IF NOT EXISTS products (
+      -- Tabela de produtos
+      CREATE TABLE products (
         id SERIAL PRIMARY KEY,
         name VARCHAR(200) NOT NULL,
         description TEXT,
@@ -201,7 +126,8 @@ async function createTables() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE TABLE IF NOT EXISTS sales (
+      -- Tabela de vendas
+      CREATE TABLE sales (
         id SERIAL PRIMARY KEY,
         sale_code VARCHAR(50) UNIQUE NOT NULL,
         total_amount DECIMAL(10,2) NOT NULL,
@@ -212,7 +138,8 @@ async function createTables() {
         notes TEXT
       );
 
-      CREATE TABLE IF NOT EXISTS sale_items (
+      -- Tabela de itens da venda
+      CREATE TABLE sale_items (
         id SERIAL PRIMARY KEY,
         sale_id INTEGER REFERENCES sales(id) ON DELETE CASCADE,
         product_id INTEGER REFERENCES products(id),
@@ -223,26 +150,33 @@ async function createTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      -- Inserir categorias
       INSERT INTO categories (name, description) VALUES 
       ('Geral', 'Produtos diversos'),
       ('Eletrônicos', 'Dispositivos eletrônicos'),
       ('Alimentação', 'Produtos alimentícios'),
-      ('Limpeza', 'Produtos de limpeza')
-      ON CONFLICT DO NOTHING;
+      ('Limpeza', 'Produtos de limpeza');
 
+      -- Inserir produtos
       INSERT INTO products (name, description, price, cost, stock_quantity, category_id, sku) VALUES 
       ('Smartphone Android', 'Smartphone Android 128GB', 899.90, 650.00, 15, 2, 'SP-AND001'),
       ('Notebook i5', 'Notebook Core i5 8GB RAM', 1899.90, 1400.00, 8, 2, 'NB-I5001'),
       ('Café Premium', 'Café em grãos 500g', 24.90, 15.00, 50, 3, 'CF-PREM01'),
       ('Detergente', 'Detergente líquido 500ml', 3.90, 1.80, 100, 4, 'DT-LIQ01'),
-      ('Água Mineral', 'Água mineral 500ml', 2.50, 0.80, 200, 3, 'AG-MIN01')
-      ON CONFLICT DO NOTHING;
+      ('Água Mineral', 'Água mineral 500ml', 2.50, 0.80, 200, 3, 'AG-MIN01');
     `;
 
     await client.query(tablesSQL);
-    await ensureAdminUser(client);
-    await client.query('COMMIT');
     
+    // Criar usuário admin
+    const passwordHash = await bcrypt.hash('admin123', 10);
+    await client.query(
+      `INSERT INTO users (username, email, password_hash, full_name, role) 
+       VALUES ($1, $2, $3, $4, $5)`,
+      ['admin', 'admin@bizflow.com', passwordHash, 'Administrador do Sistema', 'admin']
+    );
+
+    await client.query('COMMIT');
     console.log('✅ Banco inicializado com sucesso!');
     
   } catch (error) {
@@ -254,9 +188,9 @@ async function createTables() {
   }
 }
 
-async function ensureAdminUser(client = pool) {
+async function ensureAdminUser() {
   try {
-    const adminCheck = await client.query(
+    const adminCheck = await pool.query(
       'SELECT id FROM users WHERE username = $1',
       ['admin']
     );
@@ -265,26 +199,80 @@ async function ensureAdminUser(client = pool) {
       console.log('👤 Criando usuário admin...');
       const passwordHash = await bcrypt.hash('admin123', 10);
       
-      await client.query(
+      await pool.query(
         `INSERT INTO users (username, email, password_hash, full_name, role) 
          VALUES ($1, $2, $3, $4, $5)`,
         ['admin', 'admin@bizflow.com', passwordHash, 'Administrador do Sistema', 'admin']
       );
       
-      console.log('✅ Usuário admin criado: admin / admin123');
-    } else {
-      console.log('✅ Usuário admin já existe');
+      console.log('✅ Usuário admin criado');
     }
   } catch (error) {
     console.error('❌ Erro ao verificar usuário admin:', error);
-    throw error;
   }
 }
 
+// ================= MIDDLEWARE DE AUTENTICAÇÃO =================
+async function requireAuth(req, res, next) {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Acesso não autorizado' 
+      });
+    }
+
+    const sessionResult = await pool.query(
+      `SELECT u.*, us.expires_at 
+       FROM user_sessions us 
+       JOIN users u ON us.user_id = u.id 
+       WHERE us.session_token = $1 AND us.expires_at > NOW() AND u.is_active = true`,
+      [token]
+    );
+
+    if (sessionResult.rows.length === 0) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Sessão expirada' 
+      });
+    }
+
+    req.user = sessionResult.rows[0];
+    next();
+  } catch (error) {
+    console.error('Erro na autenticação:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erro interno do servidor' 
+    });
+  }
+}
+
+// ================= ROTAS PÚBLICAS =================
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'index.html'));
+});
+
+app.get('/health', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json({ 
+      status: 'OK', 
+      timestamp: new Date().toISOString(),
+      version: '2.0.0'
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      status: 'ERROR', 
+      error: error.message 
+    });
+  }
+});
+
 // ================= ROTAS DE AUTENTICAÇÃO =================
 app.post('/api/auth/login', async (req, res) => {
-  console.log('🔐 Recebida requisição de login');
-  
   try {
     const { username, password } = req.body;
 
@@ -295,8 +283,6 @@ app.post('/api/auth/login', async (req, res) => {
       });
     }
 
-    console.log('👤 Tentando login para:', username);
-
     // Buscar usuário
     const userResult = await pool.query(
       'SELECT * FROM users WHERE username = $1 AND is_active = true',
@@ -304,7 +290,6 @@ app.post('/api/auth/login', async (req, res) => {
     );
 
     if (userResult.rows.length === 0) {
-      console.log('❌ Usuário não encontrado:', username);
       return res.status(401).json({ 
         success: false, 
         error: 'Credenciais inválidas' 
@@ -312,24 +297,20 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const user = userResult.rows[0];
-    console.log('✅ Usuário encontrado:', user.username);
 
     // Verificar senha
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
     
     if (!isValidPassword) {
-      console.log('❌ Senha inválida para:', username);
       return res.status(401).json({ 
         success: false, 
         error: 'Credenciais inválidas' 
       });
     }
 
-    console.log('✅ Senha válida para:', username);
-
     // Gerar token de sessão
     const sessionToken = crypto.randomBytes(64).toString('hex');
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 horas
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     // Salvar sessão
     await pool.query(
@@ -339,8 +320,6 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Remover password hash da resposta
     const { password_hash, ...userWithoutPassword } = user;
-
-    console.log('🎉 Login bem-sucedido para:', user.username);
 
     res.json({
       success: true,
@@ -353,7 +332,7 @@ app.post('/api/auth/login', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('💥 ERRO NO LOGIN:', error);
+    console.error('Erro no login:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Erro interno do servidor' 
@@ -458,87 +437,9 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
   }
 });
 
-// ================= ROTAS PÚBLICAS =================
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'index.html'));
-});
+// ================= ROTAS DA APLICAÇÃO (PROTEGIDAS) =================
 
-app.get('/health', async (req, res) => {
-  try {
-    await pool.query('SELECT 1');
-    res.status(200).json({ 
-      status: 'OK', 
-      service: 'BizFlow API',
-      timestamp: new Date().toISOString(),
-      version: '2.0.0',
-      database: 'connected'
-    });
-  } catch (error) {
-    console.error('Health check error:', error);
-    res.status(500).json({ 
-      status: 'ERROR', 
-      database: 'disconnected',
-      error: error.message 
-    });
-  }
-});
-
-app.get('/api/test', (req, res) => {
-  res.json({ 
-    success: true, 
-    message: '🚀 BizFlow API funcionando!',
-    authentication: 'enabled'
-  });
-});
-
-// ================= ROTAS DEBUG =================
-app.get('/api/debug/users', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT id, username, email, role FROM users');
-    res.json({
-      success: true,
-      data: result.rows,
-      total: result.rows.length
-    });
-  } catch (error) {
-    console.error('Debug error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
-  }
-});
-
-app.get('/api/debug/check-admin', async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT id, username FROM users WHERE username = $1', 
-      ['admin']
-    );
-    
-    if (result.rows.length === 0) {
-      return res.json({
-        success: false,
-        message: 'Usuário admin não encontrado'
-      });
-    }
-
-    res.json({
-      success: true,
-      userExists: true,
-      user: result.rows[0]
-    });
-
-  } catch (error) {
-    console.error('Debug check-admin error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
-  }
-});
-
-// ================= ROTAS PROTEGIDAS =================
+// Produtos
 app.get('/api/produtos', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -559,12 +460,39 @@ app.get('/api/produtos', requireAuth, async (req, res) => {
   }
 });
 
+app.post('/api/produtos', requireAuth, async (req, res) => {
+  try {
+    const { name, price, cost, stock_quantity, category_id, sku } = req.body;
+    
+    const result = await pool.query(
+      `INSERT INTO products (name, price, cost, stock_quantity, category_id, sku) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
+       RETURNING *`,
+      [name, price, cost, stock_quantity, category_id, sku]
+    );
+
+    res.json({
+      success: true,
+      data: result.rows[0],
+      message: "Produto adicionado com sucesso!"
+    });
+  } catch (error) {
+    console.error('Erro ao criar produto:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// Vendas
 app.get('/api/vendas', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT * FROM sales 
-      ORDER BY sale_date DESC 
-      LIMIT 20
+      SELECT s.*, 
+             COUNT(si.id) as items_count
+      FROM sales s
+      LEFT JOIN sale_items si ON s.id = si.sale_id
+      GROUP BY s.id
+      ORDER BY s.sale_date DESC
+      LIMIT 50
     `);
     
     res.json({
@@ -577,6 +505,54 @@ app.get('/api/vendas', requireAuth, async (req, res) => {
   }
 });
 
+app.post('/api/vendas', requireAuth, async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    const { items, total_amount, total_items, payment_method } = req.body;
+    
+    // Gerar código da venda
+    const saleCode = 'V' + Date.now();
+    
+    // Inserir venda
+    const saleResult = await client.query(
+      `INSERT INTO sales (sale_code, total_amount, total_items, payment_method) 
+       VALUES ($1, $2, $3, $4) 
+       RETURNING *`,
+      [saleCode, total_amount, total_items, payment_method]
+    );
+    
+    const sale = saleResult.rows[0];
+    
+    // Inserir itens da venda
+    for (const item of items) {
+      await client.query(
+        `INSERT INTO sale_items (sale_id, product_id, product_name, quantity, unit_price, total_price) 
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [sale.id, item.id, item.name, item.quantity, item.price, item.total]
+      );
+    }
+    
+    await client.query('COMMIT');
+    
+    res.json({
+      success: true,
+      data: sale,
+      message: "Venda registrada com sucesso!"
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Erro ao registrar venda:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  } finally {
+    client.release();
+  }
+});
+
+// Dashboard
 app.get('/api/dashboard', requireAuth, async (req, res) => {
   try {
     const salesResult = await pool.query(`
@@ -586,16 +562,16 @@ app.get('/api/dashboard', requireAuth, async (req, res) => {
       WHERE sale_date >= CURRENT_DATE
     `);
     
-    const lowStockResult = await pool.query(`
-      SELECT COUNT(*) as alertas_estoque
+    const productsResult = await pool.query(`
+      SELECT COUNT(*) as total_produtos
       FROM products 
-      WHERE stock_quantity <= 5 AND is_active = true
+      WHERE is_active = true
     `);
     
     const data = {
       receitaTotal: parseFloat(salesResult.rows[0].receita_total),
       totalVendas: parseInt(salesResult.rows[0].total_vendas),
-      alertasEstoque: parseInt(lowStockResult.rows[0].alertas_estoque)
+      totalProdutos: parseInt(productsResult.rows[0].total_produtos)
     };
     
     res.json({
@@ -606,6 +582,36 @@ app.get('/api/dashboard', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Erro ao buscar dashboard:', error);
     res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// Categorias
+app.get('/api/categorias', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM categories ORDER BY name');
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Erro ao buscar categorias:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// ================= ROTAS DE DEBUG =================
+app.get('/api/debug/users', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, username, email, role FROM users');
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
   }
 });
 
@@ -628,32 +634,16 @@ async function startServer() {
 ║ 🌐 Host: ${HOST}                         ║
 ║ 🗄️  Banco: PostgreSQL                 ║
 ║ 🔐 Autenticação: ATIVADA             ║
-║ 🩺 Health: /health                    ║
-║ 🔑 Login: POST /api/auth/login       ║
-║ 👤 Register: POST /api/auth/register ║
-║ 🐛 Debug: /api/debug/*               ║
+║ 👤 Usuário: admin / admin123         ║
 ╚══════════════════════════════════════╝
       `);
     });
     
   } catch (error) {
-    console.error('❌ Falha crítica ao iniciar servidor:', error);
+    console.error('❌ Falha ao iniciar servidor:', error);
     process.exit(1);
   }
 }
-
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('🛑 Recebido SIGTERM, encerrando servidor...');
-  await pool.end();
-  process.exit(0);
-});
-
-process.on('SIGINT', async () => {
-  console.log('🛑 Recebido SIGINT, encerrando servidor...');
-  await pool.end();
-  process.exit(0);
-});
 
 // Iniciar o servidor
 startServer();
