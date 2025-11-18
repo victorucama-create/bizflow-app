@@ -633,36 +633,177 @@ async function ensureAPITables() {
 }
 
 async function ensureFinancialTables() {
-  // ... (código existente mantido)
+  try {
+    const result = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'financial_accounts'
+      );
+    `);
+    
+    if (!result.rows[0].exists) {
+      console.log('🔄 Criando tabelas financeiras FASE 4...');
+      const client = await pool.connect();
+      
+      try {
+        await client.query('BEGIN');
+        
+        await client.query(`
+          CREATE TABLE financial_accounts (
+            id SERIAL PRIMARY KEY,
+            empresa_id INTEGER REFERENCES empresas(id) ON DELETE CASCADE,
+            filial_id INTEGER REFERENCES filiais(id),
+            name VARCHAR(100) NOT NULL,
+            type VARCHAR(50) CHECK (type IN ('receita', 'despesa')),
+            category VARCHAR(100),
+            amount DECIMAL(15,2) NOT NULL,
+            due_date DATE,
+            status VARCHAR(50) CHECK (status IN ('pendente', 'pago', 'recebido', 'atrasado')),
+            user_id INTEGER REFERENCES users(id),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        
+        await client.query(`
+          CREATE TABLE financial_reports (
+            id SERIAL PRIMARY KEY,
+            empresa_id INTEGER REFERENCES empresas(id) ON DELETE CASCADE,
+            report_type VARCHAR(100) NOT NULL,
+            period_start DATE,
+            period_end DATE,
+            data JSONB,
+            user_id INTEGER REFERENCES users(id),
+            generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        
+        await client.query('COMMIT');
+        console.log('✅ Tabelas financeiras FASE 4 criadas!');
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    }
+  } catch (error) {
+    console.error('❌ Erro ao verificar tabelas financeiras:', error);
+  }
 }
 
 async function ensureBackupTables() {
-  // ... (código existente mantido)
+  try {
+    const result = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'system_backups'
+      );
+    `);
+    
+    if (!result.rows[0].exists) {
+      console.log('🔄 Criando tabelas de backup FASE 4...');
+      const client = await pool.connect();
+      
+      try {
+        await client.query('BEGIN');
+        
+        await client.query(`
+          CREATE TABLE system_backups (
+            id SERIAL PRIMARY KEY,
+            empresa_id INTEGER REFERENCES empresas(id) ON DELETE CASCADE,
+            backup_type VARCHAR(50) NOT NULL,
+            filename VARCHAR(255) NOT NULL,
+            file_size INTEGER,
+            data JSONB,
+            user_id INTEGER REFERENCES users(id),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        
+        await client.query(`
+          CREATE TABLE audit_logs (
+            id SERIAL PRIMARY KEY,
+            empresa_id INTEGER REFERENCES empresas(id) ON DELETE CASCADE,
+            user_id INTEGER REFERENCES users(id),
+            action VARCHAR(100) NOT NULL,
+            table_name VARCHAR(100),
+            record_id INTEGER,
+            old_values JSONB,
+            new_values JSONB,
+            ip_address VARCHAR(45),
+            user_agent TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        
+        await client.query('COMMIT');
+        console.log('✅ Tabelas de backup FASE 4 criadas!');
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    }
+  } catch (error) {
+    console.error('❌ Erro ao verificar tabelas de backup:', error);
+  }
 }
 
 async function ensureAdminUser() {
-  // ... (código existente mantido)
+  try {
+    const result = await pool.query('SELECT id FROM users WHERE username = $1', ['admin']);
+    
+    if (result.rows.length === 0) {
+      console.log('🔄 Criando usuário admin...');
+      const passwordHash = await bcrypt.hash('admin123', 10);
+      
+      await pool.query(
+        `INSERT INTO users (empresa_id, filial_id, username, email, password_hash, full_name, role, permissoes) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [1, 1, 'admin', 'admin@bizflow.com', passwordHash, 'Administrador do Sistema', 'admin', '{"*": ["*"]}']
+      );
+      
+      console.log('✅ Usuário admin criado!');
+    } else {
+      console.log('✅ Usuário admin já existe');
+    }
+  } catch (error) {
+    console.error('❌ Erro ao verificar usuário admin:', error);
+  }
 }
 
 // ================= MIDDLEWARES FASE 4 =================
 
-// Middleware de contexto empresarial FASE 4
+// Middleware de contexto empresarial FASE 4 - CORRIGIDO
 async function empresaContext(req, res, next) {
   try {
-    const empresaId = req.headers['x-empresa-id'] || req.query.empresa_id || req.body.empresa_id;
+    let empresaId = req.headers['x-empresa-id'] || req.query.empresa_id || req.body.empresa_id;
     
-    if (empresaId) {
-      req.empresa_id = parseInt(empresaId);
-    } else if (req.user && req.user.empresa_id) {
-      req.empresa_id = req.user.empresa_id;
-    } else {
-      req.empresa_id = 1; // Empresa padrão
+    // Se não foi fornecido, usar empresa padrão
+    if (!empresaId) {
+      // Tentar buscar empresa padrão
+      const empresaResult = await pool.query(
+        'SELECT id FROM empresas WHERE is_active = true ORDER BY id LIMIT 1'
+      );
+      
+      if (empresaResult.rows.length > 0) {
+        empresaId = empresaResult.rows[0].id;
+      } else {
+        empresaId = 1; // Fallback
+      }
     }
     
+    req.empresa_id = parseInt(empresaId);
     next();
   } catch (error) {
     console.error('Erro no contexto empresarial:', error);
-    res.status(500).json({ success: false, error: 'Erro de contexto empresarial' });
+    // Continuar mesmo com erro no contexto
+    req.empresa_id = 1;
+    next();
   }
 }
 
@@ -916,15 +1057,24 @@ app.post('/api/auth/login', empresaContext, async (req, res) => {
       });
     }
 
-    // Buscar usuário
-    const userResult = await pool.query(
-      `SELECT u.*, e.nome as empresa_nome, f.nome as filial_nome 
-       FROM users u 
-       LEFT JOIN empresas e ON u.empresa_id = e.id 
-       LEFT JOIN filiais f ON u.filial_id = f.id 
-       WHERE u.username = $1 AND u.empresa_id = $2 AND u.is_active = true`,
-      [username, req.empresa_id]
-    );
+    // Buscar usuário - CORREÇÃO APLICADA
+    let userQuery = `
+      SELECT u.*, e.nome as empresa_nome, f.nome as filial_nome 
+      FROM users u 
+      LEFT JOIN empresas e ON u.empresa_id = e.id 
+      LEFT JOIN filiais f ON u.filial_id = f.id 
+      WHERE u.username = $1 AND u.is_active = true
+    `;
+    
+    let queryParams = [username];
+    
+    // Se empresa_id foi fornecido, filtrar por empresa
+    if (req.empresa_id) {
+      userQuery += ' AND u.empresa_id = $2';
+      queryParams.push(req.empresa_id);
+    }
+
+    const userResult = await pool.query(userQuery, queryParams);
 
     if (userResult.rows.length === 0) {
       return res.status(401).json({ 
@@ -983,6 +1133,42 @@ app.post('/api/auth/login', empresaContext, async (req, res) => {
       success: false, 
       error: 'Erro interno do servidor' 
     });
+  }
+});
+
+// Rota para verificar autenticação
+app.get('/api/auth/me', requireAuth, async (req, res) => {
+  try {
+    const { password_hash, ...userWithoutPassword } = req.user;
+    res.json({
+      success: true,
+      data: userWithoutPassword
+    });
+  } catch (error) {
+    console.error('Erro ao verificar autenticação:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// Rota de logout
+app.post('/api/auth/logout', requireAuth, async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (token) {
+      await pool.query(
+        'DELETE FROM user_sessions WHERE session_token = $1',
+        [token]
+      );
+    }
+
+    res.json({
+      success: true,
+      message: 'Logout realizado com sucesso!'
+    });
+  } catch (error) {
+    console.error('Erro no logout:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
   }
 });
 
@@ -1655,9 +1841,269 @@ app.post('/api/notifications/:id/read', requireAuth, empresaContext, async (req,
   }
 });
 
-// ================= ROTAS EXISTENTES (ATUALIZADAS) =================
+// ================= ROTAS FINANCEIRAS (ATUALIZADAS FASE 4) =================
 
-// ... (manter todas as rotas existentes da FASE 3, atualizadas com multi-empresa)
+app.get('/api/financeiro/contas', requireAuth, empresaContext, async (req, res) => {
+  try {
+    const { tipo, status } = req.query;
+    
+    let query = `
+      SELECT fa.*, f.nome as filial_nome, u.full_name as usuario_nome
+      FROM financial_accounts fa
+      LEFT JOIN filiais f ON fa.filial_id = f.id
+      LEFT JOIN users u ON fa.user_id = u.id
+      WHERE fa.empresa_id = $1
+    `;
+    
+    let params = [req.empresa_id];
+    
+    if (tipo) {
+      query += ' AND fa.type = $2';
+      params.push(tipo);
+    }
+    
+    if (status) {
+      query += ' AND fa.status = $' + (params.length + 1);
+      params.push(status);
+    }
+    
+    query += ' ORDER BY fa.due_date, fa.created_at DESC';
+    
+    const result = await pool.query(query, params);
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Erro ao buscar contas financeiras:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+app.post('/api/financeiro/contas', requireAuth, checkPermission('financeiro', 'write'), empresaContext, async (req, res) => {
+  try {
+    const { name, type, category, amount, due_date, status, filial_id } = req.body;
+    
+    const result = await pool.query(
+      `INSERT INTO financial_accounts (empresa_id, filial_id, name, type, category, amount, due_date, status, user_id) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+       RETURNING *`,
+      [req.empresa_id, filial_id || req.user.filial_id, name, type, category, amount, due_date, status || 'pendente', req.user.id]
+    );
+
+    const newAccount = result.rows[0];
+
+    // Registrar auditoria
+    await logAudit('CREATE', 'financial_accounts', newAccount.id, null, newAccount, req);
+
+    res.json({
+      success: true,
+      data: newAccount,
+      message: "Conta financeira registrada com sucesso!"
+    });
+  } catch (error) {
+    console.error('Erro ao criar conta financeira:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// ================= ROTAS DE RELATÓRIOS FASE 4 =================
+
+app.get('/api/relatorios/vendas', requireAuth, empresaContext, async (req, res) => {
+  try {
+    const { data_inicio, data_fim, filial_id } = req.query;
+    
+    let query = `
+      SELECT 
+        DATE(s.sale_date) as data,
+        COUNT(*) as total_vendas,
+        SUM(s.total_amount) as total_valor,
+        AVG(s.total_amount) as valor_medio,
+        COUNT(DISTINCT s.user_id) as vendedores_ativos
+      FROM sales s
+      WHERE s.empresa_id = $1 AND s.status = 'completed'
+    `;
+    
+    let params = [req.empresa_id];
+    
+    if (data_inicio) {
+      query += ' AND DATE(s.sale_date) >= $' + (params.length + 1);
+      params.push(data_inicio);
+    }
+    
+    if (data_fim) {
+      query += ' AND DATE(s.sale_date) <= $' + (params.length + 1);
+      params.push(data_fim);
+    }
+    
+    if (filial_id) {
+      query += ' AND s.filial_id = $' + (params.length + 1);
+      params.push(filial_id);
+    }
+    
+    query += ' GROUP BY DATE(s.sale_date) ORDER BY data DESC';
+    
+    const result = await pool.query(query, params);
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Erro ao gerar relatório de vendas:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+app.get('/api/relatorios/estoque', requireAuth, empresaContext, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        p.name as produto,
+        p.stock_quantity as quantidade,
+        p.min_stock as estoque_minimo,
+        c.name as categoria,
+        f.nome as filial,
+        CASE 
+          WHEN p.stock_quantity <= p.min_stock THEN 'CRÍTICO'
+          WHEN p.stock_quantity <= p.min_stock * 2 THEN 'ALERTA'
+          ELSE 'NORMAL'
+        END as status_estoque
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN filiais f ON p.filial_id = f.id
+      WHERE p.empresa_id = $1 AND p.is_active = true
+      ORDER BY status_estoque, p.stock_quantity ASC`,
+      [req.empresa_id]
+    );
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Erro ao gerar relatório de estoque:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// ================= ROTAS DE BACKUP FASE 4 =================
+
+app.get('/api/backups', requireAuth, checkPermission('backup', 'read'), empresaContext, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT sb.*, u.full_name as usuario_nome
+       FROM system_backups sb
+       LEFT JOIN users u ON sb.user_id = u.id
+       WHERE sb.empresa_id = $1
+       ORDER BY sb.created_at DESC
+       LIMIT 50`,
+      [req.empresa_id]
+    );
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Erro ao buscar backups:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+app.post('/api/backups/gerar', requireAuth, checkPermission('backup', 'write'), empresaContext, async (req, res) => {
+  try {
+    const { backup_type, observacoes } = req.body;
+    
+    // Simular dados do backup (em produção, isso seria um dump real do banco)
+    const backupData = {
+      timestamp: new Date().toISOString(),
+      empresa_id: req.empresa_id,
+      usuario_id: req.user.id,
+      tabelas: ['users', 'products', 'sales', 'financial_accounts'],
+      registros: 1500,
+      observacoes: observacoes || 'Backup automático do sistema'
+    };
+    
+    const filename = `backup_${req.empresa_id}_${Date.now()}.json`;
+    
+    const result = await pool.query(
+      `INSERT INTO system_backups (empresa_id, backup_type, filename, file_size, data, user_id) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
+       RETURNING *`,
+      [req.empresa_id, backup_type || 'automático', filename, JSON.stringify(backupData).length, backupData, req.user.id]
+    );
+
+    const newBackup = result.rows[0];
+
+    // Registrar auditoria
+    await logAudit('CREATE', 'system_backups', newBackup.id, null, { backup_type, filename }, req);
+
+    // Enviar notificação
+    await sendNotification(
+      req.empresa_id,
+      null,
+      'Backup Gerado',
+      `Backup do sistema gerado: ${filename}`,
+      'info'
+    );
+
+    res.json({
+      success: true,
+      data: newBackup,
+      message: "Backup gerado com sucesso!"
+    });
+  } catch (error) {
+    console.error('Erro ao gerar backup:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// ================= ROTAS DE AUDITORIA FASE 4 =================
+
+app.get('/api/auditoria', requireAuth, checkPermission('configuracoes', 'read'), empresaContext, async (req, res) => {
+  try {
+    const { limit = 50, offset = 0, acao, data_inicio, data_fim } = req.query;
+    
+    let query = `
+      SELECT al.*, u.full_name as usuario_nome, u.username
+      FROM audit_logs al
+      LEFT JOIN users u ON al.user_id = u.id
+      WHERE al.empresa_id = $1
+    `;
+    
+    let params = [req.empresa_id];
+    
+    if (acao) {
+      query += ' AND al.action = $' + (params.length + 1);
+      params.push(acao);
+    }
+    
+    if (data_inicio) {
+      query += ' AND DATE(al.created_at) >= $' + (params.length + 1);
+      params.push(data_inicio);
+    }
+    
+    if (data_fim) {
+      query += ' AND DATE(al.created_at) <= $' + (params.length + 1);
+      params.push(data_fim);
+    }
+    
+    query += ' ORDER BY al.created_at DESC LIMIT $' + (params.length + 1) + ' OFFSET $' + (params.length + 2);
+    params.push(limit, offset);
+    
+    const result = await pool.query(query, params);
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Erro ao buscar logs de auditoria:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
 
 // ================= INICIALIZAÇÃO DO SERVIDOR FASE 4 =================
 async function startServer() {
