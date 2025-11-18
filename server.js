@@ -1,4 +1,4 @@
-// server.js - ATUALIZADO COM COMPATIBILIDADE E CSP
+// server.js - ATUALIZADO COM SISTEMA DE AUTENTICAÇÃO COMPLETO
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -7,6 +7,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 // ✅ CONFIGURAÇÃO ES6 MODULES
 const __filename = fileURLToPath(import.meta.url);
@@ -42,17 +44,88 @@ app.use((req, res, next) => {
   next();
 });
 
+// ================= MIDDLEWARES =================
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors());
+app.use(helmet({
+  contentSecurityPolicy: false
+}));
+app.use(compression());
+app.use(morgan('combined'));
+
+// Servir arquivos estáticos
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'views')));
+
+// ✅ FAVICON - Elimina erro 404
+app.get('/favicon.ico', (req, res) => {
+    res.status(204).end();
+});
+
+// ================= MIDDLEWARE DE AUTENTICAÇÃO =================
+
+// Middleware para verificar sessão
+async function requireAuth(req, res, next) {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.session_token;
+    
+    if (!token) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Acesso não autorizado. Faça login para continuar.' 
+      });
+    }
+
+    // Verificar sessão no banco
+    const sessionResult = await pool.query(
+      `SELECT u.*, us.expires_at 
+       FROM user_sessions us 
+       JOIN users u ON us.user_id = u.id 
+       WHERE us.session_token = $1 AND us.expires_at > NOW() AND u.is_active = true`,
+      [token]
+    );
+
+    if (sessionResult.rows.length === 0) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Sessão expirada. Faça login novamente.' 
+      });
+    }
+
+    req.user = sessionResult.rows[0];
+    next();
+  } catch (error) {
+    console.error('Erro na autenticação:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erro interno do servidor' 
+    });
+  }
+}
+
+// Middleware para verificar permissões de admin
+function requireAdmin(req, res, next) {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ 
+      success: false, 
+      error: 'Acesso negado. Permissões de administrador necessárias.' 
+    });
+  }
+  next();
+}
+
 // ================= INICIALIZAÇÃO AUTOMÁTICA DO BANCO =================
 async function initializeDatabaseIfNeeded() {
     try {
         console.log('🔍 Verificando se o banco precisa de inicialização...');
         
-        // Testar se a tabela products existe
+        // Testar se a tabela users existe
         const result = await pool.query(`
             SELECT EXISTS (
                 SELECT FROM information_schema.tables 
                 WHERE table_schema = 'public' 
-                AND table_name = 'products'
+                AND table_name = 'users'
             );
         `);
         
@@ -75,6 +148,29 @@ async function executeInitSQL() {
         await client.query('BEGIN');
         
         const initSQL = `
+        -- Criar tabela de usuários
+        CREATE TABLE users (
+            id SERIAL PRIMARY KEY,
+            username VARCHAR(50) UNIQUE NOT NULL,
+            email VARCHAR(100) UNIQUE NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            full_name VARCHAR(100) NOT NULL,
+            role VARCHAR(20) DEFAULT 'user',
+            is_active BOOLEAN DEFAULT true,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- Criar tabela de sessões
+        CREATE TABLE user_sessions (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            session_token VARCHAR(255) UNIQUE NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- Criar tabela de categorias
         CREATE TABLE categories (
             id SERIAL PRIMARY KEY,
             name VARCHAR(100) NOT NULL,
@@ -82,6 +178,7 @@ async function executeInitSQL() {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
+        -- Criar tabela de produtos
         CREATE TABLE products (
             id SERIAL PRIMARY KEY,
             name VARCHAR(200) NOT NULL,
@@ -97,6 +194,7 @@ async function executeInitSQL() {
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
+        -- Criar tabela de vendas
         CREATE TABLE sales (
             id SERIAL PRIMARY KEY,
             sale_code VARCHAR(50) UNIQUE NOT NULL,
@@ -108,6 +206,7 @@ async function executeInitSQL() {
             notes TEXT
         );
 
+        -- Criar tabela de itens da venda
         CREATE TABLE sale_items (
             id SERIAL PRIMARY KEY,
             sale_id INTEGER REFERENCES sales(id) ON DELETE CASCADE,
@@ -119,12 +218,18 @@ async function executeInitSQL() {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
+        -- Inserir usuário administrador padrão (senha: admin123)
+        INSERT INTO users (username, email, password_hash, full_name, role) VALUES 
+        ('admin', 'admin@bizflow.com', '$2a$10$8K1p/a0dRTlB0.ZB8HuUu.Z8.9o3YgC9/xB7eI5G5V4n6VYQY/JW2', 'Administrador do Sistema', 'admin');
+
+        -- Inserir categorias iniciais
         INSERT INTO categories (name, description) VALUES 
         ('Geral', 'Produtos diversos'),
         ('Eletrônicos', 'Dispositivos eletrônicos'),
         ('Alimentação', 'Produtos alimentícios'),
         ('Limpeza', 'Produtos de limpeza');
 
+        -- Inserir produtos de exemplo
         INSERT INTO products (name, description, price, cost, stock_quantity, category_id, sku) VALUES 
         ('Smartphone Android', 'Smartphone Android 128GB', 899.90, 650.00, 15, 2, 'SP-AND001'),
         ('Notebook i5', 'Notebook Core i5 8GB RAM', 1899.90, 1400.00, 8, 2, 'NB-I5001'),
@@ -137,7 +242,8 @@ async function executeInitSQL() {
         await client.query('COMMIT');
         
         console.log('✅ Banco inicializado automaticamente com sucesso!');
-        console.log('📊 Tabelas criadas: categories, products, sales, sale_items');
+        console.log('📊 Tabelas criadas: users, user_sessions, categories, products, sales, sale_items');
+        console.log('👤 Usuário admin criado: admin / admin123');
         console.log('🎯 Dados iniciais: 4 categorias, 5 produtos exemplo');
     } catch (error) {
         await client.query('ROLLBACK');
@@ -148,23 +254,167 @@ async function executeInitSQL() {
     }
 }
 
-// Middlewares
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cors());
-app.use(helmet({
-  contentSecurityPolicy: false // Já configuramos manualmente acima
-}));
-app.use(compression());
-app.use(morgan('combined'));
+// ================= ROTAS DE AUTENTICAÇÃO =================
 
-// Servir arquivos estáticos
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(path.join(__dirname, 'views')));
+// POST - Login
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
 
-// ✅ FAVICON - Elimina erro 404
-app.get('/favicon.ico', (req, res) => {
-    res.status(204).end();
+    if (!username || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Username e password são obrigatórios' 
+      });
+    }
+
+    // Buscar usuário
+    const userResult = await pool.query(
+      'SELECT * FROM users WHERE username = $1 AND is_active = true',
+      [username]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Credenciais inválidas' 
+      });
+    }
+
+    const user = userResult.rows[0];
+
+    // Verificar senha
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    if (!isValidPassword) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Credenciais inválidas' 
+      });
+    }
+
+    // Gerar token de sessão
+    const sessionToken = crypto.randomBytes(64).toString('hex');
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 horas
+
+    // Salvar sessão
+    await pool.query(
+      'INSERT INTO user_sessions (user_id, session_token, expires_at) VALUES ($1, $2, $3)',
+      [user.id, sessionToken, expiresAt]
+    );
+
+    // Remover password hash da resposta
+    const { password_hash, ...userWithoutPassword } = user;
+
+    res.json({
+      success: true,
+      message: 'Login realizado com sucesso!',
+      data: {
+        user: userWithoutPassword,
+        session_token: sessionToken,
+        expires_at: expiresAt
+      }
+    });
+
+  } catch (error) {
+    console.error('Erro no login:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erro interno do servidor' 
+    });
+  }
+});
+
+// POST - Registrar novo usuário
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { username, email, password, full_name } = req.body;
+
+    if (!username || !email || !password || !full_name) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Todos os campos são obrigatórios' 
+      });
+    }
+
+    // Verificar se usuário já existe
+    const existingUser = await pool.query(
+      'SELECT id FROM users WHERE username = $1 OR email = $2',
+      [username, email]
+    );
+
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Username ou email já estão em uso' 
+      });
+    }
+
+    // Hash da senha
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Criar usuário
+    const userResult = await pool.query(
+      `INSERT INTO users (username, email, password_hash, full_name) 
+       VALUES ($1, $2, $3, $4) 
+       RETURNING id, username, email, full_name, role, created_at`,
+      [username, email, passwordHash, full_name]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Usuário criado com sucesso!',
+      data: userResult.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Erro no registro:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erro interno do servidor' 
+    });
+  }
+});
+
+// POST - Logout
+app.post('/api/auth/logout', requireAuth, async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.session_token;
+    
+    await pool.query(
+      'DELETE FROM user_sessions WHERE session_token = $1',
+      [token]
+    );
+
+    res.json({
+      success: true,
+      message: 'Logout realizado com sucesso!'
+    });
+
+  } catch (error) {
+    console.error('Erro no logout:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erro interno do servidor' 
+    });
+  }
+});
+
+// GET - Perfil do usuário
+app.get('/api/auth/me', requireAuth, async (req, res) => {
+  try {
+    const { password_hash, ...userWithoutPassword } = req.user;
+    
+    res.json({
+      success: true,
+      data: userWithoutPassword
+    });
+  } catch (error) {
+    console.error('Erro ao buscar perfil:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erro interno do servidor' 
+    });
+  }
 });
 
 // ================= ROTAS PRINCIPAIS =================
@@ -184,9 +434,10 @@ app.get('/health', async (req, res) => {
             status: 'OK', 
             service: 'BizFlow API',
             timestamp: new Date().toISOString(),
-            version: '1.0.0',
+            version: '2.0.0',
             environment: process.env.NODE_ENV || 'development',
-            database: 'connected'
+            database: 'connected',
+            features: 'authentication-enabled'
         });
     } catch (error) {
         console.error('❌ Health check - Erro no banco:', error);
@@ -208,7 +459,8 @@ app.get('/api/test', (req, res) => {
             vendas: 3,
             estoque: 4,
             online: true,
-            database: 'PostgreSQL'
+            database: 'PostgreSQL',
+            authentication: 'enabled'
         }
     });
 });
@@ -216,7 +468,7 @@ app.get('/api/test', (req, res) => {
 // ================= API - PRODUTOS (ESTOQUE) =================
 
 // GET - Listar produtos
-app.get('/api/produtos', async (req, res) => {
+app.get('/api/produtos', requireAuth, async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT p.*, c.name as categoria 
@@ -242,7 +494,7 @@ app.get('/api/produtos', async (req, res) => {
 });
 
 // POST - Criar produto
-app.post('/api/produtos', async (req, res) => {
+app.post('/api/produtos', requireAuth, async (req, res) => {
     try {
         const { produto: name, quantidade: stock_quantity, minimo, categoria: category_id, preco: price, custo: cost, sku, codigo_barras: barcode } = req.body;
         
@@ -272,7 +524,7 @@ app.post('/api/produtos', async (req, res) => {
 });
 
 // PUT - Atualizar produto
-app.put('/api/produtos/:id', async (req, res) => {
+app.put('/api/produtos/:id', requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
         const { produto: name, quantidade: stock_quantity, preco: price, custo: cost } = req.body;
@@ -301,7 +553,7 @@ app.put('/api/produtos/:id', async (req, res) => {
 });
 
 // DELETE - Deletar produto (soft delete)
-app.delete('/api/produtos/:id', async (req, res) => {
+app.delete('/api/produtos/:id', requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
         
@@ -327,7 +579,7 @@ app.delete('/api/produtos/:id', async (req, res) => {
 // ================= API - VENDAS =================
 
 // GET - Listar vendas
-app.get('/api/vendas', async (req, res) => {
+app.get('/api/vendas', requireAuth, async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT s.*, 
@@ -362,7 +614,7 @@ app.get('/api/vendas', async (req, res) => {
 });
 
 // POST - Registrar venda
-app.post('/api/vendas', async (req, res) => {
+app.post('/api/vendas', requireAuth, async (req, res) => {
     const client = await pool.connect();
     
     try {
@@ -417,7 +669,7 @@ app.post('/api/vendas', async (req, res) => {
 });
 
 // ================= API - DASHBOARD =================
-app.get('/api/dashboard', async (req, res) => {
+app.get('/api/dashboard', requireAuth, async (req, res) => {
     try {
         // Total de vendas do dia
         const salesResult = await pool.query(`
@@ -476,7 +728,7 @@ app.get('/api/dashboard', async (req, res) => {
 });
 
 // ================= API - CATEGORIAS =================
-app.get('/api/categorias', async (req, res) => {
+app.get('/api/categorias', requireAuth, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM categories ORDER BY name');
         res.json({
@@ -489,69 +741,47 @@ app.get('/api/categorias', async (req, res) => {
     }
 });
 
-// ================= ROTAS DE COMPATIBILIDADE =================
-// Para manter compatibilidade com frontend antigo
+// ================= API - GESTÃO DE USUÁRIOS (APENAS ADMIN) =================
 
-app.get('/api/estoque', async (req, res) => {
+// GET - Listar usuários
+app.get('/api/users', requireAuth, requireAdmin, async (req, res) => {
     try {
-        const result = await pool.query(`
-            SELECT 
-                id,
-                name as produto,
-                stock_quantity as quantidade,
-                5 as minimo,
-                categoria
-            FROM products 
-            WHERE is_active = true 
-            ORDER BY name
-        `);
-        
-        const alertas = result.rows.filter(item => item.quantidade <= 5);
+        const result = await pool.query(
+            'SELECT id, username, email, full_name, role, is_active, created_at FROM users ORDER BY created_at DESC'
+        );
         
         res.json({
             success: true,
-            data: result.rows,
-            totalItens: result.rows.length,
-            alertas: alertas.length,
-            itensBaixoEstoque: alertas
+            data: result.rows
         });
     } catch (error) {
-        console.error('Erro ao buscar estoque (compatibilidade):', error);
+        console.error('Erro ao buscar usuários:', error);
         res.status(500).json({ success: false, error: 'Erro interno do servidor' });
     }
 });
 
-app.post('/api/estoque', async (req, res) => {
+// PUT - Atualizar usuário
+app.put('/api/users/:id', requireAuth, requireAdmin, async (req, res) => {
     try {
-        const { produto: name, quantidade: stock_quantity } = req.body;
+        const { id } = req.params;
+        const { role, is_active } = req.body;
         
-        if (!name || stock_quantity === undefined) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Produto e quantidade são obrigatórios' 
-            });
-        }
-
         const result = await pool.query(
-            `INSERT INTO products (name, stock_quantity, category_id) 
-             VALUES ($1, $2, $3) 
-             RETURNING *`,
-            [name.trim(), parseInt(stock_quantity), 1]
+            'UPDATE users SET role = $1, is_active = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING id, username, email, full_name, role, is_active',
+            [role, is_active, id]
         );
-
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+        }
+        
         res.json({
             success: true,
-            data: {
-                id: result.rows[0].id,
-                produto: result.rows[0].name,
-                quantidade: result.rows[0].stock_quantity,
-                minimo: 5,
-                categoria: "Geral"
-            },
-            message: "Item adicionado ao estoque! 📦"
+            data: result.rows[0],
+            message: 'Usuário atualizado com sucesso!'
         });
     } catch (error) {
-        console.error('Erro ao criar produto (compatibilidade):', error);
+        console.error('Erro ao atualizar usuário:', error);
         res.status(500).json({ success: false, error: 'Erro interno do servidor' });
     }
 });
@@ -571,8 +801,8 @@ app.post('/api/init-db', async (req, res) => {
         res.json({
             success: true,
             message: 'Banco de dados inicializado com sucesso!',
-            tables: ['categories', 'products', 'sales', 'sale_items'],
-            sample_data: '5 produtos e 4 categorias inseridos'
+            tables: ['users', 'user_sessions', 'categories', 'products', 'sales', 'sale_items'],
+            sample_data: 'Usuário admin (admin/admin123), 5 produtos e 4 categorias inseridos'
         });
 
     } catch (error) {
@@ -617,10 +847,11 @@ async function startServer() {
 ║ 📍 Porta: ${PORT}                          ║
 ║ 🌐 Host: ${HOST}                         ║
 ║ 🗄️  Banco: PostgreSQL                 ║
+║ 🔐 Autenticação: ATIVADA             ║
 ║ 🩺 Health: /health                    ║
-║ 📊 Dashboard: /                       ║
-║ 🔧 Init DB: POST /api/init-db        ║
-║ 🔄 Compatibilidade: /api/estoque     ║
+║ 🔑 Login: POST /api/auth/login       ║
+║ 👤 Register: POST /api/auth/register ║
+║ 📊 Dashboard: /                      ║
 ╚══════════════════════════════════════╝
             `);
         });
