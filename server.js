@@ -1,4 +1,4 @@
-// server.js - ATUALIZADO COM SISTEMA DE AUTENTICAÇÃO COMPLETO
+// server.js - ATUALIZADO COM SISTEMA DE AUTENTICAÇÃO COMPLETO E CORREÇÕES
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -9,6 +9,7 @@ import compression from 'compression';
 import morgan from 'morgan';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import cookieParser from 'cookie-parser';
 
 // ✅ CONFIGURAÇÃO ES6 MODULES
 const __filename = fileURLToPath(import.meta.url);
@@ -53,6 +54,7 @@ app.use(helmet({
 }));
 app.use(compression());
 app.use(morgan('combined'));
+app.use(cookieParser());
 
 // Servir arquivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
@@ -135,10 +137,43 @@ async function initializeDatabaseIfNeeded() {
             console.log('🔄 Tabelas não encontradas. Inicializando banco...');
             await executeInitSQL();
         } else {
-            console.log('✅ Tabelas já existem. Inicialização não necessária.');
+            console.log('✅ Tabelas já existem. Verificando usuário admin...');
+            await verifyAdminUser();
         }
     } catch (error) {
         console.error('❌ Erro ao verificar banco:', error);
+    }
+}
+
+async function verifyAdminUser() {
+    try {
+        const result = await pool.query(
+            'SELECT id, username, password_hash FROM users WHERE username = $1',
+            ['admin']
+        );
+        
+        if (result.rows.length === 0) {
+            console.log('❌ Usuário admin não encontrado. Criando...');
+            await createAdminUser();
+        } else {
+            console.log('✅ Usuário admin verificado');
+        }
+    } catch (error) {
+        console.error('❌ Erro ao verificar usuário admin:', error);
+    }
+}
+
+async function createAdminUser() {
+    try {
+        const passwordHash = await bcrypt.hash('admin123', 10);
+        await pool.query(
+            `INSERT INTO users (username, email, password_hash, full_name, role) 
+             VALUES ($1, $2, $3, $4, $5)`,
+            ['admin', 'admin@bizflow.com', passwordHash, 'Administrador do Sistema', 'admin']
+        );
+        console.log('✅ Usuário admin criado com sucesso!');
+    } catch (error) {
+        console.error('❌ Erro ao criar usuário admin:', error);
     }
 }
 
@@ -218,10 +253,6 @@ async function executeInitSQL() {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
-        -- Inserir usuário administrador padrão (senha: admin123)
-        INSERT INTO users (username, email, password_hash, full_name, role) VALUES 
-        ('admin', 'admin@bizflow.com', '$2a$10$8K1p/a0dRTlB0.ZB8HuUu.Z8.9o3YgC9/xB7eI5G5V4n6VYQY/JW2', 'Administrador do Sistema', 'admin');
-
         -- Inserir categorias iniciais
         INSERT INTO categories (name, description) VALUES 
         ('Geral', 'Produtos diversos'),
@@ -239,6 +270,15 @@ async function executeInitSQL() {
         `;
 
         await client.query(initSQL);
+        
+        // Criar usuário admin separadamente
+        const passwordHash = await bcrypt.hash('admin123', 10);
+        await client.query(
+            `INSERT INTO users (username, email, password_hash, full_name, role) 
+             VALUES ($1, $2, $3, $4, $5)`,
+            ['admin', 'admin@bizflow.com', passwordHash, 'Administrador do Sistema', 'admin']
+        );
+
         await client.query('COMMIT');
         
         console.log('✅ Banco inicializado automaticamente com sucesso!');
@@ -258,8 +298,11 @@ async function executeInitSQL() {
 
 // POST - Login
 app.post('/api/auth/login', async (req, res) => {
+  let client;
   try {
     const { username, password } = req.body;
+
+    console.log('🔐 Tentativa de login para usuário:', username);
 
     if (!username || !password) {
       return res.status(400).json({ 
@@ -268,13 +311,16 @@ app.post('/api/auth/login', async (req, res) => {
       });
     }
 
+    client = await pool.connect();
+
     // Buscar usuário
-    const userResult = await pool.query(
+    const userResult = await client.query(
       'SELECT * FROM users WHERE username = $1 AND is_active = true',
       [username]
     );
 
     if (userResult.rows.length === 0) {
+      console.log('❌ Usuário não encontrado:', username);
       return res.status(401).json({ 
         success: false, 
         error: 'Credenciais inválidas' 
@@ -282,9 +328,12 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const user = userResult.rows[0];
+    console.log('✅ Usuário encontrado:', user.username);
 
     // Verificar senha
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    console.log('🔑 Verificação de senha:', isValidPassword);
+    
     if (!isValidPassword) {
       return res.status(401).json({ 
         success: false, 
@@ -297,13 +346,15 @@ app.post('/api/auth/login', async (req, res) => {
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 horas
 
     // Salvar sessão
-    await pool.query(
+    await client.query(
       'INSERT INTO user_sessions (user_id, session_token, expires_at) VALUES ($1, $2, $3)',
       [user.id, sessionToken, expiresAt]
     );
 
     // Remover password hash da resposta
     const { password_hash, ...userWithoutPassword } = user;
+
+    console.log('✅ Login realizado com sucesso para:', user.username);
 
     res.json({
       success: true,
@@ -316,18 +367,23 @@ app.post('/api/auth/login', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erro no login:', error);
+    console.error('❌ Erro no login:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Erro interno do servidor' 
+      error: 'Erro interno do servidor: ' + error.message 
     });
+  } finally {
+    if (client) client.release();
   }
 });
 
 // POST - Registrar novo usuário
 app.post('/api/auth/register', async (req, res) => {
+  let client;
   try {
     const { username, email, password, full_name } = req.body;
+
+    console.log('👤 Tentativa de registro:', username);
 
     if (!username || !email || !password || !full_name) {
       return res.status(400).json({ 
@@ -336,8 +392,17 @@ app.post('/api/auth/register', async (req, res) => {
       });
     }
 
+    if (password.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'A senha deve ter pelo menos 6 caracteres' 
+      });
+    }
+
+    client = await pool.connect();
+
     // Verificar se usuário já existe
-    const existingUser = await pool.query(
+    const existingUser = await client.query(
       'SELECT id FROM users WHERE username = $1 OR email = $2',
       [username, email]
     );
@@ -353,12 +418,14 @@ app.post('/api/auth/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
 
     // Criar usuário
-    const userResult = await pool.query(
+    const userResult = await client.query(
       `INSERT INTO users (username, email, password_hash, full_name) 
        VALUES ($1, $2, $3, $4) 
        RETURNING id, username, email, full_name, role, created_at`,
       [username, email, passwordHash, full_name]
     );
+
+    console.log('✅ Usuário registrado com sucesso:', username);
 
     res.status(201).json({
       success: true,
@@ -367,11 +434,13 @@ app.post('/api/auth/register', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erro no registro:', error);
+    console.error('❌ Erro no registro:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Erro interno do servidor' 
+      error: 'Erro interno do servidor: ' + error.message 
     });
+  } finally {
+    if (client) client.release();
   }
 });
 
@@ -463,6 +532,62 @@ app.get('/api/test', (req, res) => {
             authentication: 'enabled'
         }
     });
+});
+
+// ================= DEBUG ROTAS =================
+app.get('/api/debug/users', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, username, email, role, is_active FROM users');
+    res.json({
+      success: true,
+      data: result.rows,
+      total: result.rows.length
+    });
+  } catch (error) {
+    console.error('Debug error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+app.get('/api/debug/check-admin', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, username, password_hash FROM users WHERE username = $1', 
+      ['admin']
+    );
+    
+    if (result.rows.length === 0) {
+      return res.json({
+        success: false,
+        message: 'Usuário admin não encontrado',
+        suggestion: 'Execute a inicialização do banco'
+      });
+    }
+
+    const user = result.rows[0];
+    const testPassword = 'admin123';
+    const isPasswordValid = await bcrypt.compare(testPassword, user.password_hash);
+
+    res.json({
+      success: true,
+      userExists: true,
+      passwordValid: isPasswordValid,
+      userId: user.id,
+      suggestion: isPasswordValid ? 
+        'Senha está correta' : 
+        'Senha não corresponde.'
+    });
+
+  } catch (error) {
+    console.error('Debug check-admin error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
 });
 
 // ================= API - PRODUTOS (ESTOQUE) =================
@@ -637,14 +762,12 @@ app.post('/api/vendas', requireAuth, async (req, res) => {
         
         // Inserir itens da venda e atualizar estoque
         for (const item of items) {
-            // Inserir item da venda
             await client.query(
                 `INSERT INTO sale_items (sale_id, product_id, product_name, quantity, unit_price, total_price) 
                  VALUES ($1, $2, $3, $4, $5, $6)`,
                 [sale.id, item.id, item.name, item.quantity, item.price, item.total]
             );
             
-            // Atualizar estoque
             await client.query(
                 'UPDATE products SET stock_quantity = stock_quantity - $1 WHERE id = $2',
                 [item.quantity, item.id]
@@ -788,7 +911,6 @@ app.put('/api/users/:id', requireAuth, requireAdmin, async (req, res) => {
 
 // ================= ROTA DE INICIALIZAÇÃO MANUAL =================
 app.post('/api/init-db', async (req, res) => {
-    // 🔒 Segurança básica - você pode remover depois
     const { secret } = req.body;
     if (secret !== 'bizflow-init-2024') {
         return res.status(401).json({ success: false, error: 'Não autorizado' });
@@ -851,6 +973,7 @@ async function startServer() {
 ║ 🩺 Health: /health                    ║
 ║ 🔑 Login: POST /api/auth/login       ║
 ║ 👤 Register: POST /api/auth/register ║
+║ 🐛 Debug: /api/debug/*               ║
 ║ 📊 Dashboard: /                      ║
 ╚══════════════════════════════════════╝
             `);
