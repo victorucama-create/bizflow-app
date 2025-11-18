@@ -1,7 +1,7 @@
 {
   "name": "bizflow-app",
-  "version": "1.0.0",
-  "description": "Sistema de Gestão Integrada para PMEs - PDV, Estoque, Financeiro e Relatórios",
+  "version": "2.0.0",
+  "description": "Sistema de Gestão Integrada para PMEs - PDV, Estoque, Financeiro e Relatórios com Autenticação",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -14,7 +14,8 @@
     "setup": "npm install && echo \"Dependencies installed successfully\"",
     "deploy": "npm run build && npm start",
     "init-db": "node init-db.js",
-    "db-migrate": "node init-db.js"
+    "db-migrate": "node init-db.js",
+    "db-reset": "node init-db.js"
   },
   "keywords": [
     "pdv",
@@ -32,7 +33,11 @@
     "web-app",
     "postgresql",
     "database",
-    "postgres"
+    "postgres",
+    "authentication",
+    "security",
+    "jwt",
+    "bcrypt"
   ],
   "author": {
     "name": "BizFlow Team",
@@ -47,7 +52,9 @@
     "compression": "^1.7.4",
     "morgan": "^1.10.0",
     "pg": "^8.11.3",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6"
   },
   "devDependencies": {
     "nodemon": "^3.0.1",
