@@ -1818,6 +1818,25 @@ app.post('/api/notifications/:id/read', requireAuth, empresaContext, async (req,
 // ================= ROTAS EXISTENTES (ATUALIZADAS) =================
 
 // ... (manter todas as rotas existentes da FASE 3, atualizadas com multi-empresa)
+// ================= DEBUG ENDPOINTS =================
+app.get('/api/debug/users', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT u.id, u.username, u.empresa_id, e.nome as empresa_nome 
+      FROM users u 
+      LEFT JOIN empresas e ON u.empresa_id = e.id
+    `);
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
 
 // ================= INICIALIZAÇÃO DO SERVIDOR FASE 4 =================
 async function startServer() {
