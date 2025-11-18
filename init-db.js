@@ -1,4 +1,4 @@
-// init-db.js - SCRIPT DE INICIALIZAÇÃO DO BANCO DE DADOS
+// init-db.js - ATUALIZADO COM SISTEMA DE AUTENTICAÇÃO
 import { Pool } from 'pg';
 
 // Configuração do PostgreSQL
@@ -9,6 +9,28 @@ const pool = new Pool({
 
 // Script SQL para criar as tabelas e dados iniciais
 const initSQL = `
+-- Criar tabela de usuários
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name VARCHAR(100) NOT NULL,
+    role VARCHAR(20) DEFAULT 'user',
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Criar tabela de sessões
+CREATE TABLE IF NOT EXISTS user_sessions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    session_token VARCHAR(255) UNIQUE NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Criar tabela de categorias
 CREATE TABLE IF NOT EXISTS categories (
     id SERIAL PRIMARY KEY,
@@ -57,6 +79,11 @@ CREATE TABLE IF NOT EXISTS sale_items (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Inserir usuário administrador padrão
+INSERT INTO users (username, email, password_hash, full_name, role) VALUES 
+('admin', 'admin@bizflow.com', '$2a$10$8K1p/a0dRTlB0.ZB8HuUu.Z8.9o3YgC9/xB7eI5G5V4n6VYQY/JW2', 'Administrador do Sistema', 'admin')
+ON CONFLICT (username) DO NOTHING;
+
 -- Inserir categorias iniciais
 INSERT INTO categories (name, description) VALUES 
 ('Geral', 'Produtos diversos'),
@@ -85,7 +112,8 @@ async function initializeDatabase() {
     await client.query(initSQL);
     
     console.log('✅ Banco de dados inicializado com sucesso!');
-    console.log('📊 Tabelas criadas: categories, products, sales, sale_items');
+    console.log('📊 Tabelas criadas: users, user_sessions, categories, products, sales, sale_items');
+    console.log('👤 Usuário admin criado: admin / admin123');
     console.log('🎯 Dados iniciais inseridos: 4 categorias, 5 produtos exemplo');
     
   } catch (error) {
