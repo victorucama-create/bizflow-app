@@ -1,70 +1,37 @@
 {
   "name": "bizflow-app",
-  "version": "2.0.0",
-  "description": "Sistema de Gestão Integrada para PMEs - PDV, Estoque, Financeiro e Relatórios com Autenticação",
-  "main": "server.js",
+  "version": "3.0.0",
+  "description": "Sistema de Gestão Integrada - FASE 3 Completa",
   "type": "module",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
-    "debug": "node --inspect server.js",
-    "test": "echo \"No tests specified\" && exit 0",
-    "build": "echo \"No build step required for Node.js app\"",
-    "lint": "echo \"No linter configured\"",
-    "setup": "npm install && echo \"Dependencies installed successfully\"",
-    "deploy": "npm run build && npm start"
+    "dev": "node --watch server.js",
+    "test": "echo \"No tests specified\" && exit 0"
   },
   "keywords": [
-    "pdv",
+    "erp",
     "gestao",
+    "vendas",
     "estoque",
     "financeiro",
-    "erp",
-    "nodejs",
-    "express",
-    "bootstrap",
-    "sistema",
-    "negocios",
-    "pmes",
-    "rest-api",
-    "web-app",
-    "postgresql",
-    "database",
-    "postgres",
-    "authentication",
-    "security",
-    "jwt",
-    "bcrypt"
+    "relatorios",
+    "dashboard"
   ],
-  "author": {
-    "name": "BizFlow Team",
-    "email": "dev@bizflow.com",
-    "url": "https://bizflow.com"
-  },
+  "author": "BizFlow Team",
   "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
+    "pg": "^8.11.3",
     "cors": "^2.8.5",
     "helmet": "^7.1.0",
     "compression": "^1.7.4",
     "morgan": "^1.10.0",
-    "pg": "^8.11.3",
-    "dotenv": "^16.3.1",
-    "bcryptjs": "^2.4.3"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.1"
+    "bcryptjs": "^2.4.3",
+    "pdfkit": "^0.14.0",
+    "exceljs": "^4.4.0"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/seu-usuario/bizflow-app.git"
-  },
-  "bugs": {
-    "url": "https://github.com/seu-usuario/bizflow-app/issues"
-  },
-  "homepage": "https://github.com/seu-usuario/bizflow-app#readme"
+    "node": ">=18.0.0"
+  }
 }
