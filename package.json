@@ -1,7 +1,7 @@
 {
   "name": "bizflow-app",
-  "version": "3.0.0",
-  "description": "Sistema de Gestão Integrada - FASE 3 Completa",
+  "version": "4.0.0",
+  "description": "Sistema de Gestão Empresarial - FASE 4 Completa",
   "type": "module",
   "main": "server.js",
   "scripts": {
@@ -12,11 +12,12 @@
   "keywords": [
     "erp",
     "gestao",
+    "multi-empresa",
     "vendas",
     "estoque",
     "financeiro",
-    "relatorios",
-    "dashboard"
+    "api",
+    "websocket"
   ],
   "author": "BizFlow Team",
   "license": "MIT",
@@ -29,7 +30,10 @@
     "morgan": "^1.10.0",
     "bcryptjs": "^2.4.3",
     "pdfkit": "^0.14.0",
-    "exceljs": "^4.4.0"
+    "exceljs": "^4.4.0",
+    "socket.io": "^4.7.2",
+    "jsonwebtoken": "^9.0.2",
+    "express-rate-limit": "^6.8.1"
   },
   "engines": {
     "node": ">=18.0.0"
