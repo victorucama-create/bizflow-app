@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
+    "build": "npm install",
     "test": "echo \"No tests specified\" && exit 0"
   },
   "keywords": [
@@ -15,9 +16,7 @@
     "multi-empresa",
     "vendas",
     "estoque",
-    "financeiro",
-    "api",
-    "websocket"
+    "financeiro"
   ],
   "author": "BizFlow Team",
   "license": "MIT",
