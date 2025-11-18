@@ -589,7 +589,7 @@ class BizFlowApp {
                             <h6 class="mb-1">${item.produto}</h6>
                             <small class="text-muted">
                                 <i class="fas fa-tag me-1"></i>${item.categoria || 'Geral'}
-                                ${item.preco ? `<br><i class="fas fa-dollar-sign me-1"></i>R$ ${item.preco.toFixed(2)}` : ''}
+                                ${item.preco ? `<br><i class="fas fa-dollar-sign me-1"></i>R$ ${parseFloat(item.preco || 0).toFixed(2)}` : ''}
                                 ${!this.isOnline ? '<span class="badge bg-warning ms-2">Local</span>' : ''}
                             </small>
                         </div>
