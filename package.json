@@ -1,28 +1,34 @@
 {
   "name": "bizflow-app",
-  "version": "5.1.0",
-  "description": "Sistema Empresarial BizFlow - FASE 5.1 PRODUÇÃO - Sistema de Produção & Escalabilidade Empresarial",
+  "version": "5.5.0",
+  "description": "Sistema Empresarial BizFlow - FASE 5 COMPLETA - Sistema de Produção & Escalabilidade Empresarial com Redis, Monitoramento e Segurança Avançada",
   "type": "module",
-  "main": "server.js",
+  "main": "core/server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js",
-    "dev-with-errors": "node --watch server.js --trace-warnings --unhandled-rejections=strict",
-    "init-db": "node init-db.js",
-    "fix-admin": "node fix-admin.js",
-    "fix-login": "node fix-login.js",
-    "health-check": "node health-check.js",
-    "test-api": "node test-api.js",
-    "test-db": "node test-db.js",
-    "test-production": "NODE_ENV=production node server.js",
+    "start": "node core/server.js",
+    "dev": "node --watch core/server.js",
+    "dev-with-errors": "node --watch core/server.js --trace-warnings --unhandled-rejections=strict",
+    "init-db": "node scripts/init-database.js",
+    "health-check": "node scripts/health-check.js",
+    "test-api": "node scripts/test-api.js",
+    "test-db": "node scripts/test-database.js",
+    "test-redis": "node scripts/test-redis.js",
+    "test-metrics": "node scripts/test-metrics.js",
+    "backup-db": "node scripts/backup/backup-database.js",
+    "backup-redis": "node scripts/backup/backup-redis.js",
+    "monitor-system": "node scripts/monitoring/system-monitor.js",
+    "cache-stats": "node scripts/monitoring/cache-stats.js",
+    "test-production": "NODE_ENV=production node core/server.js",
     "lint": "echo 'Linting not configured - skipping'",
     "audit": "npm audit --audit-level=high",
-    "postinstall": "echo '✅ BizFlow FASE 5.1 - Dependências instaladas com sucesso!'"
+    "security-scan": "npm audit --audit-level=moderate",
+    "postinstall": "echo '🚀 BizFlow FASE 5 COMPLETA - Dependências instaladas com sucesso!' && echo '📊 Sistema com Redis, Prometheus e Monitoramento Avançado'"
   },
   "dependencies": {
     "express": "^4.18.2",
     "socket.io": "^4.7.5",
     "pg": "^8.11.3",
+    "ioredis": "^5.3.2",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "helmet": "^7.1.0",
@@ -30,35 +36,54 @@
     "express-rate-limit": "^7.1.5",
     "morgan": "^1.10.0",
     "winston": "^3.11.0",
+    "prom-client": "^14.2.0",
     "uuid": "^9.0.1",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "cron": "^3.1.6",
+    "node-cron": "^3.0.3",
+    "validator": "^13.11.0",
+    "joi": "^17.11.0",
+    "express-validator": "^7.0.1",
+    "swagger-ui-express": "^5.0.0",
+    "swagger-jsdoc": "^6.2.8",
+    "compression": "^1.7.4",
+    "express-status-monitor": "^1.3.4"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.0.2",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
+    "nyc": "^15.1.0"
   },
   "keywords": [
     "bizflow",
     "empresarial",
     "gestao",
     "producao",
-    "fase5.1",
+    "fase5-completa",
     "sistema-producao",
     "escalabilidade",
     "monitoramento",
-    "cache",
+    "cache-redis",
+    "prometheus-metrics",
     "performance",
     "postgresql",
     "websocket",
-    "real-time"
+    "real-time",
+    "redis-cache",
+    "rate-limiting",
+    "security",
+    "backup-automation",
+    "health-checks"
   ],
   "author": "BizFlow Team <dev@bizflow.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bizflow/bizflow-app-fase5.git"
+    "url": "https://github.com/bizflow/bizflow-app-fase5-completa.git"
   },
   "bugs": {
-    "url": "https://github.com/bizflow/bizflow-app-fase5/issues"
+    "url": "https://github.com/bizflow/bizflow-app-fase5-completa/issues"
   },
   "homepage": "https://bizflow-app-xvcw.onrender.com",
   "engines": {
@@ -73,5 +98,8 @@
   "cpu": [
     "x64",
     "arm64"
-  ]
+  ],
+  "volta": {
+    "node": "18.17.0"
+  }
 }
