@@ -4,12 +4,13 @@
 class BizFlowApp {
     constructor() {
         this.API_BASE_URL = window.location.origin;
-        this.authToken = localStorage.getItem('bizflow_token');
-        this.currentUser = JSON.parse(localStorage.getItem('bizflow_user') || 'null');
+        this.authToken = null;
+        this.currentUser = null;
         this.empresaAtual = { id: 1, nome: 'Empresa Principal' };
         this.socket = null;
         this.isOnline = true;
         this.isWebSocketConnected = false;
+        this.notifications = [];
         
         console.log('🚀 BizFlow App FASE 5.1 inicializado');
     }
@@ -21,7 +22,6 @@ class BizFlowApp {
             // Verificar autenticação
             if (!this.authToken) {
                 console.log('👤 Usuário não autenticado - modo público');
-                this.mostrarAlerta('Sistema BizFlow FASE 5.1 carregado. Faça login para acessar todas as funcionalidades.', 'info');
                 return;
             }
             
@@ -35,11 +35,9 @@ class BizFlowApp {
             await this.carregarDadosIniciais();
             
             console.log('✅ BizFlow App FASE 5.1 inicializado com sucesso!');
-            this.mostrarAlerta('Sistema FASE 5.1 - PRODUÇÃO carregado! 🚀', 'success');
             
         } catch (error) {
             console.error('❌ Erro ao inicializar app FASE 5.1:', error);
-            this.mostrarAlerta('Sistema em modo resiliente. Funcionalidades limitadas.', 'warning');
         }
     }
 
@@ -48,9 +46,7 @@ class BizFlowApp {
         try {
             console.log('🔌 Conectando WebSocket...');
             
-            this.socket = io(this.API_BASE_URL, {
-                transports: ['websocket', 'polling']
-            });
+            this.socket = io(this.API_BASE_URL);
 
             this.socket.on('connect', () => {
                 console.log('🔌 Conectado ao WebSocket');
@@ -66,8 +62,6 @@ class BizFlowApp {
             this.socket.on('authenticated', (data) => {
                 if (data.success) {
                     console.log('✅ Autenticado no WebSocket');
-                } else {
-                    console.error('❌ Falha na autenticação WebSocket:', data.error);
                 }
             });
 
@@ -157,7 +151,7 @@ class BizFlowApp {
             
             await Promise.allSettled([
                 this.carregarEmpresas(),
-                this.carregarFiliais(),
+                this.carregarProdutos(),
                 this.carregarNotificacoes()
             ]);
             
@@ -185,27 +179,26 @@ class BizFlowApp {
         }
     }
 
-    async carregarFiliais() {
+    async carregarProdutos() {
         try {
-            const response = await fetch(`${this.API_BASE_URL}/api/filiais`, {
+            const response = await fetch(`${this.API_BASE_URL}/api/produtos`, {
                 headers: this.getAuthHeaders()
             });
             
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
-                    this.filiais = data.data;
-                    this.exibirFiliais(this.filiais);
+                    this.exibirProdutos(data.data);
                 }
             }
         } catch (error) {
-            console.error('Erro ao carregar filiais:', error);
+            console.error('Erro ao carregar produtos:', error);
         }
     }
 
     async carregarNotificacoes() {
         try {
-            const response = await fetch(`${this.API_BASE_URL}/api/notifications?unread_only=true`, {
+            const response = await fetch(`${this.API_BASE_URL}/api/notifications`, {
                 headers: this.getAuthHeaders()
             });
             
@@ -231,9 +224,6 @@ class BizFlowApp {
                             <h6 class="mb-1">${empresa.nome}</h6>
                             <small class="text-muted">${empresa.cnpj || 'Sem CNPJ'}</small>
                         </div>
-                        <button class="btn btn-outline-primary btn-sm" onclick="trocarEmpresa(${empresa.id}, '${empresa.nome}')">
-                            Selecionar
-                        </button>
                     </div>
                 </div>
             `).join('');
@@ -241,19 +231,16 @@ class BizFlowApp {
         }
     }
 
-    exibirFiliais(filiais) {
-        const container = document.getElementById('lista-filiais');
-        if (container && filiais) {
-            const html = filiais.map(filial => `
+    exibirProdutos(produtos) {
+        const container = document.getElementById('lista-estoque');
+        if (container && produtos) {
+            const html = produtos.map(produto => `
                 <div class="list-group-item">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="mb-1">${filial.nome}</h6>
-                            <small class="text-muted">${filial.codigo} - ${filial.responsavel || 'Sem responsável'}</small>
+                            <h6 class="mb-1">${produto.name}</h6>
+                            <small class="text-muted">R$ ${produto.price} • Estoque: ${produto.stock_quantity}</small>
                         </div>
-                        <span class="badge ${filial.is_active ? 'bg-success' : 'bg-secondary'}">
-                            ${filial.is_active ? 'Ativa' : 'Inativa'}
-                        </span>
                     </div>
                 </div>
             `).join('');
@@ -298,10 +285,14 @@ class BizFlowApp {
     }
 
     // ================= UTILITÁRIOS =================
+    setAuthToken(token) {
+        this.authToken = token;
+        this.currentUser = JSON.parse(localStorage.getItem('bizflow_user') || 'null');
+    }
+
     getAuthHeaders() {
         const headers = {
-            'Content-Type': 'application/json',
-            'X-Empresa-ID': this.empresaAtual.id.toString()
+            'Content-Type': 'application/json'
         };
         
         if (this.authToken) {
@@ -323,6 +314,20 @@ class BizFlowApp {
         }
     }
 
+    testarWebSocket() {
+        if (this.isWebSocketConnected) {
+            this.mostrarAlerta('WebSocket conectado e funcionando! ✅', 'success');
+        } else {
+            this.mostrarAlerta('WebSocket desconectado', 'warning');
+        }
+    }
+
+    testarConexaoCompleta() {
+        this.mostrarAlerta('Testando conexões...', 'info');
+        this.testarConexao();
+        this.testarWebSocket();
+    }
+
     atualizarStatusWebSocket(status, mensagem) {
         const elemento = document.getElementById('status-websocket');
         if (elemento) {
@@ -336,34 +341,23 @@ class BizFlowApp {
         const diffMs = now - date;
         const diffMins = Math.floor(diffMs / 60000);
         const diffHours = Math.floor(diffMs / 3600000);
-        const diffDays = Math.floor(diffMs / 86400000);
 
         if (diffMins < 1) return 'Agora mesmo';
         if (diffMins < 60) return `${diffMins} min atrás`;
         if (diffHours < 24) return `${diffHours} h atrás`;
-        if (diffDays < 7) return `${diffDays} dias atrás`;
         
         return date.toLocaleDateString('pt-BR');
     }
 
     mostrarAlerta(mensagem, tipo = 'info') {
-        // Implementação simples de alerta
         alert(`[${tipo.toUpperCase()}] ${mensagem}`);
     }
 }
 
 // ================= FUNÇÕES GLOBAIS =================
-function trocarEmpresa(empresaId, empresaNome) {
-    if (window.bizFlowApp) {
-        window.bizFlowApp.empresaAtual = { id: empresaId, nome: empresaNome };
-        window.bizFlowApp.mostrarAlerta(`Empresa alterada para: ${empresaNome}`, 'info');
-        window.bizFlowApp.carregarDadosIniciais();
-    }
-}
-
 function fazerLogin() {
-    const username = document.getElementById('login-username')?.value;
-    const password = document.getElementById('login-password')?.value;
+    const username = document.getElementById('username')?.value;
+    const password = document.getElementById('password')?.value;
     
     if (!username || !password) {
         alert('Por favor, preencha username e password');
@@ -381,8 +375,22 @@ function fazerLogout() {
     }
 }
 
+function testarConexoes() {
+    if (window.bizFlowApp) {
+        window.bizFlowApp.testarConexaoCompleta();
+    }
+}
+
 // Inicializar aplicação quando o DOM estiver carregado
 document.addEventListener('DOMContentLoaded', function() {
     window.bizFlowApp = new BizFlowApp();
-    window.bizFlowApp.init();
+    
+    // Verificar se há token de autenticação
+    const token = localStorage.getItem('bizflow_token');
+    const user = localStorage.getItem('bizflow_user');
+    
+    if (token && user) {
+        window.bizFlowApp.setAuthToken(token);
+        window.bizFlowApp.init();
+    }
 });
