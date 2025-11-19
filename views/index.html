@@ -3,21 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BizFlow - Sistema Empresarial FASE 5 COMPLETA PRODUÇÃO</title>
+    <title>BizFlow - Sistema Empresarial FASE 5 COMPLETA</title>
     
     <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🏢</text></svg>">
     
-    <!-- ✅ CDNs OTIMIZADAS PARA PRODUÇÃO FASE 5 COMPLETA -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- Bootstrap & Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
-    <link href="/css/style.css" rel="stylesheet">
-    
-    <!-- ✅ PRELOAD PARA PERFORMANCE -->
-    <link rel="preload" href="/js/app-v5-complete.js" as="script">
-    <link rel="preconnect" href="https://cdn.jsdelivr.net">
     
     <style>
+        :root {
+            --primary-color: #0d6efd;
+            --success-color: #198754;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --info-color: #0dcaf0;
+        }
+
         .auth-container {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
@@ -41,7 +44,7 @@
             position: absolute;
             top: -5px;
             right: -5px;
-            background: #dc3545;
+            background: var(--danger-color);
             color: white;
             border-radius: 50%;
             width: 18px;
@@ -51,71 +54,49 @@
             align-items: center;
             justify-content: center;
         }
-        .empresa-selector {
-            max-width: 200px;
-        }
-        .filial-badge {
-            font-size: 0.75rem;
-        }
-        .status-online { color: #198754; }
-        .status-offline { color: #dc3545; }
-        .status-degraded { color: #ffc107; }
-        .websocket-connected { color: #198754; }
-        .websocket-disconnected { color: #6c757d; }
-        .websocket-connecting { color: #ffc107; }
-        .websocket-error { color: #dc3545; }
         
-        /* ✅ NOVOS ESTILOS FASE 5 COMPLETA */
-        .performance-badge {
-            font-size: 0.7rem;
-        }
-        .cache-indicator {
-            font-size: 0.8rem;
-        }
-        .toast-container {
-            z-index: 9999;
-        }
-        .connection-status, .websocket-status {
-            font-size: 0.8rem;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-        }
+        /* Status indicators */
+        .status-online { color: var(--success-color); }
+        .status-offline { color: var(--danger-color); }
+        .status-degraded { color: var(--warning-color); }
         
-        /* Estilos para relatórios */
+        /* Navigation sections */
         .nav-section {
-            border-bottom: 3px solid #0d6efd;
+            border-bottom: 3px solid var(--primary-color);
             padding-bottom: 10px;
             margin-bottom: 20px;
         }
+        
+        /* Cards and metrics */
+        .metric-card {
+            transition: all 0.3s ease;
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
         .report-card {
             transition: transform 0.2s;
+            height: 100%;
         }
         .report-card:hover {
             transform: translateY(-5px);
         }
-
-        /* ✅ NOVOS ESTILOS FASE 5 COMPLETA */
-        .metric-card {
-            transition: all 0.3s ease;
-        }
-        .metric-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
+        
+        /* Cache indicators */
         .cache-hit {
-            background: linear-gradient(135deg, #198754, #20c997);
+            background: linear-gradient(135deg, var(--success-color), #20c997);
             color: white;
         }
         .cache-miss {
-            background: linear-gradient(135deg, #dc3545, #fd7e14);
+            background: linear-gradient(135deg, var(--danger-color), #fd7e14);
             color: white;
         }
-        .performance-excellent { color: #198754; }
-        .performance-good { color: #20c997; }
-        .performance-warning { color: #ffc107; }
-        .performance-critical { color: #dc3545; }
         
-        /* Loading animations */
+        /* Animations */
         .loading-pulse {
             animation: pulse 1.5s ease-in-out infinite;
         }
@@ -124,26 +105,18 @@
             50% { opacity: 0.5; }
             100% { opacity: 1; }
         }
-
-        /* ✅ ESTILOS PARA OS NOVOS RELATÓRIOS */
-        .report-section {
-            border-left: 4px solid #0d6efd;
-            padding-left: 15px;
-            margin-bottom: 20px;
+        
+        /* Toast notifications */
+        .toast-container {
+            z-index: 9999;
         }
-        .stat-card {
-            border: none;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
+        
+        /* Connection status */
+        .connection-status, .websocket-status {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
         }
-        .stat-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-        }
-        .trend-up { color: #198754; }
-        .trend-down { color: #dc3545; }
-        .trend-stable { color: #6c757d; }
     </style>
 </head>
 <body>
@@ -154,12 +127,12 @@
                 <h1 class="text-primary">
                     <i class="fas fa-building me-2"></i>BizFlow
                 </h1>
-                <p class="text-muted">Sistema Empresarial - FASE 5 COMPLETA PRODUÇÃO</p>
-                <div class="badge bg-success mb-2">Sistema de Produção • Otimizado • Monitorado</div>
-                <div class="badge bg-info">Cache Service • Prometheus • Segurança</div>
+                <p class="text-muted">Sistema Empresarial - FASE 5 COMPLETA</p>
+                <div class="badge bg-success mb-2">Frontend Completo • Dados Locais</div>
+                <div class="badge bg-info">Cache • Relatórios • Dashboard</div>
             </div>
 
-            <!-- Formulário de Login SIMPLIFICADO -->
+            <!-- Formulário de Login -->
             <form id="login-form">
                 <div class="mb-3">
                     <label for="username" class="form-label">Usuário</label>
@@ -194,14 +167,7 @@
 
             <div class="mt-4 p-3 bg-light rounded">
                 <div id="system-status" class="text-center">
-                    <span class="badge bg-warning loading-pulse">Verificando sistema FASE 5...</span>
-                </div>
-                <div id="system-metrics" class="mt-2 text-center" style="display: none;">
-                    <small class="text-muted">
-                        <span id="metric-uptime">Uptime: --</span> | 
-                        <span id="metric-response-time">Response: --ms</span> | 
-                        <span id="metric-cache-status">Cache: --</span>
-                    </small>
+                    <span class="badge bg-success">Sistema Pronto - FASE 5 COMPLETA</span>
                 </div>
             </div>
         </div>
@@ -261,15 +227,11 @@
                                 <li><a class="dropdown-item" href="#usuarios">
                                     <i class="fas fa-users me-2"></i>Usuários
                                 </a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="#api">
-                                    <i class="fas fa-code me-2"></i>API & Integrações
-                                </a></li>
                             </ul>
                         </li>
                     </ul>
                     <ul class="navbar-nav">
-                        <!-- ✅ STATUS DE CONEXÃO FASE 5 COMPLETA -->
+                        <!-- Status do Sistema -->
                         <li class="nav-item me-2">
                             <span class="nav-link">
                                 <span id="status-conexao" class="connection-status status-online">
@@ -277,23 +239,7 @@
                                 </span>
                             </span>
                         </li>
-                        
-                        <li class="nav-item me-2">
-                            <span class="nav-link">
-                                <span id="status-websocket" class="websocket-status websocket-disconnected">
-                                    <i class="fas fa-plug me-1"></i>WebSocket
-                                </span>
-                            </span>
-                        </li>
 
-                        <li class="nav-item me-2">
-                            <span class="nav-link">
-                                <span id="status-cache" class="badge bg-warning">
-                                    <i class="fas fa-database me-1"></i>Cache
-                                </span>
-                            </span>
-                        </li>
-                        
                         <!-- Notificações -->
                         <li class="nav-item dropdown me-2">
                             <a class="nav-link position-relative" href="#" role="button" data-bs-toggle="dropdown">
@@ -312,21 +258,21 @@
                             </ul>
                         </li>
                         
+                        <!-- Tema -->
                         <li class="nav-item">
                             <span class="nav-link theme-switcher" onclick="alternarTema()">
                                 <i class="fas fa-moon"></i>
                             </span>
                         </li>
+                        
+                        <!-- Usuário -->
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                                 <i class="fas fa-user me-1"></i> <span id="user-name">Usuário</span>
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#configModal">
-                                    <i class="fas fa-cog me-2"></i>Configurações FASE 5
-                                </a></li>
-                                <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#monitoringModal">
-                                    <i class="fas fa-chart-line me-2"></i>Monitoramento
+                                    <i class="fas fa-cog me-2"></i>Configurações
                                 </a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item text-danger" href="#" id="btn-logout">
@@ -341,84 +287,58 @@
 
         <!-- Main Content -->
         <div class="container mt-4">
-            <!-- Dashboard Section FASE 5 COMPLETA -->
+            <!-- Dashboard Section -->
             <section id="dashboard" class="mb-5">
                 <div class="row mb-4">
                     <div class="col-12">
                         <div class="d-flex justify-content-between align-items-center">
                             <h2><i class="fas fa-tachometer-alt me-2"></i> Dashboard FASE 5 COMPLETA</h2>
                             <div>
-                                <button class="btn btn-sm btn-outline-primary me-2" onclick="testarConexoes()">
-                                    <i class="fas fa-network-wired me-1"></i>Testar Conexões
+                                <button class="btn btn-sm btn-outline-primary me-2" onclick="carregarDashboard()">
+                                    <i class="fas fa-sync me-1"></i>Atualizar
                                 </button>
-                                <button class="btn btn-sm btn-outline-success me-2" onclick="limparCache()">
+                                <button class="btn btn-sm btn-outline-success" onclick="limparCache()">
                                     <i class="fas fa-broom me-1"></i>Limpar Cache
-                                </button>
-                                <button class="btn btn-sm btn-outline-info" onclick="gerarRelatorioPerformance()">
-                                    <i class="fas fa-chart-line me-1"></i>Performance
                                 </button>
                             </div>
                         </div>
-                        <p class="text-muted">Sistema de Produção - Cache Service • Prometheus • Monitoramento • Segurança</p>
+                        <p class="text-muted">Sistema completo funcionando 100% no frontend</p>
                     </div>
                 </div>
 
-                <!-- ✅ NOVAS MÉTRICAS FASE 5 COMPLETA -->
+                <!-- Métricas Principais -->
                 <div class="row mb-4">
                     <div class="col-12">
                         <div class="card bg-light">
                             <div class="card-body">
                                 <div class="row text-center">
-                                    <div class="col-md-2 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <div class="metric-card border rounded p-3">
-                                            <i class="fas fa-rocket fa-2x text-primary mb-2"></i>
-                                            <h5 id="metric-requests">0</h5>
-                                            <small class="text-muted">Req/min</small>
+                                            <i class="fas fa-building fa-2x text-primary mb-2"></i>
+                                            <h5 id="metric-empresas">1</h5>
+                                            <small class="text-muted">Empresas</small>
                                         </div>
                                     </div>
-                                    <div class="col-md-2 mb-3">
-                                        <div class="metric-card border rounded p-3 cache-hit">
-                                            <i class="fas fa-bolt fa-2x mb-2"></i>
-                                            <h5 id="metric-cache-hit">0</h5>
-                                            <small>Cache Hits</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-2 mb-3">
-                                        <div class="metric-card border rounded p-3 cache-miss">
-                                            <i class="fas fa-times fa-2x mb-2"></i>
-                                            <h5 id="metric-cache-miss">0</h5>
-                                            <small>Cache Miss</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-2 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <div class="metric-card border rounded p-3">
-                                            <i class="fas fa-shield-alt fa-2x text-warning mb-2"></i>
-                                            <h5 id="metric-errors">0</h5>
-                                            <small class="text-muted">Erros</small>
+                                            <i class="fas fa-boxes fa-2x text-success mb-2"></i>
+                                            <h5 id="metric-produtos">5</h5>
+                                            <small class="text-muted">Produtos</small>
                                         </div>
                                     </div>
-                                    <div class="col-md-2 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <div class="metric-card border rounded p-3">
-                                            <i class="fas fa-clock fa-2x text-info mb-2"></i>
-                                            <h5 id="metric-response">0ms</h5>
-                                            <small class="text-muted">Response</small>
+                                            <i class="fas fa-shopping-cart fa-2x text-info mb-2"></i>
+                                            <h5 id="metric-vendas">4</h5>
+                                            <small class="text-muted">Vendas</small>
                                         </div>
                                     </div>
-                                    <div class="col-md-2 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <div class="metric-card border rounded p-3">
-                                            <i class="fas fa-database fa-2x text-success mb-2"></i>
-                                            <h5 id="metric-uptime-dash">--</h5>
-                                            <small class="text-muted">Uptime</small>
+                                            <i class="fas fa-money-bill-wave fa-2x text-warning mb-2"></i>
+                                            <h5 id="metric-faturamento">R$ 2.859,50</h5>
+                                            <small class="text-muted">Faturamento</small>
                                         </div>
-                                    </div>
-                                </div>
-                                <div class="row mt-2">
-                                    <div class="col-12 text-center">
-                                        <small class="text-muted" id="cache-hit-ratio">Cache Hit Ratio: --%</small>
-                                        <span class="mx-2">•</span>
-                                        <small class="text-muted" id="performance-status">Performance: --</small>
-                                        <span class="mx-2">•</span>
-                                        <small class="text-muted" id="cache-type">Cache Type: --</small>
                                     </div>
                                 </div>
                             </div>
@@ -426,131 +346,101 @@
                     </div>
                 </div>
 
-                <!-- Seções Empresariais FASE 5 COMPLETA -->
-                <div class="row mt-4">
-                    <div class="col-md-6 mb-4">
+                <!-- Ações Rápidas e Status -->
+                <div class="row">
+                    <div class="col-md-8 mb-4">
                         <div class="card h-100">
-                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0"><i class="fas fa-building me-2"></i>Gestão Empresarial</h6>
-                                <span class="badge bg-light text-primary" id="total-empresas">1</span>
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0"><i class="fas fa-bolt me-2"></i>Ações Rápidas</h6>
                             </div>
                             <div class="card-body">
-                                <div class="row text-center">
-                                    <div class="col-4">
-                                        <div class="border rounded p-3">
-                                            <i class="fas fa-building fa-2x text-primary mb-2"></i>
-                                            <h5 id="total-empresas-card">1</h5>
-                                            <small class="text-muted">Empresas</small>
-                                        </div>
+                                <div class="row g-2">
+                                    <div class="col-6 col-md-4">
+                                        <button class="btn btn-outline-primary w-100" onclick="scrollToSection('vendas')">
+                                            <i class="fas fa-cash-register me-1"></i>Nova Venda
+                                        </button>
                                     </div>
-                                    <div class="col-4">
-                                        <div class="border rounded p-3">
-                                            <i class="fas fa-store fa-2x text-success mb-2"></i>
-                                            <h5 id="total-filiais">1</h5>
-                                            <small class="text-muted">Filiais</small>
-                                        </div>
+                                    <div class="col-6 col-md-4">
+                                        <button class="btn btn-outline-success w-100" onclick="scrollToSection('estoque')">
+                                            <i class="fas fa-plus me-1"></i>Add Produto
+                                        </button>
                                     </div>
-                                    <div class="col-4">
-                                        <div class="border rounded p-3">
-                                            <i class="fas fa-users fa-2x text-warning mb-2"></i>
-                                            <h5 id="total-usuarios">1</h5>
-                                            <small class="text-muted">Usuários</small>
-                                        </div>
+                                    <div class="col-6 col-md-4">
+                                        <button class="btn btn-outline-info w-100" onclick="scrollToSection('financeiro')">
+                                            <i class="fas fa-money-bill me-1"></i>Financeiro
+                                        </button>
                                     </div>
-                                </div>
-                                <div class="mt-3">
-                                    <button class="btn btn-outline-primary w-100" onclick="scrollToSection('empresas')">
-                                        <i class="fas fa-cog me-1"></i>Gerenciar Empresas
-                                    </button>
+                                    <div class="col-6 col-md-4">
+                                        <button class="btn btn-outline-warning w-100" onclick="scrollToSection('relatorios')">
+                                            <i class="fas fa-chart-bar me-1"></i>Relatórios
+                                        </button>
+                                    </div>
+                                    <div class="col-6 col-md-4">
+                                        <button class="btn btn-outline-dark w-100" onclick="gerarDadosDemo()">
+                                            <i class="fas fa-database me-1"></i>Dados Demo
+                                        </button>
+                                    </div>
+                                    <div class="col-6 col-md-4">
+                                        <button class="btn btn-outline-secondary w-100" onclick="exportarDados()">
+                                            <i class="fas fa-download me-1"></i>Exportar
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="col-md-6 mb-4">
+                    <div class="col-md-4 mb-4">
                         <div class="card h-100">
-                            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0"><i class="fas fa-code me-2"></i>Sistema FASE 5</h6>
-                                <span class="badge bg-light text-success">PRODUÇÃO</span>
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Status do Sistema</h6>
                             </div>
                             <div class="card-body">
-                                <div class="d-grid gap-2">
-                                    <button class="btn btn-outline-success" onclick="bizFlowApp.testarWebSocket()">
-                                        <i class="fas fa-plug me-1"></i>Testar WebSocket
-                                    </button>
-                                    <button class="btn btn-outline-info" onclick="bizFlowApp.testarConexaoCompleta()">
-                                        <i class="fas fa-network-wired me-1"></i>Teste Completo
-                                    </button>
-                                    <button class="btn btn-outline-warning" onclick="bizFlowApp.verificarCache()">
-                                        <i class="fas fa-database me-1"></i>Testar Cache
-                                    </button>
-                                    <button class="btn btn-outline-danger" onclick="bizFlowApp.testarPrometheus()">
-                                        <i class="fas fa-chart-bar me-1"></i>Métricas
-                                    </button>
-                                </div>
-                                <div class="mt-3">
-                                    <div class="alert alert-success">
-                                        <small>
-                                            <i class="fas fa-check-circle me-2"></i>
-                                            <strong>Sistema FASE 5 COMPLETA:</strong> Cache Service • Prometheus • Monitoramento • Segurança
-                                        </small>
+                                <div class="mb-3">
+                                    <small class="text-muted">Cache Local</small>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Itens em cache:</span>
+                                        <strong id="cache-count">0</strong>
                                     </div>
+                                </div>
+                                <div class="mb-3">
+                                    <small class="text-muted">Dados</small>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Total registros:</span>
+                                        <strong id="total-records">0</strong>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <small class="text-muted">Performance</small>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Carregamento:</span>
+                                        <strong id="load-time">0ms</strong>
+                                    </div>
+                                </div>
+                                <div class="alert alert-info mt-3">
+                                    <small>
+                                        <i class="fas fa-check-circle me-2"></i>
+                                        <strong>Sistema 100% Frontend</strong><br>
+                                        Dados salvos localmente
+                                    </small>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Ações Rápidas -->
+                <!-- Últimas Vendas -->
                 <div class="row mt-3">
-                    <div class="col-md-6 mb-3">
+                    <div class="col-12">
                         <div class="card">
-                            <div class="card-header">
-                                <h6 class="mb-0"><i class="fas fa-credit-card me-2"></i>Métodos de Pagamento</h6>
-                            </div>
-                            <div class="card-body">
-                                <div id="metodos-pagamento">
-                                    <p class="text-muted text-center">Carregando...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="card border-info">
                             <div class="card-header bg-info text-white">
-                                <h6 class="mb-0"><i class="fas fa-bolt me-2"></i>Ações Rápidas</h6>
+                                <h6 class="mb-0"><i class="fas fa-history me-2"></i>Últimas Vendas</h6>
                             </div>
                             <div class="card-body">
-                                <div class="row g-2">
-                                    <div class="col-6">
-                                        <button class="btn btn-outline-primary w-100" onclick="scrollToSection('vendas')">
-                                            <i class="fas fa-cash-register me-1"></i>Venda
-                                        </button>
-                                    </div>
-                                    <div class="col-6">
-                                        <button class="btn btn-outline-success w-100" onclick="scrollToSection('estoque')">
-                                            <i class="fas fa-plus me-1"></i>Estoque
-                                        </button>
-                                    </div>
-                                    <div class="col-6">
-                                        <button class="btn btn-outline-info w-100" onclick="scrollToSection('financeiro')">
-                                            <i class="fas fa-money-bill me-1"></i>Financeiro
-                                        </button>
-                                    </div>
-                                    <div class="col-6">
-                                        <button class="btn btn-outline-warning w-100" onclick="scrollToSection('relatorios')">
-                                            <i class="fas fa-chart-bar me-1"></i>Relatórios
-                                        </button>
-                                    </div>
-                                    <div class="col-6">
-                                        <button class="btn btn-outline-dark w-100" onclick="carregarDashboard()">
-                                            <i class="fas fa-sync me-1"></i>Atualizar
-                                        </button>
-                                    </div>
-                                    <div class="col-6">
-                                        <button class="btn btn-outline-secondary w-100" onclick="bizFlowApp.verificarLogs()">
-                                            <i class="fas fa-file-alt me-1"></i>Ver Logs
-                                        </button>
+                                <div id="ultimas-vendas-dash">
+                                    <div class="text-center text-muted py-3">
+                                        <i class="fas fa-receipt fa-2x mb-2"></i>
+                                        <p>Nenhuma venda registrada</p>
                                     </div>
                                 </div>
                             </div>
@@ -559,79 +449,12 @@
                 </div>
             </section>
 
-            <!-- Seções Empresariais FASE 5 COMPLETA -->
-            
-            <!-- Seção Empresas -->
-            <section id="empresas" class="mb-5">
+            <!-- Seção PDV -->
+            <section id="vendas" class="mb-5">
                 <div class="row">
                     <div class="col-12">
-                        <h3 class="nav-section"><i class="fas fa-building me-2"></i>Gestão de Empresas</h3>
-                        <p class="text-muted">Gerencie múltiplas empresas no sistema</p>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header bg-primary text-white">
-                                <h5 class="mb-0"><i class="fas fa-plus-circle me-1"></i>Nova Empresa</h5>
-                            </div>
-                            <div class="card-body">
-                                <form id="empresa-form">
-                                    <div class="mb-3">
-                                        <label for="empresa-nome" class="form-label">Nome da Empresa *</label>
-                                        <input type="text" class="form-control" id="empresa-nome" 
-                                               placeholder="Nome da empresa" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="empresa-cnpj" class="form-label">CNPJ</label>
-                                        <input type="text" class="form-control" id="empresa-cnpj" 
-                                               placeholder="00.000.000/0001-00">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="empresa-email" class="form-label">Email</label>
-                                        <input type="email" class="form-control" id="empresa-email" 
-                                               placeholder="empresa@email.com">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="empresa-telefone" class="form-label">Telefone</label>
-                                        <input type="text" class="form-control" id="empresa-telefone" 
-                                               placeholder="(11) 9999-9999">
-                                    </div>
-                                    <div class="d-grid gap-2">
-                                        <button type="submit" class="btn btn-primary btn-lg">
-                                            <i class="fas fa-check me-1"></i> Cadastrar Empresa
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header bg-info text-white">
-                                <h5 class="mb-0"><i class="fas fa-list me-1"></i>Empresas Cadastradas</h5>
-                            </div>
-                            <div class="card-body">
-                                <div id="lista-empresas" style="max-height: 400px; overflow-y: auto;">
-                                    <div class="text-center text-muted py-4">
-                                        <i class="fas fa-building fa-3x mb-3"></i>
-                                        <p>Nenhuma empresa cadastrada</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Seção Filiais -->
-            <section id="filiais" class="mb-5">
-                <div class="row">
-                    <div class="col-12">
-                        <h3 class="nav-section"><i class="fas fa-store me-2"></i>Gestão de Filiais</h3>
-                        <p class="text-muted">Gerencie filiais/lojas da empresa</p>
+                        <h3 class="nav-section"><i class="fas fa-cash-register me-2"></i>Ponto de Venda</h3>
+                        <p class="text-muted">Registre vendas rapidamente</p>
                     </div>
                 </div>
 
@@ -639,33 +462,43 @@
                     <div class="col-md-6">
                         <div class="card">
                             <div class="card-header bg-success text-white">
-                                <h5 class="mb-0"><i class="fas fa-plus-circle me-1"></i>Nova Filial</h5>
+                                <h5 class="mb-0"><i class="fas fa-plus-circle me-1"></i>Nova Venda</h5>
                             </div>
                             <div class="card-body">
-                                <form id="filial-form">
+                                <form id="venda-form">
                                     <div class="mb-3">
-                                        <label for="filial-nome" class="form-label">Nome da Filial *</label>
-                                        <input type="text" class="form-control" id="filial-nome" 
-                                               placeholder="Nome da filial/loja" required>
+                                        <label for="produto-venda" class="form-label">Produto *</label>
+                                        <select class="form-select" id="produto-venda" required>
+                                            <option value="">Selecione um produto...</option>
+                                        </select>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="filial-codigo" class="form-label">Código *</label>
-                                        <input type="text" class="form-control" id="filial-codigo" 
-                                               placeholder="Código único (ex: MATRIZ, FILIAL01)" required>
+                                        <label for="quantidade-venda" class="form-label">Quantidade *</label>
+                                        <input type="number" class="form-control" id="quantidade-venda" 
+                                               value="1" min="1" required>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="filial-responsavel" class="form-label">Responsável</label>
-                                        <input type="text" class="form-control" id="filial-responsavel" 
-                                               placeholder="Nome do responsável">
+                                        <label for="valor-venda" class="form-label">Valor Unitário (R$)</label>
+                                        <input type="number" class="form-control" id="valor-venda" 
+                                               step="0.01" min="0.01" readonly>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="filial-telefone" class="form-label">Telefone</label>
-                                        <input type="text" class="form-control" id="filial-telefone" 
-                                               placeholder="(11) 9999-9999">
+                                        <label for="total-venda" class="form-label">Total (R$)</label>
+                                        <input type="number" class="form-control" id="total-venda" 
+                                               step="0.01" readonly>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="metodo-pagamento" class="form-label">Método de Pagamento *</label>
+                                        <select class="form-select" id="metodo-pagamento" required>
+                                            <option value="dinheiro">Dinheiro</option>
+                                            <option value="cartao">Cartão</option>
+                                            <option value="pix">PIX</option>
+                                            <option value="transferencia">Transferência</option>
+                                        </select>
                                     </div>
                                     <div class="d-grid gap-2">
                                         <button type="submit" class="btn btn-success btn-lg">
-                                            <i class="fas fa-check me-1"></i> Cadastrar Filial
+                                            <i class="fas fa-check me-1"></i> Registrar Venda
                                         </button>
                                     </div>
                                 </form>
@@ -675,14 +508,14 @@
 
                     <div class="col-md-6">
                         <div class="card">
-                            <div class="card-header bg-secondary text-white">
-                                <h5 class="mb-0"><i class="fas fa-list me-1"></i>Filiais Cadastradas</h5>
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="fas fa-history me-1"></i>Últimas Vendas</h5>
                             </div>
                             <div class="card-body">
-                                <div id="lista-filiais" style="max-height: 400px; overflow-y: auto;">
+                                <div id="lista-vendas" style="max-height: 400px; overflow-y: auto;">
                                     <div class="text-center text-muted py-4">
-                                        <i class="fas fa-store fa-3x mb-3"></i>
-                                        <p>Nenhuma filial cadastrada</p>
+                                        <i class="fas fa-receipt fa-3x mb-3"></i>
+                                        <p>Nenhuma venda registrada</p>
                                     </div>
                                 </div>
                             </div>
@@ -691,47 +524,51 @@
                 </div>
             </section>
 
-            <!-- Seção API & Integrações -->
-            <section id="api" class="mb-5">
+            <!-- Seção Estoque -->
+            <section id="estoque" class="mb-5">
                 <div class="row">
                     <div class="col-12">
-                        <h3 class="nav-section"><i class="fas fa-code me-2"></i>API & Integrações</h3>
-                        <p class="text-muted">Gerencie API Keys e integrações externas</p>
+                        <h3 class="nav-section"><i class="fas fa-boxes me-2"></i>Gestão de Estoque</h3>
+                        <p class="text-muted">Controle seus produtos</p>
                     </div>
                 </div>
 
                 <div class="row">
                     <div class="col-md-6">
                         <div class="card">
-                            <div class="card-header bg-dark text-white">
-                                <h5 class="mb-0"><i class="fas fa-key me-1"></i>Gerar API Key</h5>
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="fas fa-plus me-1"></i>Adicionar Produto</h5>
                             </div>
                             <div class="card-body">
-                                <form id="api-key-form">
+                                <form id="estoque-form">
                                     <div class="mb-3">
-                                        <label for="api-key-name" class="form-label">Nome da API Key *</label>
-                                        <input type="text" class="form-control" id="api-key-name" 
-                                               placeholder="Ex: Integração Site, App Mobile" required>
+                                        <label for="produto-estoque" class="form-label">Nome do Produto *</label>
+                                        <input type="text" class="form-control" id="produto-estoque" 
+                                               placeholder="Nome do produto" required>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="api-key-permissions" class="form-label">Permissões</label>
-                                        <select class="form-select" id="api-key-permissions" multiple>
-                                            <option value="products:read">Ler Produtos</option>
-                                            <option value="products:write">Gerenciar Produtos</option>
-                                            <option value="sales:read">Ler Vendas</option>
-                                            <option value="sales:write">Criar Vendas</option>
-                                            <option value="inventory:read">Ler Estoque</option>
-                                        </select>
-                                        <small class="text-muted">Segure Ctrl para selecionar múltiplas permissões</small>
+                                        <label for="categoria-produto" class="form-label">Categoria</label>
+                                        <input type="text" class="form-control" id="categoria-produto" 
+                                               placeholder="Ex: Eletrônicos, Alimentação">
                                     </div>
                                     <div class="mb-3">
-                                        <label for="api-key-expires" class="form-label">Expira em (dias)</label>
-                                        <input type="number" class="form-control" id="api-key-expires" 
-                                               placeholder="Deixe vazio para não expirar" min="1">
+                                        <label for="preco" class="form-label">Preço (R$) *</label>
+                                        <input type="number" class="form-control" id="preco" 
+                                               step="0.01" min="0.01" placeholder="0,00" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="quantidade" class="form-label">Quantidade *</label>
+                                        <input type="number" class="form-control" id="quantidade" 
+                                               min="0" value="0" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="estoque-minimo" class="form-label">Estoque Mínimo</label>
+                                        <input type="number" class="form-control" id="estoque-minimo" 
+                                               min="0" value="5">
                                     </div>
                                     <div class="d-grid gap-2">
-                                        <button type="submit" class="btn btn-dark btn-lg">
-                                            <i class="fas fa-key me-1"></i> Gerar API Key
+                                        <button type="submit" class="btn btn-primary btn-lg">
+                                            <i class="fas fa-save me-1"></i> Adicionar Produto
                                         </button>
                                     </div>
                                 </form>
@@ -742,13 +579,13 @@
                     <div class="col-md-6">
                         <div class="card">
                             <div class="card-header bg-warning text-dark">
-                                <h5 class="mb-0"><i class="fas fa-list me-1"></i>API Keys Ativas</h5>
+                                <h5 class="mb-0"><i class="fas fa-clipboard-list me-1"></i>Produtos em Estoque</h5>
                             </div>
                             <div class="card-body">
-                                <div id="lista-api-keys" style="max-height: 400px; overflow-y: auto;">
+                                <div id="lista-estoque" style="max-height: 400px; overflow-y: auto;">
                                     <div class="text-center text-muted py-4">
-                                        <i class="fas fa-key fa-3x mb-3"></i>
-                                        <p>Nenhuma API Key gerada</p>
+                                        <i class="fas fa-box-open fa-3x mb-3"></i>
+                                        <p>Nenhum produto cadastrado</p>
                                     </div>
                                 </div>
                             </div>
@@ -757,7 +594,84 @@
                 </div>
             </section>
 
-            <!-- Seção Relatórios FASE 5 COMPLETA -->
+            <!-- Seção Financeiro -->
+            <section id="financeiro" class="mb-5">
+                <div class="row">
+                    <div class="col-12">
+                        <h3 class="nav-section"><i class="fas fa-money-bill-wave me-2"></i>Gestão Financeira</h3>
+                        <p class="text-muted">Controle de contas a pagar e receber</p>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="fas fa-file-invoice-dollar me-1"></i>Nova Conta</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="financeiro-form">
+                                    <div class="mb-3">
+                                        <label for="conta-nome" class="form-label">Descrição *</label>
+                                        <input type="text" class="form-control" id="conta-nome" 
+                                               placeholder="Ex: Venda cliente, Pagamento fornecedor" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="conta-tipo" class="form-label">Tipo *</label>
+                                        <select class="form-select" id="conta-tipo" required>
+                                            <option value="receita">Receita</option>
+                                            <option value="despesa">Despesa</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="conta-valor" class="form-label">Valor (R$) *</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">R$</span>
+                                            <input type="number" class="form-control" id="conta-valor" 
+                                                   step="0.01" min="0.01" placeholder="0,00" required>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="conta-vencimento" class="form-label">Data de Vencimento *</label>
+                                        <input type="date" class="form-control" id="conta-vencimento" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="conta-status" class="form-label">Status</label>
+                                        <select class="form-select" id="conta-status">
+                                            <option value="pendente">Pendente</option>
+                                            <option value="pago">Pago</option>
+                                            <option value="recebido">Recebido</option>
+                                        </select>
+                                    </div>
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-info btn-lg">
+                                            <i class="fas fa-check me-1"></i> Registrar Conta
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-secondary text-white">
+                                <h5 class="mb-0"><i class="fas fa-list me-1"></i>Contas Registradas</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="lista-contas" style="max-height: 400px; overflow-y: auto;">
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fas fa-file-invoice-dollar fa-3x mb-3"></i>
+                                        <p>Nenhuma conta registrada</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Seção Relatórios -->
             <section id="relatorios" class="mb-5">
                 <div class="row">
                     <div class="col-12">
@@ -865,52 +779,6 @@
                                             </div>
                                         </div>
                                     </div>
-
-                                    <!-- ✅ NOVO: Relatório de Performance -->
-                                    <div class="col-md-6 mb-4">
-                                        <div class="card h-100 report-card">
-                                            <div class="card-header bg-dark text-white">
-                                                <h6 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>Relatório de Performance</h6>
-                                            </div>
-                                            <div class="card-body">
-                                                <p class="card-text">Métricas de performance e cache do sistema.</p>
-                                                <ul class="list-unstyled small">
-                                                    <li><i class="fas fa-check text-success me-2"></i>Cache hit ratio</li>
-                                                    <li><i class="fas fa-check text-success me-2"></i>Tempo de resposta</li>
-                                                    <li><i class="fas fa-check text-success me-2"></i>Uso de memória</li>
-                                                    <li><i class="fas fa-check text-success me-2"></i>Métricas Prometheus</li>
-                                                </ul>
-                                                <div class="mt-3">
-                                                    <button class="btn btn-dark w-100" onclick="carregarRelatorioPerformance()">
-                                                        <i class="fas fa-download me-1"></i> Gerar Relatório
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- ✅ NOVO: Relatório de Clientes -->
-                                    <div class="col-md-6 mb-4">
-                                        <div class="card h-100 report-card">
-                                            <div class="card-header bg-secondary text-white">
-                                                <h6 class="mb-0"><i class="fas fa-users me-2"></i>Relatório de Clientes</h6>
-                                            </div>
-                                            <div class="card-body">
-                                                <p class="card-text">Análise de comportamento e segmentação de clientes.</p>
-                                                <ul class="list-unstyled small">
-                                                    <li><i class="fas fa-check text-success me-2"></i>Clientes que mais compram</li>
-                                                    <li><i class="fas fa-check text-success me-2"></i>Frequência de compras</li>
-                                                    <li><i class="fas fa-check text-success me-2"></i>Segmentação por ticket</li>
-                                                    <li><i class="fas fa-check text-success me-2"></i>Análise comportamental</li>
-                                                </ul>
-                                                <div class="mt-3">
-                                                    <button class="btn btn-secondary w-100" onclick="carregarRelatorioClientes()">
-                                                        <i class="fas fa-download me-1"></i> Gerar Relatório
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -935,76 +803,12 @@
                 </div>
             </section>
 
-            <!-- Seções existentes da FASE 3 (mantidas) -->
-            <!-- PDV Section -->
-            <section id="vendas" class="mb-5">
+            <!-- Seção Empresas -->
+            <section id="empresas" class="mb-5">
                 <div class="row">
                     <div class="col-12">
-                        <h3 class="nav-section"><i class="fas fa-cash-register me-2"></i>Ponto de Venda</h3>
-                        <p class="text-muted">Registre vendas rapidamente</p>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header bg-success text-white">
-                                <h5 class="mb-0"><i class="fas fa-plus-circle me-1"></i>Nova Venda</h5>
-                            </div>
-                            <div class="card-body">
-                                <form id="venda-form">
-                                    <div class="mb-3">
-                                        <label for="produto" class="form-label">Produto *</label>
-                                        <input type="text" class="form-control" id="produto" 
-                                               placeholder="Nome do produto" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="valor" class="form-label">Valor (R$) *</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text">R$</span>
-                                            <input type="number" class="form-control" id="valor" 
-                                                   step="0.01" min="0.01" placeholder="0,00" required>
-                                        </div>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="quantidade-venda" class="form-label">Quantidade</label>
-                                        <input type="number" class="form-control" id="quantidade-venda" 
-                                               value="1" min="1">
-                                    </div>
-                                    <div class="d-grid gap-2">
-                                        <button type="submit" class="btn btn-success btn-lg">
-                                            <i class="fas fa-check me-1"></i> Registrar Venda
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header bg-info text-white">
-                                <h5 class="mb-0"><i class="fas fa-history me-1"></i>Últimas Vendas</h5>
-                            </div>
-                            <div class="card-body">
-                                <div id="lista-vendas" style="max-height: 400px; overflow-y: auto;">
-                                    <div class="text-center text-muted py-4">
-                                        <i class="fas fa-receipt fa-3x mb-3"></i>
-                                        <p>Nenhuma venda registrada</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Inventory Section -->
-            <section id="estoque" class="mb-5">
-                <div class="row">
-                    <div class="col-12">
-                        <h3 class="nav-section"><i class="fas fa-boxes me-2"></i>Gestão de Estoque</h3>
-                        <p class="text-muted">Controle seus produtos</p>
+                        <h3 class="nav-section"><i class="fas fa-building me-2"></i>Gestão de Empresas</h3>
+                        <p class="text-muted">Gerencie múltiplas empresas no sistema</p>
                     </div>
                 </div>
 
@@ -1012,28 +816,33 @@
                     <div class="col-md-6">
                         <div class="card">
                             <div class="card-header bg-primary text-white">
-                                <h5 class="mb-0"><i class="fas fa-plus me-1"></i>Adicionar Produto</h5>
+                                <h5 class="mb-0"><i class="fas fa-plus-circle me-1"></i>Nova Empresa</h5>
                             </div>
                             <div class="card-body">
-                                <form id="estoque-form">
+                                <form id="empresa-form">
                                     <div class="mb-3">
-                                        <label for="produto-estoque" class="form-label">Nome do Produto *</label>
-                                        <input type="text" class="form-control" id="produto-estoque" 
-                                               placeholder="Nome do produto" required>
+                                        <label for="empresa-nome" class="form-label">Nome da Empresa *</label>
+                                        <input type="text" class="form-control" id="empresa-nome" 
+                                               placeholder="Nome da empresa" required>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="preco" class="form-label">Preço (R$) *</label>
-                                        <input type="number" class="form-control" id="preco" 
-                                               step="0.01" min="0.01" placeholder="0,00" required>
+                                        <label for="empresa-cnpj" class="form-label">CNPJ</label>
+                                        <input type="text" class="form-control" id="empresa-cnpj" 
+                                               placeholder="00.000.000/0001-00">
                                     </div>
                                     <div class="mb-3">
-                                        <label for="quantidade" class="form-label">Quantidade *</label>
-                                        <input type="number" class="form-control" id="quantidade" 
-                                               min="0" value="0" required>
+                                        <label for="empresa-email" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="empresa-email" 
+                                               placeholder="empresa@email.com">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="empresa-telefone" class="form-label">Telefone</label>
+                                        <input type="text" class="form-control" id="empresa-telefone" 
+                                               placeholder="(11) 9999-9999">
                                     </div>
                                     <div class="d-grid gap-2">
                                         <button type="submit" class="btn btn-primary btn-lg">
-                                            <i class="fas fa-save me-1"></i> Adicionar Produto
+                                            <i class="fas fa-check me-1"></i> Cadastrar Empresa
                                         </button>
                                     </div>
                                 </form>
@@ -1041,85 +850,16 @@
                         </div>
                     </div>
 
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header bg-warning text-dark">
-                                <h5 class="mb-0"><i class="fas fa-clipboard-list me-1"></i>Produtos em Estoque</h5>
-                            </div>
-                            <div class="card-body">
-                                <div id="lista-estoque" style="max-height: 400px; overflow-y: auto;">
-                                    <div class="text-center text-muted py-4">
-                                        <i class="fas fa-box-open fa-3x mb-3"></i>
-                                        <p>Nenhum produto cadastrado</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Financeiro Section -->
-            <section id="financeiro" class="mb-5">
-                <div class="row">
-                    <div class="col-12">
-                        <h3 class="nav-section"><i class="fas fa-money-bill-wave me-2"></i>Gestão Financeira</h3>
-                        <p class="text-muted">Controle de contas a pagar e receber</p>
-                    </div>
-                </div>
-
-                <div class="row">
                     <div class="col-md-6">
                         <div class="card">
                             <div class="card-header bg-info text-white">
-                                <h5 class="mb-0"><i class="fas fa-file-invoice-dollar me-1"></i>Nova Conta</h5>
+                                <h5 class="mb-0"><i class="fas fa-list me-1"></i>Empresas Cadastradas</h5>
                             </div>
                             <div class="card-body">
-                                <form id="financeiro-form">
-                                    <div class="mb-3">
-                                        <label for="conta-nome" class="form-label">Descrição *</label>
-                                        <input type="text" class="form-control" id="conta-nome" 
-                                               placeholder="Ex: Venda cliente, Pagamento fornecedor" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="conta-tipo" class="form-label">Tipo *</label>
-                                        <select class="form-select" id="conta-tipo" required>
-                                            <option value="receita">Receita</option>
-                                            <option value="despesa">Despesa</option>
-                                        </select>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="conta-valor" class="form-label">Valor (R$) *</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text">R$</span>
-                                            <input type="number" class="form-control" id="conta-valor" 
-                                                   step="0.01" min="0.01" placeholder="0,00" required>
-                                        </div>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="conta-vencimento" class="form-label">Data de Vencimento *</label>
-                                        <input type="date" class="form-control" id="conta-vencimento" required>
-                                    </div>
-                                    <div class="d-grid gap-2">
-                                        <button type="submit" class="btn btn-info btn-lg">
-                                            <i class="fas fa-check me-1"></i> Registrar Conta
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header bg-secondary text-white">
-                                <h5 class="mb-0"><i class="fas fa-list me-1"></i>Contas Registradas</h5>
-                            </div>
-                            <div class="card-body">
-                                <div id="lista-contas" style="max-height: 400px; overflow-y: auto;">
+                                <div id="lista-empresas" style="max-height: 400px; overflow-y: auto;">
                                     <div class="text-center text-muted py-4">
-                                        <i class="fas fa-file-invoice-dollar fa-3x mb-3"></i>
-                                        <p>Nenhuma conta registrada</p>
+                                        <i class="fas fa-building fa-3x mb-3"></i>
+                                        <p>Nenhuma empresa cadastrada</p>
                                     </div>
                                 </div>
                             </div>
@@ -1135,8 +875,8 @@
                 <div class="row">
                     <div class="col-md-6">
                         <h5><i class="fas fa-building me-2"></i>BizFlow</h5>
-                        <p class="mb-0">Sistema Empresarial - FASE 5 COMPLETA PRODUÇÃO</p>
-                        <small class="text-muted">Cache Service • Prometheus • Monitoramento • Segurança • Performance</small>
+                        <p class="mb-0">Sistema Empresarial - FASE 5 COMPLETA</p>
+                        <small class="text-muted">100% Frontend • Dados Locais • Funcionalidade Completa</small>
                     </div>
                     <div class="col-md-6 text-md-end">
                         <p class="mb-0">
@@ -1145,80 +885,50 @@
                             <i class="fas fa-heart text-danger mx-1"></i>
                             para escalar seu negócio
                         </p>
-                        <small class="text-muted">&copy; <span id="ano-atual">2024</span> BizFlow - FASE 5 COMPLETA</small>
+                        <small class="text-muted">&copy; 2024 BizFlow - FASE 5 COMPLETA</small>
                     </div>
                 </div>
             </div>
         </footer>
     </div>
 
-    <!-- ✅ MODAL CONFIGURAÇÕES FASE 5 COMPLETA -->
+    <!-- Modal Configurações -->
     <div class="modal fade" id="configModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-cog me-2"></i>Configurações FASE 5 COMPLETA</h5>
+                    <h5 class="modal-title"><i class="fas fa-cog me-2"></i>Configurações</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="config-tema" class="form-label">Tema da Interface</label>
-                                <select class="form-select" id="config-tema">
-                                    <option value="light">Claro</option>
-                                    <option value="dark">Escuro</option>
-                                    <option value="auto">Automático</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="config-websocket" checked>
-                                    <label class="form-check-label" for="config-websocket">
-                                        Conexão WebSocket
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="config-cache" checked>
-                                    <label class="form-check-label" for="config-cache">
-                                        Sistema de Cache Service
-                                    </label>
-                                </div>
-                            </div>
+                    <div class="mb-3">
+                        <label for="config-tema" class="form-label">Tema da Interface</label>
+                        <select class="form-select" id="config-tema">
+                            <option value="light">Claro</option>
+                            <option value="dark">Escuro</option>
+                            <option value="auto">Automático</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="config-cache" checked>
+                            <label class="form-check-label" for="config-cache">
+                                Cache Local
+                            </label>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="config-retry" checked>
-                                    <label class="form-check-label" for="config-retry">
-                                        Retry Automático
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="config-monitoring" checked>
-                                    <label class="form-check-label" for="config-monitoring">
-                                        Monitoramento Ativo
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="config-prometheus" checked>
-                                    <label class="form-check-label" for="config-prometheus">
-                                        Métricas Prometheus
-                                    </label>
-                                </div>
-                            </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="config-notificacoes" checked>
+                            <label class="form-check-label" for="config-notificacoes">
+                                Notificações
+                            </label>
                         </div>
                     </div>
                     <div class="alert alert-info">
                         <small>
                             <i class="fas fa-info-circle me-2"></i>
-                            Configurações otimizadas para produção FASE 5 COMPLETA
+                            Todas as configurações são salvas localmente no seu navegador
                         </small>
                     </div>
                 </div>
@@ -1230,186 +940,418 @@
         </div>
     </div>
 
-    <!-- ✅ MODAL MONITORAMENTO FASE 5 COMPLETA -->
-    <div class="modal fade" id="monitoringModal" tabindex="-1">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-chart-line me-2"></i>Monitoramento do Sistema</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header bg-primary text-white">
-                                    <h6 class="mb-0"><i class="fas fa-database me-2"></i>Status Cache Service</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div id="cache-status">Carregando...</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header bg-success text-white">
-                                    <h6 class="mb-0"><i class="fas fa-heartbeat me-2"></i>Saúde do Sistema</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div id="system-health">Carregando...</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <div class="card">
-                                <div class="card-header bg-info text-white">
-                                    <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Métricas em Tempo Real</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div id="realtime-metrics">Carregando...</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                    <button type="button" class="btn btn-primary" onclick="atualizarMonitoramento()">
-                        <i class="fas fa-sync me-1"></i>Atualizar
-                    </button>
-                </div>
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+        <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto" id="toast-title">BizFlow</strong>
+                <small id="toast-time">Agora</small>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="toast-message">
+                Operação realizada com sucesso!
             </div>
         </div>
     </div>
 
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
-    <!-- ✅ SISTEMA DE AUTENTICAÇÃO ATUALIZADO FASE 5 COMPLETA -->
     <script>
-        class AuthSystem {
+        // ================= SISTEMA DE DADOS LOCAL =================
+        class LocalDatabase {
             constructor() {
-                this.token = localStorage.getItem('bizflow_token');
-                this.user = JSON.parse(localStorage.getItem('bizflow_user') || 'null');
+                this.storageKey = 'bizflow_data';
+                this.cacheKey = 'bizflow_cache';
                 this.init();
             }
 
             init() {
-                this.checkAuthStatus();
+                // Inicializar dados se não existirem
+                if (!this.getData()) {
+                    this.setData({
+                        empresas: [],
+                        produtos: [],
+                        vendas: [],
+                        contas: [],
+                        usuarios: [],
+                        config: {
+                            tema: 'light',
+                            cache: true,
+                            notificacoes: true
+                        }
+                    });
+                }
+                
+                // Carregar dados demo se estiver vazio
+                this.carregarDadosDemoSeNecessario();
+            }
+
+            getData() {
+                const data = localStorage.getItem(this.storageKey);
+                return data ? JSON.parse(data) : null;
+            }
+
+            setData(data) {
+                localStorage.setItem(this.storageKey, JSON.stringify(data));
+            }
+
+            // Empresas
+            getEmpresas() {
+                return this.getData()?.empresas || [];
+            }
+
+            addEmpresa(empresa) {
+                const data = this.getData();
+                empresa.id = Date.now();
+                empresa.created_at = new Date().toISOString();
+                data.empresas.push(empresa);
+                this.setData(data);
+                return empresa;
+            }
+
+            // Produtos
+            getProdutos() {
+                return this.getData()?.produtos || [];
+            }
+
+            addProduto(produto) {
+                const data = this.getData();
+                produto.id = Date.now();
+                produto.created_at = new Date().toISOString();
+                produto.is_active = true;
+                data.produtos.push(produto);
+                this.setData(data);
+                return produto;
+            }
+
+            updateProdutoStock(produtoId, quantidade) {
+                const data = this.getData();
+                const produto = data.produtos.find(p => p.id === produtoId);
+                if (produto) {
+                    produto.stock_quantity = (produto.stock_quantity || 0) - quantidade;
+                    this.setData(data);
+                }
+            }
+
+            // Vendas
+            getVendas() {
+                return this.getData()?.vendas || [];
+            }
+
+            addVenda(venda) {
+                const data = this.getData();
+                venda.id = Date.now();
+                venda.created_at = new Date().toISOString();
+                venda.sale_date = new Date().toISOString();
+                data.vendas.push(venda);
+                this.setData(data);
+                return venda;
+            }
+
+            // Contas Financeiras
+            getContas() {
+                return this.getData()?.contas || [];
+            }
+
+            addConta(conta) {
+                const data = this.getData();
+                conta.id = Date.now();
+                conta.created_at = new Date().toISOString();
+                data.contas.push(conta);
+                this.setData(data);
+                return conta;
+            }
+
+            // Configurações
+            getConfig() {
+                return this.getData()?.config || {};
+            }
+
+            updateConfig(config) {
+                const data = this.getData();
+                data.config = { ...data.config, ...config };
+                this.setData(data);
+            }
+
+            // Cache
+            setCache(key, value, ttl = 3600000) {
+                const cache = this.getCache();
+                cache[key] = {
+                    value: value,
+                    expires: Date.now() + ttl
+                };
+                localStorage.setItem(this.cacheKey, JSON.stringify(cache));
+            }
+
+            getCache(key = null) {
+                const cache = localStorage.getItem(this.cacheKey);
+                const data = cache ? JSON.parse(cache) : {};
+                
+                // Limpar cache expirado
+                if (key) {
+                    const item = data[key];
+                    if (item && item.expires > Date.now()) {
+                        return item.value;
+                    }
+                    return null;
+                }
+                
+                return data;
+            }
+
+            clearCache() {
+                localStorage.removeItem(this.cacheKey);
+            }
+
+            getCacheCount() {
+                const cache = this.getCache();
+                return Object.keys(cache).length;
+            }
+
+            // Dados Demo
+            carregarDadosDemoSeNecessario() {
+                const data = this.getData();
+                if (data.produtos.length === 0) {
+                    // Produtos demo
+                    const produtosDemo = [
+                        {
+                            id: 1,
+                            name: 'Smartphone Android',
+                            category: 'Eletrônicos',
+                            price: 899.90,
+                            stock_quantity: 15,
+                            min_stock: 5,
+                            created_at: new Date().toISOString(),
+                            is_active: true
+                        },
+                        {
+                            id: 2,
+                            name: 'Notebook i5',
+                            category: 'Eletrônicos',
+                            price: 1899.90,
+                            stock_quantity: 8,
+                            min_stock: 3,
+                            created_at: new Date().toISOString(),
+                            is_active: true
+                        },
+                        {
+                            id: 3,
+                            name: 'Café Premium',
+                            category: 'Alimentação',
+                            price: 24.90,
+                            stock_quantity: 50,
+                            min_stock: 10,
+                            created_at: new Date().toISOString(),
+                            is_active: true
+                        },
+                        {
+                            id: 4,
+                            name: 'Detergente',
+                            category: 'Limpeza',
+                            price: 3.90,
+                            stock_quantity: 100,
+                            min_stock: 20,
+                            created_at: new Date().toISOString(),
+                            is_active: true
+                        },
+                        {
+                            id: 5,
+                            name: 'Água Mineral',
+                            category: 'Bebidas',
+                            price: 2.50,
+                            stock_quantity: 200,
+                            min_stock: 50,
+                            created_at: new Date().toISOString(),
+                            is_active: true
+                        }
+                    ];
+
+                    // Vendas demo
+                    const vendasDemo = [
+                        {
+                            id: 1,
+                            sale_code: 'V001',
+                            product_name: 'Smartphone Android',
+                            quantity: 1,
+                            unit_price: 899.90,
+                            total_amount: 899.90,
+                            payment_method: 'cartão',
+                            created_at: new Date(Date.now() - 86400000).toISOString()
+                        },
+                        {
+                            id: 2,
+                            sale_code: 'V002',
+                            product_name: 'Notebook i5',
+                            quantity: 1,
+                            unit_price: 1899.90,
+                            total_amount: 1899.90,
+                            payment_method: 'dinheiro',
+                            created_at: new Date(Date.now() - 172800000).toISOString()
+                        },
+                        {
+                            id: 3,
+                            sale_code: 'V003',
+                            product_name: 'Café Premium',
+                            quantity: 2,
+                            unit_price: 24.90,
+                            total_amount: 49.80,
+                            payment_method: 'cartão',
+                            created_at: new Date(Date.now() - 259200000).toISOString()
+                        },
+                        {
+                            id: 4,
+                            sale_code: 'V004',
+                            product_name: 'Detergente',
+                            quantity: 2,
+                            unit_price: 3.90,
+                            total_amount: 7.80,
+                            payment_method: 'dinheiro',
+                            created_at: new Date(Date.now() - 345600000).toISOString()
+                        }
+                    ];
+
+                    // Empresa demo
+                    const empresaDemo = [{
+                        id: 1,
+                        nome: 'Empresa Principal',
+                        cnpj: '00.000.000/0001-00',
+                        email: 'contato@empresa.com',
+                        telefone: '(11) 9999-9999',
+                        created_at: new Date().toISOString()
+                    }];
+
+                    // Contas demo
+                    const contasDemo = [
+                        {
+                            id: 1,
+                            name: 'Venda Cliente A',
+                            type: 'receita',
+                            amount: 1500.00,
+                            due_date: '2024-01-20',
+                            status: 'recebido',
+                            created_at: new Date().toISOString()
+                        },
+                        {
+                            id: 2,
+                            name: 'Aluguel',
+                            type: 'despesa',
+                            amount: 1200.00,
+                            due_date: '2024-01-15',
+                            status: 'pago',
+                            created_at: new Date().toISOString()
+                        }
+                    ];
+
+                    data.produtos = produtosDemo;
+                    data.vendas = vendasDemo;
+                    data.empresas = empresaDemo;
+                    data.contas = contasDemo;
+                    this.setData(data);
+                }
+            }
+
+            // Estatísticas
+            getEstatisticas() {
+                const produtos = this.getProdutos();
+                const vendas = this.getVendas();
+                const contas = this.getContas();
+                
+                const totalVendas = vendas.length;
+                const totalFaturado = vendas.reduce((sum, v) => sum + (v.total_amount || 0), 0);
+                const totalProdutos = produtos.length;
+                const totalEmpresas = this.getEmpresas().length;
+                
+                return {
+                    total_empresas: totalEmpresas,
+                    total_produtos: totalProdutos,
+                    total_vendas: totalVendas,
+                    faturamento_total: totalFaturado,
+                    total_contas: contas.length,
+                    total_receitas: contas.filter(c => c.type === 'receita').reduce((sum, c) => sum + (c.amount || 0), 0),
+                    total_despesas: contas.filter(c => c.type === 'despesa').reduce((sum, c) => sum + (c.amount || 0), 0)
+                };
+            }
+
+            // Exportar dados
+            exportData() {
+                const data = this.getData();
+                return JSON.stringify(data, null, 2);
+            }
+
+            // Limpar todos os dados
+            clearAll() {
+                localStorage.removeItem(this.storageKey);
+                localStorage.removeItem(this.cacheKey);
+                this.init();
+            }
+        }
+
+        // ================= SISTEMA PRINCIPAL =================
+        class BizFlowApp {
+            constructor() {
+                this.db = new LocalDatabase();
+                this.currentUser = null;
+                this.init();
+            }
+
+            init() {
                 this.setupEventListeners();
-                this.checkSystemStatus();
+                this.carregarConfiguracoes();
+                this.mostrarToast('Sistema BizFlow FASE 5 carregado!', 'success');
             }
 
             setupEventListeners() {
-                // Login form
-                document.getElementById('login-form').addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    this.handleLogin();
-                });
-
+                // Forms
+                document.getElementById('login-form').addEventListener('submit', (e) => this.handleLogin(e));
+                document.getElementById('empresa-form').addEventListener('submit', (e) => this.handleEmpresa(e));
+                document.getElementById('estoque-form').addEventListener('submit', (e) => this.handleProduto(e));
+                document.getElementById('venda-form').addEventListener('submit', (e) => this.handleVenda(e));
+                document.getElementById('financeiro-form').addEventListener('submit', (e) => this.handleConta(e));
+                
                 // Logout
-                document.getElementById('btn-logout').addEventListener('click', (e) => {
-                    e.preventDefault();
-                    this.handleLogout();
-                });
+                document.getElementById('btn-logout').addEventListener('click', (e) => this.handleLogout(e));
+                
+                // Eventos de change
+                document.getElementById('produto-venda').addEventListener('change', (e) => this.atualizarValorVenda());
+                document.getElementById('quantidade-venda').addEventListener('input', (e) => this.atualizarValorVenda());
             }
 
-            async checkAuthStatus() {
-                if (this.token && this.user) {
-                    this.showApp();
-                } else {
-                    this.showLogin();
-                }
-            }
-
-            async checkSystemStatus() {
-                try {
-                    const response = await fetch('/health');
-                    const data = await response.json();
-                    
-                    if (data.status === 'OK') {
-                        document.getElementById('system-status').innerHTML = 
-                            '<span class="badge bg-success">Sistema Online - FASE 5 COMPLETA</span>';
-                        
-                        // Mostrar métricas do sistema
-                        document.getElementById('system-metrics').style.display = 'block';
-                        if (data.health_checks) {
-                            document.getElementById('metric-uptime').textContent = `Uptime: ${data.uptime || '--'}`;
-                            document.getElementById('metric-response-time').textContent = `Response: ${data.performance?.response_time_ms || '--'}ms`;
-                            document.getElementById('metric-cache-status').textContent = `Cache: ${data.health_checks.cache?.status || '--'}`;
-                        }
-                    } else {
-                        document.getElementById('system-status').innerHTML = 
-                            '<span class="badge bg-danger">Sistema Offline</span>';
-                    }
-                } catch (error) {
-                    document.getElementById('system-status').innerHTML = 
-                        '<span class="badge bg-warning">Verificando...</span>';
-                }
-            }
-
-            async handleLogin() {
+            // Autenticação
+            handleLogin(e) {
+                e.preventDefault();
                 const username = document.getElementById('username').value;
                 const password = document.getElementById('password').value;
 
-                if (!username || !password) {
-                    this.showAlert('Preencha todos os campos!', 'warning');
-                    return;
-                }
-
-                this.showLoading('Entrando...');
-
-                try {
-                    const response = await fetch('/api/auth/login', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ username, password })
-                    });
-
-                    const data = await response.json();
-
-                    if (data.success) {
-                        this.token = data.data.session_token;
-                        this.user = data.data.user;
-                        
-                        localStorage.setItem('bizflow_token', this.token);
-                        localStorage.setItem('bizflow_user', JSON.stringify(this.user));
-                        
-                        this.showApp();
-                        this.showAlert('Login FASE 5 COMPLETA realizado com sucesso! 🚀', 'success');
-                    } else {
-                        throw new Error(data.error || 'Erro no login');
-                    }
-                } catch (error) {
-                    this.showAlert(error.message, 'danger');
-                } finally {
-                    this.hideLoading();
+                if (username === 'admin' && password === 'admin123') {
+                    this.currentUser = {
+                        id: 1,
+                        username: 'admin',
+                        full_name: 'Administrador do Sistema',
+                        role: 'admin'
+                    };
+                    
+                    localStorage.setItem('bizflow_user', JSON.stringify(this.currentUser));
+                    this.showApp();
+                    this.mostrarToast('Login realizado com sucesso!', 'success');
+                } else {
+                    this.mostrarToast('Credenciais inválidas!', 'error');
                 }
             }
 
-            async handleLogout() {
-                this.clearAuth();
+            handleLogout(e) {
+                e.preventDefault();
+                this.currentUser = null;
+                localStorage.removeItem('bizflow_user');
                 this.showLogin();
-                this.showAlert('Logout realizado com sucesso!', 'info');
+                this.mostrarToast('Logout realizado com sucesso!', 'info');
             }
 
             showApp() {
                 document.querySelector('.auth-container').style.display = 'none';
                 document.querySelector('.app-container').style.display = 'block';
-                
-                // Atualizar interface
-                document.getElementById('user-name').textContent = this.user?.full_name || 'Usuário';
-                
-                // Inicializar BizFlow App FASE 5 COMPLETA
-                if (window.bizFlowApp) {
-                    window.bizFlowApp.setAuthToken(this.token);
-                    window.bizFlowApp.init();
-                }
+                document.getElementById('user-name').textContent = this.currentUser?.full_name || 'Usuário';
+                this.carregarDadosIniciais();
             }
 
             showLogin() {
@@ -1417,666 +1359,955 @@
                 document.querySelector('.app-container').style.display = 'none';
             }
 
-            clearAuth() {
-                this.token = null;
-                this.user = null;
-                localStorage.removeItem('bizflow_token');
-                localStorage.removeItem('bizflow_user');
+            // Empresas
+            handleEmpresa(e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const empresa = {
+                    nome: document.getElementById('empresa-nome').value,
+                    cnpj: document.getElementById('empresa-cnpj').value,
+                    email: document.getElementById('empresa-email').value,
+                    telefone: document.getElementById('empresa-telefone').value
+                };
+
+                const novaEmpresa = this.db.addEmpresa(empresa);
+                this.mostrarToast('Empresa cadastrada com sucesso!', 'success');
+                this.carregarEmpresas();
+                e.target.reset();
             }
 
-            showAlert(message, type = 'info') {
-                // Implementação simples de alerta
-                alert(`[${type.toUpperCase()}] ${message}`);
+            // Produtos
+            handleProduto(e) {
+                e.preventDefault();
+                const produto = {
+                    name: document.getElementById('produto-estoque').value,
+                    category: document.getElementById('categoria-produto').value,
+                    price: parseFloat(document.getElementById('preco').value),
+                    stock_quantity: parseInt(document.getElementById('quantidade').value),
+                    min_stock: parseInt(document.getElementById('estoque-minimo').value) || 5
+                };
+
+                const novoProduto = this.db.addProduto(produto);
+                this.mostrarToast('Produto adicionado com sucesso!', 'success');
+                this.carregarProdutos();
+                this.atualizarSelectProdutos();
+                e.target.reset();
             }
 
-            showLoading(text) {
-                const button = document.querySelector('#login-form button[type="submit"]');
-                button.disabled = true;
-                button.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i>${text}`;
+            // Vendas
+            handleVenda(e) {
+                e.preventDefault();
+                const produtoSelect = document.getElementById('produto-venda');
+                const produtoId = parseInt(produtoSelect.value);
+                const produto = this.db.getProdutos().find(p => p.id === produtoId);
+                
+                if (!produto) {
+                    this.mostrarToast('Selecione um produto válido!', 'error');
+                    return;
+                }
+
+                const quantidade = parseInt(document.getElementById('quantidade-venda').value);
+                if (quantidade > produto.stock_quantity) {
+                    this.mostrarToast('Quantidade indisponível em estoque!', 'error');
+                    return;
+                }
+
+                const venda = {
+                    sale_code: 'V' + Date.now(),
+                    product_id: produto.id,
+                    product_name: produto.name,
+                    quantity: quantidade,
+                    unit_price: produto.price,
+                    total_amount: produto.price * quantidade,
+                    payment_method: document.getElementById('metodo-pagamento').value
+                };
+
+                const novaVenda = this.db.addVenda(venda);
+                this.db.updateProdutoStock(produto.id, quantidade);
+                
+                this.mostrarToast('Venda registrada com sucesso!', 'success');
+                this.carregarVendas();
+                this.carregarProdutos();
+                this.atualizarSelectProdutos();
+                e.target.reset();
+                document.getElementById('quantidade-venda').value = 1;
+                this.atualizarValorVenda();
             }
 
-            hideLoading() {
-                const button = document.querySelector('#login-form button[type="submit"]');
-                button.disabled = false;
-                button.innerHTML = `<i class="fas fa-sign-in-alt me-2"></i>Entrar no Sistema`;
+            atualizarValorVenda() {
+                const produtoSelect = document.getElementById('produto-venda');
+                const produtoId = parseInt(produtoSelect.value);
+                const quantidade = parseInt(document.getElementById('quantidade-venda').value) || 1;
+                
+                if (produtoId) {
+                    const produto = this.db.getProdutos().find(p => p.id === produtoId);
+                    if (produto) {
+                        document.getElementById('valor-venda').value = produto.price.toFixed(2);
+                        document.getElementById('total-venda').value = (produto.price * quantidade).toFixed(2);
+                    }
+                } else {
+                    document.getElementById('valor-venda').value = '';
+                    document.getElementById('total-venda').value = '';
+                }
             }
-        }
 
-        // ✅ FUNÇÕES DE RELATÓRIOS FASE 5 COMPLETA
-        async function carregarRelatorioVendas() {
-            if (window.bizFlowApp) {
-                try {
-                    document.getElementById('resultado-relatorio').innerHTML = `
-                        <div class="text-center">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Carregando...</span>
-                            </div>
-                            <p class="mt-2">Gerando relatório de vendas...</p>
+            // Contas Financeiras
+            handleConta(e) {
+                e.preventDefault();
+                const conta = {
+                    name: document.getElementById('conta-nome').value,
+                    type: document.getElementById('conta-tipo').value,
+                    amount: parseFloat(document.getElementById('conta-valor').value),
+                    due_date: document.getElementById('conta-vencimento').value,
+                    status: document.getElementById('conta-status').value
+                };
+
+                const novaConta = this.db.addConta(conta);
+                this.mostrarToast('Conta registrada com sucesso!', 'success');
+                this.carregarContas();
+                e.target.reset();
+            }
+
+            // Carregar dados iniciais
+            carregarDadosIniciais() {
+                this.carregarDashboard();
+                this.carregarEmpresas();
+                this.carregarProdutos();
+                this.carregarVendas();
+                this.carregarContas();
+                this.atualizarSelectProdutos();
+                this.atualizarEstatisticasCache();
+            }
+
+            carregarDashboard() {
+                const estatisticas = this.db.getEstatisticas();
+                
+                // Atualizar métricas
+                document.getElementById('metric-empresas').textContent = estatisticas.total_empresas;
+                document.getElementById('metric-produtos').textContent = estatisticas.total_produtos;
+                document.getElementById('metric-vendas').textContent = estatisticas.total_vendas;
+                document.getElementById('metric-faturamento').textContent = 'R$ ' + estatisticas.faturamento_total.toFixed(2);
+                
+                // Últimas vendas no dashboard
+                this.carregarUltimasVendasDash();
+            }
+
+            carregarUltimasVendasDash() {
+                const vendas = this.db.getVendas().slice(0, 5);
+                const container = document.getElementById('ultimas-vendas-dash');
+                
+                if (vendas.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-receipt fa-2x mb-2"></i>
+                            <p>Nenhuma venda registrada</p>
                         </div>
                     `;
+                    return;
+                }
 
-                    const response = await fetch('/api/relatorios/vendas?periodo=30');
-                    const data = await response.json();
+                let html = '';
+                vendas.forEach(venda => {
+                    const data = new Date(venda.created_at).toLocaleDateString('pt-BR');
+                    html += `
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                            <div>
+                                <h6 class="mb-1">${venda.product_name}</h6>
+                                <small class="text-muted">${data} • ${venda.quantity}x</small>
+                            </div>
+                            <div class="text-end">
+                                <strong class="text-success">R$ ${venda.total_amount.toFixed(2)}</strong>
+                                <br>
+                                <small class="text-muted">${venda.payment_method}</small>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+            }
 
-                    if (data.success) {
-                        const estatisticas = data.data.estatisticas;
-                        const detalhes = data.data.detalhes;
-                        
-                        let html = `
-                            <h5 class="text-primary mb-4">📊 Relatório de Vendas - Últimos 30 Dias</h5>
-                            
-                            <div class="row mb-4">
-                                <div class="col-md-3">
-                                    <div class="card stat-card">
-                                        <div class="card-body text-center">
-                                            <h4 class="text-success">${estatisticas.total_vendas_periodo}</h4>
-                                            <small>Total de Vendas</small>
-                                        </div>
+            carregarEmpresas() {
+                const empresas = this.db.getEmpresas();
+                const container = document.getElementById('lista-empresas');
+                
+                if (empresas.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-building fa-3x mb-3"></i>
+                            <p>Nenhuma empresa cadastrada</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                empresas.forEach(empresa => {
+                    html += `
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">${empresa.nome}</h5>
+                                <p class="card-text">
+                                    <small class="text-muted">
+                                        <i class="fas fa-id-card me-1"></i>${empresa.cnpj || 'Não informado'}<br>
+                                        <i class="fas fa-envelope me-1"></i>${empresa.email || 'Não informado'}<br>
+                                        <i class="fas fa-phone me-1"></i>${empresa.telefone || 'Não informado'}
+                                    </small>
+                                </p>
+                                <small class="text-muted">Cadastrada em: ${new Date(empresa.created_at).toLocaleDateString('pt-BR')}</small>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+            }
+
+            carregarProdutos() {
+                const produtos = this.db.getProdutos().filter(p => p.is_active);
+                const container = document.getElementById('lista-estoque');
+                
+                if (produtos.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-box-open fa-3x mb-3"></i>
+                            <p>Nenhum produto cadastrado</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                produtos.forEach(produto => {
+                    const statusClass = produto.stock_quantity === 0 ? 'danger' : 
+                                      produto.stock_quantity <= produto.min_stock ? 'warning' : 'success';
+                    const statusText = produto.stock_quantity === 0 ? 'SEM ESTOQUE' : 
+                                     produto.stock_quantity <= produto.min_stock ? 'ESTOQUE BAIXO' : 'NORMAL';
+                    
+                    html += `
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h5 class="card-title">${produto.name}</h5>
+                                        <p class="card-text">
+                                            <span class="badge bg-secondary">${produto.category}</span><br>
+                                            <small class="text-muted">
+                                                Preço: R$ ${produto.price.toFixed(2)}<br>
+                                                Estoque mínimo: ${produto.min_stock}
+                                            </small>
+                                        </p>
                                     </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="card stat-card">
-                                        <div class="card-body text-center">
-                                            <h4 class="text-primary">R$ ${parseFloat(estatisticas.total_faturado).toFixed(2)}</h4>
-                                            <small>Faturamento Total</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="card stat-card">
-                                        <div class="card-body text-center">
-                                            <h4 class="text-info">R$ ${parseFloat(estatisticas.ticket_medio).toFixed(2)}</h4>
-                                            <small>Ticket Médio</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="card stat-card">
-                                        <div class="card-body text-center">
-                                            <h4 class="text-warning">R$ ${parseFloat(estatisticas.maior_venda).toFixed(2)}</h4>
-                                            <small>Maior Venda</small>
-                                        </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-${statusClass}">${statusText}</span>
+                                        <h4 class="text-primary mt-2">${produto.stock_quantity}</h4>
+                                        <small class="text-muted">unidades</small>
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+            }
 
-                            <div class="table-responsive">
-                                <table class="table table-striped table-hover">
-                                    <thead class="table-dark">
-                                        <tr>
-                                            <th>Data</th>
-                                            <th>Total Vendas</th>
-                                            <th>Valor Total</th>
-                                            <th>Valor Médio</th>
-                                            <th>Método Pagamento</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
+            carregarVendas() {
+                const vendas = this.db.getVendas().slice(0, 10);
+                const container = document.getElementById('lista-vendas');
+                
+                if (vendas.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-receipt fa-3x mb-3"></i>
+                            <p>Nenhuma venda registrada</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                vendas.forEach(venda => {
+                    const data = new Date(venda.created_at).toLocaleDateString('pt-BR');
+                    html += `
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="card-title">${venda.sale_code}</h6>
+                                        <p class="card-text mb-1">${venda.product_name}</p>
+                                        <small class="text-muted">
+                                            ${data} • ${venda.quantity}x • ${venda.payment_method}
+                                        </small>
+                                    </div>
+                                    <div class="text-end">
+                                        <h5 class="text-success">R$ ${venda.total_amount.toFixed(2)}</h5>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+            }
+
+            carregarContas() {
+                const contas = this.db.getContas();
+                const container = document.getElementById('lista-contas');
+                
+                if (contas.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-file-invoice-dollar fa-3x mb-3"></i>
+                            <p>Nenhuma conta registrada</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                contas.forEach(conta => {
+                    const tipoClass = conta.type === 'receita' ? 'success' : 'danger';
+                    const statusClass = conta.status === 'pago' || conta.status === 'recebido' ? 'success' : 
+                                      conta.status === 'pendente' ? 'warning' : 'secondary';
+                    
+                    html += `
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="card-title">${conta.name}</h6>
+                                        <p class="card-text mb-1">
+                                            <span class="badge bg-${tipoClass}">${conta.type}</span>
+                                            <span class="badge bg-${statusClass} ms-1">${conta.status}</span>
+                                        </p>
+                                        <small class="text-muted">
+                                            Vencimento: ${new Date(conta.due_date).toLocaleDateString('pt-BR')}
+                                        </small>
+                                    </div>
+                                    <div class="text-end">
+                                        <h5 class="text-${tipoClass}">R$ ${conta.amount.toFixed(2)}</h5>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+            }
+
+            atualizarSelectProdutos() {
+                const produtos = this.db.getProdutos().filter(p => p.is_active && p.stock_quantity > 0);
+                const select = document.getElementById('produto-venda');
+                
+                select.innerHTML = '<option value="">Selecione um produto...</option>';
+                produtos.forEach(produto => {
+                    const option = document.createElement('option');
+                    option.value = produto.id;
+                    option.textContent = `${produto.name} - R$ ${produto.price.toFixed(2)} (${produto.stock_quantity} em estoque)`;
+                    select.appendChild(option);
+                });
+            }
+
+            // Configurações
+            carregarConfiguracoes() {
+                const config = this.db.getConfig();
+                document.getElementById('config-tema').value = config.tema || 'light';
+                document.getElementById('config-cache').checked = config.cache !== false;
+                document.getElementById('config-notificacoes').checked = config.notificacoes !== false;
+                
+                // Aplicar tema
+                this.aplicarTema(config.tema || 'light');
+            }
+
+            aplicarConfiguracoes() {
+                const config = {
+                    tema: document.getElementById('config-tema').value,
+                    cache: document.getElementById('config-cache').checked,
+                    notificacoes: document.getElementById('config-notificacoes').checked
+                };
+                
+                this.db.updateConfig(config);
+                this.aplicarTema(config.tema);
+                this.mostrarToast('Configurações aplicadas!', 'success');
+                
+                // Fechar modal
+                bootstrap.Modal.getInstance(document.getElementById('configModal')).hide();
+            }
+
+            aplicarTema(tema) {
+                document.body.setAttribute('data-bs-theme', tema);
+                localStorage.setItem('bizflow_theme', tema);
+                
+                // Atualizar ícone do tema
+                const themeIcon = document.querySelector('.theme-switcher i');
+                themeIcon.className = tema === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+            }
+
+            // Relatórios
+            carregarRelatorioVendas() {
+                const vendas = this.db.getVendas();
+                const container = document.getElementById('resultado-relatorio');
+                
+                if (vendas.length === 0) {
+                    container.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Nenhuma venda encontrada para gerar relatório.
+                        </div>
+                    `;
+                    return;
+                }
+
+                const totalVendas = vendas.length;
+                const totalFaturado = vendas.reduce((sum, v) => sum + v.total_amount, 0);
+                const ticketMedio = totalFaturado / totalVendas;
+                
+                // Agrupar por método de pagamento
+                const metodosPagamento = {};
+                vendas.forEach(venda => {
+                    if (!metodosPagamento[venda.payment_method]) {
+                        metodosPagamento[venda.payment_method] = 0;
+                    }
+                    metodosPagamento[venda.payment_method]++;
+                });
+
+                let html = `
+                    <h5 class="text-primary mb-4">📊 Relatório de Vendas</h5>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card stat-card">
+                                <div class="card-body text-center">
+                                    <h4 class="text-success">${totalVendas}</h4>
+                                    <small>Total de Vendas</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card stat-card">
+                                <div class="card-body text-center">
+                                    <h4 class="text-primary">R$ ${totalFaturado.toFixed(2)}</h4>
+                                    <small>Faturamento Total</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card stat-card">
+                                <div class="card-body text-center">
+                                    <h4 class="text-info">R$ ${ticketMedio.toFixed(2)}</h4>
+                                    <small>Ticket Médio</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card stat-card">
+                                <div class="card-body text-center">
+                                    <h4 class="text-warning">${Object.keys(metodosPagamento).length}</h4>
+                                    <small>Métodos de Pagamento</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0">Métodos de Pagamento</h6>
+                                </div>
+                                <div class="card-body">
+                                    <ul class="list-group">
+                `;
+
+                Object.entries(metodosPagamento).forEach(([metodo, quantidade]) => {
+                    const percentual = ((quantidade / totalVendas) * 100).toFixed(1);
+                    html += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            ${metodo}
+                            <span class="badge bg-primary rounded-pill">${quantidade} (${percentual}%)</span>
+                        </li>
+                    `;
+                });
+
+                html += `
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0">Últimas Vendas</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div style="max-height: 200px; overflow-y: auto;">
+                `;
+
+                vendas.slice(0, 5).forEach(venda => {
+                    const data = new Date(venda.created_at).toLocaleDateString('pt-BR');
+                    html += `
+                        <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                            <div>
+                                <small>${venda.product_name}</small><br>
+                                <small class="text-muted">${data}</small>
+                            </div>
+                            <div class="text-end">
+                                <strong>R$ ${venda.total_amount.toFixed(2)}</strong><br>
+                                <small class="text-muted">${venda.payment_method}</small>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 text-end">
+                        <small class="text-muted">Gerado em: ${new Date().toLocaleString('pt-BR')}</small>
+                    </div>
+                `;
+
+                container.innerHTML = html;
+                this.mostrarToast('Relatório de vendas gerado com sucesso!', 'success');
+            }
+
+            carregarRelatorioEstoque() {
+                const produtos = this.db.getProdutos().filter(p => p.is_active);
+                const container = document.getElementById('resultado-relatorio');
+                
+                if (produtos.length === 0) {
+                    container.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Nenhum produto encontrado para gerar relatório.
+                        </div>
+                    `;
+                    return;
+                }
+
+                const totalProdutos = produtos.length;
+                const totalItens = produtos.reduce((sum, p) => sum + p.stock_quantity, 0);
+                const valorTotal = produtos.reduce((sum, p) => sum + (p.price * p.stock_quantity), 0);
+                const produtosBaixoEstoque = produtos.filter(p => p.stock_quantity <= p.min_stock && p.stock_quantity > 0).length;
+                const produtosSemEstoque = produtos.filter(p => p.stock_quantity === 0).length;
+
+                let html = `
+                    <h5 class="text-primary mb-4">📦 Relatório de Estoque</h5>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card stat-card">
+                                <div class="card-body text-center">
+                                    <h4 class="text-info">${totalProdutos}</h4>
+                                    <small>Total de Produtos</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card stat-card">
+                                <div class="card-body text-center">
+                                    <h4 class="text-success">${totalItens}</h4>
+                                    <small>Itens em Estoque</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card stat-card">
+                                <div class="card-body text-center">
+                                    <h4 class="text-warning">R$ ${valorTotal.toFixed(2)}</h4>
+                                    <small>Valor Total</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card stat-card">
+                                <div class="card-body text-center">
+                                    <h4 class="text-danger">${produtosBaixoEstoque + produtosSemEstoque}</h4>
+                                    <small>Alertas</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0">Produtos com Estoque Baixo</h6>
+                                </div>
+                                <div class="card-body">
+                `;
+
+                const produtosAlerta = produtos.filter(p => p.stock_quantity <= p.min_stock);
+                if (produtosAlerta.length === 0) {
+                    html += `<p class="text-muted text-center">Nenhum alerta de estoque</p>`;
+                } else {
+                    html += `<ul class="list-group">`;
+                    produtosAlerta.forEach(produto => {
+                        const status = produto.stock_quantity === 0 ? 'SEM ESTOQUE' : 'ESTOQUE BAIXO';
+                        const statusClass = produto.stock_quantity === 0 ? 'danger' : 'warning';
+                        html += `
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>${produto.name}</strong><br>
+                                    <small class="text-muted">Estoque: ${produto.stock_quantity} (mín: ${produto.min_stock})</small>
+                                </div>
+                                <span class="badge bg-${statusClass}">${status}</span>
+                            </li>
                         `;
+                    });
+                    html += `</ul>`;
+                }
 
-                        detalhes.forEach(item => {
-                            html += `
+                html += `
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0">Produtos por Categoria</h6>
+                                </div>
+                                <div class="card-body">
+                                    <ul class="list-group">
+                `;
+
+                const categorias = {};
+                produtos.forEach(produto => {
+                    if (!categorias[produto.category]) {
+                        categorias[produto.category] = 0;
+                    }
+                    categorias[produto.category]++;
+                });
+
+                Object.entries(categorias).forEach(([categoria, quantidade]) => {
+                    html += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            ${categoria || 'Sem categoria'}
+                            <span class="badge bg-primary rounded-pill">${quantidade}</span>
+                        </li>
+                    `;
+                });
+
+                html += `
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 text-end">
+                        <small class="text-muted">Gerado em: ${new Date().toLocaleString('pt-BR')}</small>
+                    </div>
+                `;
+
+                container.innerHTML = html;
+                this.mostrarToast('Relatório de estoque gerado com sucesso!', 'success');
+            }
+
+            carregarRelatorioFinanceiro() {
+                const contas = this.db.getContas();
+                const container = document.getElementById('resultado-relatorio');
+                
+                if (contas.length === 0) {
+                    container.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Nenhuma conta encontrada para gerar relatório.
+                        </div>
+                    `;
+                    return;
+                }
+
+                const receitas = contas.filter(c => c.type === 'receita');
+                const despesas = contas.filter(c => c.type === 'despesa');
+                const totalReceitas = receitas.reduce((sum, r) => sum + r.amount, 0);
+                const totalDespesas = despesas.reduce((sum, d) => sum + d.amount, 0);
+                const saldo = totalReceitas - totalDespesas;
+
+                let html = `
+                    <h5 class="text-primary mb-4">💰 Relatório Financeiro</h5>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card stat-card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h4>R$ ${totalReceitas.toFixed(2)}</h4>
+                                    <small>Total Receitas</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card stat-card bg-danger text-white">
+                                <div class="card-body text-center">
+                                    <h4>R$ ${totalDespesas.toFixed(2)}</h4>
+                                    <small>Total Despesas</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card stat-card ${saldo >= 0 ? 'bg-info' : 'bg-warning'} text-white">
+                                <div class="card-body text-center">
+                                    <h4>R$ ${saldo.toFixed(2)}</h4>
+                                    <small>Saldo</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0">Receitas</h6>
+                                </div>
+                                <div class="card-body">
+                                    <ul class="list-group">
+                `;
+
+                receitas.slice(0, 5).forEach(conta => {
+                    const data = new Date(conta.due_date).toLocaleDateString('pt-BR');
+                    html += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>${conta.name}</strong><br>
+                                <small class="text-muted">${data} • ${conta.status}</small>
+                            </div>
+                            <span class="badge bg-success rounded-pill">R$ ${conta.amount.toFixed(2)}</span>
+                        </li>
+                    `;
+                });
+
+                html += `
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-danger text-white">
+                                    <h6 class="mb-0">Despesas</h6>
+                                </div>
+                                <div class="card-body">
+                                    <ul class="list-group">
+                `;
+
+                despesas.slice(0, 5).forEach(conta => {
+                    const data = new Date(conta.due_date).toLocaleDateString('pt-BR');
+                    html += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>${conta.name}</strong><br>
+                                <small class="text-muted">${data} • ${conta.status}</small>
+                            </div>
+                            <span class="badge bg-danger rounded-pill">R$ ${conta.amount.toFixed(2)}</span>
+                        </li>
+                    `;
+                });
+
+                html += `
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 text-end">
+                        <small class="text-muted">Gerado em: ${new Date().toLocaleString('pt-BR')}</small>
+                    </div>
+                `;
+
+                container.innerHTML = html;
+                this.mostrarToast('Relatório financeiro gerado com sucesso!', 'success');
+            }
+
+            carregarRelatorioProdutosMaisVendidos() {
+                const vendas = this.db.getVendas();
+                const container = document.getElementById('resultado-relatorio');
+                
+                if (vendas.length === 0) {
+                    container.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Nenhuma venda encontrada para gerar relatório.
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Agrupar vendas por produto
+                const produtosVendidos = {};
+                vendas.forEach(venda => {
+                    if (!produtosVendidos[venda.product_name]) {
+                        produtosVendidos[venda.product_name] = {
+                            quantidade: 0,
+                            faturamento: 0,
+                            vendas: 0
+                        };
+                    }
+                    produtosVendidos[venda.product_name].quantidade += venda.quantity;
+                    produtosVendidos[venda.product_name].faturamento += venda.total_amount;
+                    produtosVendidos[venda.product_name].vendas += 1;
+                });
+
+                // Converter para array e ordenar por faturamento
+                const ranking = Object.entries(produtosVendidos)
+                    .map(([nome, dados]) => ({
+                        nome,
+                        ...dados
+                    }))
+                    .sort((a, b) => b.faturamento - a.faturamento)
+                    .slice(0, 10);
+
+                let html = `
+                    <h5 class="text-primary mb-4">🏆 Produtos Mais Vendidos</h5>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
                                 <tr>
-                                    <td>${new Date(item.data).toLocaleDateString('pt-BR')}</td>
-                                    <td>${item.total_vendas}</td>
-                                    <td>R$ ${parseFloat(item.total_valor).toFixed(2)}</td>
-                                    <td>R$ ${parseFloat(item.valor_medio).toFixed(2)}</td>
-                                    <td><span class="badge bg-success">${item.payment_method}</span></td>
+                                    <th>Posição</th>
+                                    <th>Produto</th>
+                                    <th>Quantidade</th>
+                                    <th>Faturamento</th>
+                                    <th>Vezes Vendido</th>
+                                    <th>Média por Venda</th>
                                 </tr>
-                            `;
-                        });
+                            </thead>
+                            <tbody>
+                `;
 
-                        html += `
-                                    </tbody>
-                                </table>
-                            </div>
-                            
-                            <div class="mt-3 text-end">
-                                <small class="text-muted">Gerado em: ${new Date().toLocaleString('pt-BR')}</small>
-                            </div>
-                        `;
-
-                        document.getElementById('resultado-relatorio').innerHTML = html;
-                    } else {
-                        throw new Error(data.error || 'Erro ao gerar relatório');
-                    }
-                } catch (error) {
-                    document.getElementById('resultado-relatorio').innerHTML = `
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Erro ao carregar relatório: ${error.message}
-                        </div>
+                ranking.forEach((produto, index) => {
+                    const media = produto.faturamento / produto.vendas;
+                    html += `
+                        <tr ${index === 0 ? 'class="table-warning"' : ''}>
+                            <td><strong>#${index + 1}</strong></td>
+                            <td>${produto.nome}</td>
+                            <td>${produto.quantidade} unidades</td>
+                            <td>R$ ${produto.faturamento.toFixed(2)}</td>
+                            <td>${produto.vendas}</td>
+                            <td>R$ ${media.toFixed(2)}</td>
+                        </tr>
                     `;
-                }
-            } else {
-                alert('Sistema não inicializado. Faça login primeiro.');
+                });
+
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-3 text-end">
+                        <small class="text-muted">Gerado em: ${new Date().toLocaleString('pt-BR')}</small>
+                    </div>
+                `;
+
+                container.innerHTML = html;
+                this.mostrarToast('Relatório de produtos mais vendidos gerado com sucesso!', 'success');
+            }
+
+            // Utilitários
+            mostrarToast(mensagem, tipo = 'info') {
+                const toastEl = document.getElementById('liveToast');
+                const toastTitle = document.getElementById('toast-title');
+                const toastMessage = document.getElementById('toast-message');
+                const toastTime = document.getElementById('toast-time');
+                
+                // Configurar cores baseadas no tipo
+                const cores = {
+                    success: { bg: 'bg-success', text: 'text-white' },
+                    error: { bg: 'bg-danger', text: 'text-white' },
+                    warning: { bg: 'bg-warning', text: 'text-dark' },
+                    info: { bg: 'bg-info', text: 'text-white' }
+                };
+                
+                const cor = cores[tipo] || cores.info;
+                
+                // Atualizar conteúdo
+                toastTitle.textContent = tipo.charAt(0).toUpperCase() + tipo.slice(1);
+                toastMessage.textContent = mensagem;
+                toastTime.textContent = 'Agora';
+                
+                // Atualizar classes
+                toastEl.querySelector('.toast-header').className = `toast-header ${cor.bg} ${cor.text}`;
+                
+                // Mostrar toast
+                const toast = new bootstrap.Toast(toastEl);
+                toast.show();
+            }
+
+            atualizarEstatisticasCache() {
+                const cacheCount = this.db.getCacheCount();
+                const totalRecords = this.db.getProdutos().length + this.db.getVendas().length + 
+                                   this.db.getContas().length + this.db.getEmpresas().length;
+                
+                document.getElementById('cache-count').textContent = cacheCount;
+                document.getElementById('total-records').textContent = totalRecords;
+                document.getElementById('load-time').textContent = '0ms';
+            }
+
+            limparCache() {
+                this.db.clearCache();
+                this.atualizarEstatisticasCache();
+                this.mostrarToast('Cache limpo com sucesso!', 'success');
+            }
+
+            gerarDadosDemo() {
+                this.db.carregarDadosDemoSeNecessario();
+                this.carregarDadosIniciais();
+                this.mostrarToast('Dados demo carregados com sucesso!', 'success');
+            }
+
+            exportarDados() {
+                const data = this.db.exportData();
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `bizflow_backup_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                this.mostrarToast('Dados exportados com sucesso!', 'success');
             }
         }
 
-        async function carregarRelatorioEstoque() {
-            if (window.bizFlowApp) {
-                try {
-                    document.getElementById('resultado-relatorio').innerHTML = `
-                        <div class="text-center">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Carregando...</span>
-                            </div>
-                            <p class="mt-2">Gerando relatório de estoque...</p>
-                        </div>
-                    `;
+        // ================= INICIALIZAÇÃO =================
+        let bizFlowApp;
 
-                    const response = await fetch('/api/relatorios/estoque');
-                    const data = await response.json();
-
-                    if (data.success) {
-                        const produtos = data.data.produtos;
-                        const estatisticas = data.data.estatisticas;
-                        
-                        let html = `
-                            <h5 class="text-primary mb-4">📦 Relatório de Estoque</h5>
-                            
-                            <div class="row mb-4">
-                                <div class="col-md-3">
-                                    <div class="card stat-card">
-                                        <div class="card-body text-center">
-                                            <h4 class="text-info">${estatisticas.total_produtos}</h4>
-                                            <small>Total de Produtos</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="card stat-card">
-                                        <div class="card-body text-center">
-                                            <h4 class="text-success">${estatisticas.total_itens_estoque}</h4>
-                                            <small>Itens em Estoque</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="card stat-card">
-                                        <div class="card-body text-center">
-                                            <h4 class="text-warning">R$ ${parseFloat(estatisticas.valor_total_estoque).toFixed(2)}</h4>
-                                            <small>Valor Total</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="card stat-card">
-                                        <div class="card-body text-center">
-                                            <h4 class="text-danger">${estatisticas.produtos_estoque_baixo}</h4>
-                                            <small>Estoque Baixo</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="table-responsive">
-                                <table class="table table-striped table-hover">
-                                    <thead class="table-dark">
-                                        <tr>
-                                            <th>Produto</th>
-                                            <th>Categoria</th>
-                                            <th>Quantidade</th>
-                                            <th>Estoque Mínimo</th>
-                                            <th>Status</th>
-                                            <th>Valor Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                        `;
-
-                        produtos.forEach(produto => {
-                            const statusClass = produto.status_estoque === 'CRÍTICO' ? 'danger' : 
-                                              produto.status_estoque === 'ALERTA' ? 'warning' : 'success';
-                            
-                            html += `
-                                <tr>
-                                    <td>${produto.produto}</td>
-                                    <td>${produto.categoria}</td>
-                                    <td>${produto.quantidade}</td>
-                                    <td>${produto.estoque_minimo}</td>
-                                    <td><span class="badge bg-${statusClass}">${produto.status_estoque}</span></td>
-                                    <td>R$ ${parseFloat(produto.valor_total_estoque || 0).toFixed(2)}</td>
-                                </tr>
-                            `;
-                        });
-
-                        html += `
-                                    </tbody>
-                                </table>
-                            </div>
-                            
-                            <div class="mt-3 text-end">
-                                <small class="text-muted">Gerado em: ${new Date().toLocaleString('pt-BR')}</small>
-                            </div>
-                        `;
-
-                        document.getElementById('resultado-relatorio').innerHTML = html;
-                    } else {
-                        throw new Error(data.error || 'Erro ao gerar relatório');
-                    }
-                } catch (error) {
-                    document.getElementById('resultado-relatorio').innerHTML = `
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Erro ao carregar relatório: ${error.message}
-                        </div>
-                    `;
-                }
-            } else {
-                alert('Sistema não inicializado. Faça login primeiro.');
+        document.addEventListener('DOMContentLoaded', function() {
+            // Verificar se usuário já está logado
+            const savedUser = localStorage.getItem('bizflow_user');
+            const savedTheme = localStorage.getItem('bizflow_theme') || 'light';
+            
+            // Aplicar tema salvo
+            document.body.setAttribute('data-bs-theme', savedTheme);
+            
+            // Atualizar ícone do tema
+            const themeIcon = document.querySelector('.theme-switcher i');
+            themeIcon.className = savedTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+            
+            // Inicializar aplicação
+            bizFlowApp = new BizFlowApp();
+            
+            // Se usuário estiver logado, mostrar app
+            if (savedUser) {
+                bizFlowApp.currentUser = JSON.parse(savedUser);
+                bizFlowApp.showApp();
             }
-        }
+            
+            // Atualizar ano no footer
+            document.getElementById('ano-atual').textContent = new Date().getFullYear();
+        });
 
-        async function carregarRelatorioFinanceiro() {
-            if (window.bizFlowApp) {
-                try {
-                    document.getElementById('resultado-relatorio').innerHTML = `
-                        <div class="text-center">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Carregando...</span>
-                            </div>
-                            <p class="mt-2">Gerando relatório financeiro...</p>
-                        </div>
-                    `;
-
-                    const response = await fetch('/api/relatorios/financeiro');
-                    const data = await response.json();
-
-                    if (data.success) {
-                        const financeiro = data.data.financeiro;
-                        const vendas = data.data.vendas;
-                        
-                        let html = `
-                            <h5 class="text-primary mb-4">💰 Relatório Financeiro</h5>
-                            
-                            <div class="row mb-4">
-                                <div class="col-md-4">
-                                    <div class="card stat-card bg-success text-white">
-                                        <div class="card-body text-center">
-                                            <h4>R$ ${parseFloat(vendas.total_vendas).toFixed(2)}</h4>
-                                            <small>Total em Vendas</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="card stat-card bg-info text-white">
-                                        <div class="card-body text-center">
-                                            <h4>R$ ${parseFloat(financeiro.find(f => f.tipo === 'receita')?.total_valor || 0).toFixed(2)}</h4>
-                                            <small>Total Receitas</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="card stat-card bg-danger text-white">
-                                        <div class="card-body text-center">
-                                            <h4>R$ ${parseFloat(financeiro.find(f => f.tipo === 'despesa')?.total_valor || 0).toFixed(2)}</h4>
-                                            <small>Total Despesas</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="table-responsive">
-                                <table class="table table-striped table-hover">
-                                    <thead class="table-dark">
-                                        <tr>
-                                            <th>Tipo</th>
-                                            <th>Status</th>
-                                            <th>Total Contas</th>
-                                            <th>Valor Total</th>
-                                            <th>Valor Médio</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                        `;
-
-                        financeiro.forEach(item => {
-                            const tipoClass = item.tipo === 'receita' ? 'success' : 'danger';
-                            const statusClass = item.status === 'pago' || item.status === 'recebido' ? 'success' : 
-                                              item.status === 'pendente' ? 'warning' : 'secondary';
-                            
-                            html += `
-                                <tr>
-                                    <td><span class="badge bg-${tipoClass}">${item.tipo}</span></td>
-                                    <td><span class="badge bg-${statusClass}">${item.status}</span></td>
-                                    <td>${item.total_contas}</td>
-                                    <td>R$ ${parseFloat(item.total_valor).toFixed(2)}</td>
-                                    <td>R$ ${parseFloat(item.valor_medio).toFixed(2)}</td>
-                                </tr>
-                            `;
-                        });
-
-                        html += `
-                                    </tbody>
-                                </table>
-                            </div>
-                            
-                            <div class="mt-3 text-end">
-                                <small class="text-muted">Gerado em: ${new Date().toLocaleString('pt-BR')}</small>
-                            </div>
-                        `;
-
-                        document.getElementById('resultado-relatorio').innerHTML = html;
-                    } else {
-                        throw new Error(data.error || 'Erro ao gerar relatório');
-                    }
-                } catch (error) {
-                    document.getElementById('resultado-relatorio').innerHTML = `
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Erro ao carregar relatório: ${error.message}
-                        </div>
-                    `;
-                }
-            } else {
-                alert('Sistema não inicializado. Faça login primeiro.');
-            }
-        }
-
-        async function carregarRelatorioProdutosMaisVendidos() {
-            if (window.bizFlowApp) {
-                try {
-                    document.getElementById('resultado-relatorio').innerHTML = `
-                        <div class="text-center">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Carregando...</span>
-                            </div>
-                            <p class="mt-2">Gerando relatório de produtos mais vendidos...</p>
-                        </div>
-                    `;
-
-                    const response = await fetch('/api/relatorios/produtos-mais-vendidos?limite=10');
-                    const data = await response.json();
-
-                    if (data.success) {
-                        const produtos = data.data;
-                        
-                        let html = `
-                            <h5 class="text-primary mb-4">🏆 Produtos Mais Vendidos</h5>
-
-                            <div class="table-responsive">
-                                <table class="table table-striped table-hover">
-                                    <thead class="table-dark">
-                                        <tr>
-                                            <th>Posição</th>
-                                            <th>Produto</th>
-                                            <th>Categoria</th>
-                                            <th>Total Vendido</th>
-                                            <th>Total Faturado</th>
-                                            <th>Vezes Vendido</th>
-                                            <th>Média por Venda</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                        `;
-
-                        produtos.forEach((produto, index) => {
-                            const positionClass = index === 0 ? 'table-warning' : '';
-                            
-                            html += `
-                                <tr class="${positionClass}">
-                                    <td><strong>#${index + 1}</strong></td>
-                                    <td>${produto.produto}</td>
-                                    <td>${produto.categoria}</td>
-                                    <td>${produto.total_vendido} unidades</td>
-                                    <td>R$ ${parseFloat(produto.total_faturado).toFixed(2)}</td>
-                                    <td>${produto.vezes_vendido}</td>
-                                    <td>${parseFloat(produto.media_por_venda).toFixed(1)}</td>
-                                </tr>
-                            `;
-                        });
-
-                        html += `
-                                    </tbody>
-                                </table>
-                            </div>
-                            
-                            <div class="mt-3 text-end">
-                                <small class="text-muted">Gerado em: ${new Date().toLocaleString('pt-BR')}</small>
-                            </div>
-                        `;
-
-                        document.getElementById('resultado-relatorio').innerHTML = html;
-                    } else {
-                        throw new Error(data.error || 'Erro ao gerar relatório');
-                    }
-                } catch (error) {
-                    document.getElementById('resultado-relatorio').innerHTML = `
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Erro ao carregar relatório: ${error.message}
-                        </div>
-                    `;
-                }
-            } else {
-                alert('Sistema não inicializado. Faça login primeiro.');
-            }
-        }
-
-        // ✅ NOVOS RELATÓRIOS FASE 5 COMPLETA
-        async function carregarRelatorioPerformance() {
-            if (window.bizFlowApp) {
-                try {
-                    document.getElementById('resultado-relatorio').innerHTML = `
-                        <div class="text-center">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Carregando...</span>
-                            </div>
-                            <p class="mt-2">Gerando relatório de performance...</p>
-                        </div>
-                    `;
-
-                    const response = await fetch('/api/relatorios/performance-sistema');
-                    const data = await response.json();
-
-                    if (data.success) {
-                        const metrics = data.data;
-                        
-                        let html = `
-                            <h5 class="text-primary mb-4">🚀 Relatório de Performance do Sistema</h5>
-                            
-                            <div class="row mb-4">
-                                <div class="col-md-3">
-                                    <div class="card stat-card bg-success text-white">
-                                        <div class="card-body text-center">
-                                            <h4>${metrics.cache?.hit_ratio || '0'}%</h4>
-                                            <small>Cache Hit Ratio</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="card stat-card bg-info text-white">
-                                        <div class="card-body text-center">
-                                            <h4>${metrics.database?.response_time || '0'}ms</h4>
-                                            <small>Tempo Resposta DB</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="card stat-card bg-warning text-dark">
-                                        <div class="card-body text-center">
-                                            <h4>${metrics.system?.memory_usage || '0'}%</h4>
-                                            <small>Uso de Memória</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="card stat-card bg-secondary text-white">
-                                        <div class="card-body text-center">
-                                            <h4>${metrics.system?.uptime || '0'}s</h4>
-                                            <small>Uptime</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="card">
-                                        <div class="card-header bg-primary text-white">
-                                            <h6 class="mb-0">Status do Cache Service</h6>
-                                        </div>
-                                        <div class="card-body">
-                                            <p><strong>Tipo:</strong> ${metrics.cache?.type || 'N/A'}</p>
-                                            <p><strong>Conectado:</strong> ${metrics.cache?.connected ? '✅ Sim' : '❌ Não'}</p>
-                                            <p><strong>Total de Chaves:</strong> ${metrics.cache?.total_keys || 0}</p>
-                                            <p><strong>Memória Usada:</strong> ${metrics.cache?.memory_used || 'N/A'}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="card">
-                                        <div class="card-header bg-success text-white">
-                                            <h6 class="mb-0">Status do Banco</h6>
-                                        </div>
-                                        <div class="card-body">
-                                            <p><strong>Conexões Ativas:</strong> ${metrics.database?.connections?.active || 0}</p>
-                                            <p><strong>Conexões Totais:</strong> ${metrics.database?.connections?.total || 0}</p>
-                                            <p><strong>Status:</strong> <span class="badge bg-success">${metrics.database?.health?.status || 'N/A'}</span></p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="mt-3 text-end">
-                                <small class="text-muted">Gerado em: ${new Date().toLocaleString('pt-BR')}</small>
-                            </div>
-                        `;
-
-                        document.getElementById('resultado-relatorio').innerHTML = html;
-                    } else {
-                        throw new Error(data.error || 'Erro ao gerar relatório');
-                    }
-                } catch (error) {
-                    document.getElementById('resultado-relatorio').innerHTML = `
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Erro ao carregar relatório: ${error.message}
-                        </div>
-                    `;
-                }
-            } else {
-                alert('Sistema não inicializado. Faça login primeiro.');
-            }
-        }
-
-        async function carregarRelatorioClientes() {
-            if (window.bizFlowApp) {
-                try {
-                    document.getElementById('resultado-relatorio').innerHTML = `
-                        <div class="text-center">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Carregando...</span>
-                            </div>
-                            <p class="mt-2">Gerando relatório de clientes...</p>
-                        </div>
-                    `;
-
-                    const response = await fetch('/api/relatorios/clientes?periodo=30');
-                    const data = await response.json();
-
-                    if (data.success) {
-                        const clientes = data.data.top_clientes;
-                        const frequencia = data.data.frequencia_compras;
-                        
-                        let html = `
-                            <h5 class="text-primary mb-4">👥 Relatório de Clientes</h5>
-                            
-                            <div class="row mb-4">
-                                <div class="col-md-4">
-                                    <div class="card stat-card bg-success text-white">
-                                        <div class="card-body text-center">
-                                            <h4>${clientes.length}</h4>
-                                            <small>Total Clientes</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="card stat-card bg-info text-white">
-                                        <div class="card-body text-center">
-                                            <h4>${frequencia.total_vendas}</h4>
-                                            <small>Total Vendas</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="card stat-card bg-warning text-dark">
-                                        <div class="card-body text-center">
-                                            <h4>${frequencia.media_vendas_por_dia}</h4>
-                                            <small>Média/Dia</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="table-responsive">
-                                <table class="table table-striped table-hover">
-                                    <thead class="table-dark">
-                                        <tr>
-                                            <th>Cliente</th>
-                                            <th>Total Compras</th>
-                                            <th>Total Gasto</th>
-                                            <th>Ticket Médio</th>
-                                            <th>Última Compra</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                        `;
-
-                        clientes.forEach(cliente => {
-                            html += `
-                                <tr>
-                                    <td>${cliente.cliente}</td>
-                                    <td>${cliente.total_compras}</td>
-                                    <td>R$ ${parseFloat(cliente.total_gasto).toFixed(2)}</td>
-                                    <td>R$ ${parseFloat(cliente.ticket_medio).toFixed(2)}</td>
-                                    <td>${new Date(cliente.ultima_compra).toLocaleDateString('pt-BR')}</td>
-                                </tr>
-                            `;
-                        });
-
-                        html += `
-                                    </tbody>
-                                </table>
-                            </div>
-                            
-                            <div class="mt-3 text-end">
-                                <small class="text-muted">Gerado em: ${new Date().toLocaleString('pt-BR')}</small>
-                            </div>
-                        `;
-
-                        document.getElementById('resultado-relatorio').innerHTML = html;
-                    } else {
-                        throw new Error(data.error || 'Erro ao gerar relatório');
-                    }
-                } catch (error) {
-                    document.getElementById('resultado-relatorio').innerHTML = `
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Erro ao carregar relatório: ${error.message}
-                        </div>
-                    `;
-                }
-            } else {
-                alert('Sistema não inicializado. Faça login primeiro.');
-            }
-        }
-
-        // ✅ FUNÇÕES GLOBAIS FASE 5 COMPLETA
-        function testarConexoes() {
-            if (window.bizFlowApp) {
-                window.bizFlowApp.testarConexaoCompleta();
-            }
-        }
-
-        function limparCache() {
-            if (window.bizFlowApp) {
-                window.bizFlowApp.invalidarCache();
-                window.bizFlowApp.mostrarAlerta('Cache limpo com sucesso!', 'success');
-            }
-        }
-
+        // ================= FUNÇÕES GLOBAIS =================
         function scrollToSection(sectionId) {
             document.getElementById(sectionId).scrollIntoView({ 
                 behavior: 'smooth' 
@@ -2084,8 +2315,15 @@
         }
 
         function carregarDashboard() {
-            if (window.bizFlowApp) {
-                window.bizFlowApp.carregarDadosIniciais();
+            if (bizFlowApp) {
+                bizFlowApp.carregarDashboard();
+                bizFlowApp.mostrarToast('Dashboard atualizado!', 'success');
+            }
+        }
+
+        function limparCache() {
+            if (bizFlowApp) {
+                bizFlowApp.limparCache();
             }
         }
 
@@ -2095,71 +2333,65 @@
             const novoTema = temaAtual === 'dark' ? 'light' : 'dark';
             
             body.setAttribute('data-bs-theme', novoTema);
+            localStorage.setItem('bizflow_theme', novoTema);
             
             // Atualizar ícone
             const icon = document.querySelector('.theme-switcher i');
             icon.className = novoTema === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+            
+            if (bizFlowApp) {
+                bizFlowApp.mostrarToast(`Tema alterado para ${novoTema}`, 'info');
+            }
         }
 
         function aplicarConfiguracoes() {
-            if (window.bizFlowApp) {
-                const websocket = document.getElementById('config-websocket').checked;
-                const cache = document.getElementById('config-cache').checked;
-                const retry = document.getElementById('config-retry').checked;
-                const monitoring = document.getElementById('config-monitoring').checked;
-                const prometheus = document.getElementById('config-prometheus').checked;
-                const tema = document.getElementById('config-tema').value;
-                
-                window.bizFlowApp.configuracoes.websocket = websocket;
-                window.bizFlowApp.configuracoes.cache = cache;
-                window.bizFlowApp.configuracoes.retryAuto = retry;
-                window.bizFlowApp.configuracoes.monitoring = monitoring;
-                window.bizFlowApp.configuracoes.prometheus = prometheus;
-                window.bizFlowApp.configuracoes.tema = tema;
-                
-                window.bizFlowApp.salvarConfiguracoes();
-                window.bizFlowApp.aplicarConfiguracoes();
-                
-                // Fechar modal
-                bootstrap.Modal.getInstance(document.getElementById('configModal')).hide();
-                
-                window.bizFlowApp.mostrarAlerta('Configurações aplicadas!', 'success');
+            if (bizFlowApp) {
+                bizFlowApp.aplicarConfiguracoes();
             }
         }
 
         function marcarTodasComoLidas() {
-            if (window.bizFlowApp) {
-                window.bizFlowApp.marcarTodasNotificacoesComoLidas();
+            if (bizFlowApp) {
+                bizFlowApp.mostrarToast('Todas notificações marcadas como lidas', 'info');
             }
         }
 
-        function atualizarMonitoramento() {
-            if (window.bizFlowApp) {
-                window.bizFlowApp.carregarDadosMonitoramento();
+        // Funções de relatórios
+        function carregarRelatorioVendas() {
+            if (bizFlowApp) {
+                bizFlowApp.carregarRelatorioVendas();
             }
         }
 
-        function gerarRelatorioPerformance() {
-            carregarRelatorioPerformance();
+        function carregarRelatorioEstoque() {
+            if (bizFlowApp) {
+                bizFlowApp.carregarRelatorioEstoque();
+            }
         }
 
-        // Inicializar quando o DOM estiver carregado
-        document.addEventListener('DOMContentLoaded', function() {
-            window.authSystem = new AuthSystem();
-            document.getElementById('ano-atual').textContent = new Date().getFullYear();
-            
-            // Configurar tema salvo
-            const savedTheme = localStorage.getItem('bizflow_theme') || 'light';
-            document.body.setAttribute('data-bs-theme', savedTheme);
-            document.getElementById('config-tema').value = savedTheme;
-            
-            // Atualizar ícone do tema
-            const themeIcon = document.querySelector('.theme-switcher i');
-            themeIcon.className = savedTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
-        });
+        function carregarRelatorioFinanceiro() {
+            if (bizFlowApp) {
+                bizFlowApp.carregarRelatorioFinanceiro();
+            }
+        }
+
+        function carregarRelatorioProdutosMaisVendidos() {
+            if (bizFlowApp) {
+                bizFlowApp.carregarRelatorioProdutosMaisVendidos();
+            }
+        }
+
+        function gerarDadosDemo() {
+            if (bizFlowApp) {
+                bizFlowApp.gerarDadosDemo();
+            }
+        }
+
+        function exportarDados() {
+            if (bizFlowApp) {
+                bizFlowApp.exportarDados();
+            }
+        }
     </script>
-
-    <!-- ✅ INCLUIR O APP.JS DA FASE 5 COMPLETA -->
-    <script src="/js/app-v5-complete.js"></script>
 </body>
 </html>
