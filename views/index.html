@@ -3,15 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BizFlow - Sistema Empresarial FASE 5.1 PRODUÇÃO</title>
+    <title>BizFlow - Sistema Empresarial FASE 5 COMPLETA PRODUÇÃO</title>
     
     <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🏢</text></svg>">
     
-    <!-- ✅ CDNs OTIMIZADAS PARA PRODUÇÃO FASE 5.1 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- ✅ CDNs OTIMIZADAS PARA PRODUÇÃO FASE 5 COMPLETA -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <link href="/css/style.css" rel="stylesheet">
+    
+    <!-- ✅ PRELOAD PARA PERFORMANCE -->
+    <link rel="preload" href="/js/app-v5-complete.js" as="script">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
     
     <style>
         .auth-container {
@@ -61,7 +65,7 @@
         .websocket-connecting { color: #ffc107; }
         .websocket-error { color: #dc3545; }
         
-        /* ✅ NOVOS ESTILOS FASE 5.1 */
+        /* ✅ NOVOS ESTILOS FASE 5 COMPLETA */
         .performance-badge {
             font-size: 0.7rem;
         }
@@ -89,6 +93,37 @@
         .report-card:hover {
             transform: translateY(-5px);
         }
+
+        /* ✅ NOVOS ESTILOS FASE 5 COMPLETA */
+        .metric-card {
+            transition: all 0.3s ease;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .cache-hit {
+            background: linear-gradient(135deg, #198754, #20c997);
+            color: white;
+        }
+        .cache-miss {
+            background: linear-gradient(135deg, #dc3545, #fd7e14);
+            color: white;
+        }
+        .performance-excellent { color: #198754; }
+        .performance-good { color: #20c997; }
+        .performance-warning { color: #ffc107; }
+        .performance-critical { color: #dc3545; }
+        
+        /* Loading animations */
+        .loading-pulse {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -99,8 +134,9 @@
                 <h1 class="text-primary">
                     <i class="fas fa-building me-2"></i>BizFlow
                 </h1>
-                <p class="text-muted">Sistema Empresarial - FASE 5.1 PRODUÇÃO</p>
-                <div class="badge bg-success">Sistema de Produção • Otimizado • Monitorado</div>
+                <p class="text-muted">Sistema Empresarial - FASE 5 COMPLETA PRODUÇÃO</p>
+                <div class="badge bg-success mb-2">Sistema de Produção • Otimizado • Monitorado</div>
+                <div class="badge bg-info">Redis Cache • Backup • Segurança</div>
             </div>
 
             <!-- Formulário de Login SIMPLIFICADO -->
@@ -138,7 +174,14 @@
 
             <div class="mt-4 p-3 bg-light rounded">
                 <div id="system-status" class="text-center">
-                    <span class="badge bg-warning">Verificando sistema FASE 5.1...</span>
+                    <span class="badge bg-warning loading-pulse">Verificando sistema FASE 5...</span>
+                </div>
+                <div id="system-metrics" class="mt-2 text-center" style="display: none;">
+                    <small class="text-muted">
+                        <span id="metric-uptime">Uptime: --</span> | 
+                        <span id="metric-response-time">Response: --ms</span> | 
+                        <span id="metric-cache-status">Cache: --</span>
+                    </small>
                 </div>
             </div>
         </div>
@@ -152,7 +195,7 @@
                 <a class="navbar-brand" href="#">
                     <i class="fas fa-building me-2"></i> 
                     <strong>BizFlow</strong>
-                    <small class="ms-2 opacity-75">FASE 5.1 PRODUÇÃO</small>
+                    <small class="ms-2 opacity-75">FASE 5 COMPLETA</small>
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                     <span class="navbar-toggler-icon"></span>
@@ -206,7 +249,7 @@
                         </li>
                     </ul>
                     <ul class="navbar-nav">
-                        <!-- ✅ STATUS DE CONEXÃO FASE 5.1 -->
+                        <!-- ✅ STATUS DE CONEXÃO FASE 5 COMPLETA -->
                         <li class="nav-item me-2">
                             <span class="nav-link">
                                 <span id="status-conexao" class="connection-status status-online">
@@ -219,6 +262,14 @@
                             <span class="nav-link">
                                 <span id="status-websocket" class="websocket-status websocket-disconnected">
                                     <i class="fas fa-plug me-1"></i>WebSocket
+                                </span>
+                            </span>
+                        </li>
+
+                        <li class="nav-item me-2">
+                            <span class="nav-link">
+                                <span id="status-redis" class="badge bg-danger">
+                                    <i class="fas fa-database me-1"></i>Redis
                                 </span>
                             </span>
                         </li>
@@ -252,7 +303,10 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#configModal">
-                                    <i class="fas fa-cog me-2"></i>Configurações FASE 5.1
+                                    <i class="fas fa-cog me-2"></i>Configurações FASE 5
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#monitoringModal">
+                                    <i class="fas fa-chart-line me-2"></i>Monitoramento
                                 </a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item text-danger" href="#" id="btn-logout">
@@ -267,58 +321,82 @@
 
         <!-- Main Content -->
         <div class="container mt-4">
-            <!-- Dashboard Section FASE 5.1 -->
+            <!-- Dashboard Section FASE 5 COMPLETA -->
             <section id="dashboard" class="mb-5">
                 <div class="row mb-4">
                     <div class="col-12">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h2><i class="fas fa-tachometer-alt me-2"></i> Dashboard FASE 5.1</h2>
+                            <h2><i class="fas fa-tachometer-alt me-2"></i> Dashboard FASE 5 COMPLETA</h2>
                             <div>
                                 <button class="btn btn-sm btn-outline-primary me-2" onclick="testarConexoes()">
                                     <i class="fas fa-network-wired me-1"></i>Testar Conexões
                                 </button>
-                                <button class="btn btn-sm btn-outline-success" onclick="limparCache()">
+                                <button class="btn btn-sm btn-outline-success me-2" onclick="limparCache()">
                                     <i class="fas fa-broom me-1"></i>Limpar Cache
+                                </button>
+                                <button class="btn btn-sm btn-outline-info" onclick="gerarRelatorioPerformance()">
+                                    <i class="fas fa-chart-line me-1"></i>Performance
                                 </button>
                             </div>
                         </div>
-                        <p class="text-muted">Sistema de Produção - Monitorado e Otimizado</p>
+                        <p class="text-muted">Sistema de Produção - Cache Redis • Monitoramento • Backup • Segurança</p>
                     </div>
                 </div>
 
-                <!-- ✅ NOVAS MÉTRICAS FASE 5.1 -->
+                <!-- ✅ NOVAS MÉTRICAS FASE 5 COMPLETA -->
                 <div class="row mb-4">
                     <div class="col-12">
                         <div class="card bg-light">
                             <div class="card-body">
                                 <div class="row text-center">
-                                    <div class="col-md-3 mb-3">
-                                        <div class="border rounded p-3">
+                                    <div class="col-md-2 mb-3">
+                                        <div class="metric-card border rounded p-3">
                                             <i class="fas fa-rocket fa-2x text-primary mb-2"></i>
                                             <h5 id="metric-requests">0</h5>
-                                            <small class="text-muted">Requisições/min</small>
+                                            <small class="text-muted">Req/min</small>
                                         </div>
                                     </div>
-                                    <div class="col-md-3 mb-3">
-                                        <div class="border rounded p-3">
-                                            <i class="fas fa-bolt fa-2x text-success mb-2"></i>
-                                            <h5 id="metric-cache">0</h5>
-                                            <small class="text-muted">Cache Hits</small>
+                                    <div class="col-md-2 mb-3">
+                                        <div class="metric-card border rounded p-3 cache-hit">
+                                            <i class="fas fa-bolt fa-2x mb-2"></i>
+                                            <h5 id="metric-cache-hit">0</h5>
+                                            <small>Cache Hits</small>
                                         </div>
                                     </div>
-                                    <div class="col-md-3 mb-3">
-                                        <div class="border rounded p-3">
+                                    <div class="col-md-2 mb-3">
+                                        <div class="metric-card border rounded p-3 cache-miss">
+                                            <i class="fas fa-times fa-2x mb-2"></i>
+                                            <h5 id="metric-cache-miss">0</h5>
+                                            <small>Cache Miss</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2 mb-3">
+                                        <div class="metric-card border rounded p-3">
                                             <i class="fas fa-shield-alt fa-2x text-warning mb-2"></i>
                                             <h5 id="metric-errors">0</h5>
                                             <small class="text-muted">Erros</small>
                                         </div>
                                     </div>
-                                    <div class="col-md-3 mb-3">
-                                        <div class="border rounded p-3">
+                                    <div class="col-md-2 mb-3">
+                                        <div class="metric-card border rounded p-3">
                                             <i class="fas fa-clock fa-2x text-info mb-2"></i>
                                             <h5 id="metric-response">0ms</h5>
-                                            <small class="text-muted">Tempo Resposta</small>
+                                            <small class="text-muted">Response</small>
                                         </div>
+                                    </div>
+                                    <div class="col-md-2 mb-3">
+                                        <div class="metric-card border rounded p-3">
+                                            <i class="fas fa-database fa-2x text-success mb-2"></i>
+                                            <h5 id="metric-uptime-dash">--</h5>
+                                            <small class="text-muted">Uptime</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-12 text-center">
+                                        <small class="text-muted" id="cache-hit-ratio">Cache Hit Ratio: --%</small>
+                                        <span class="mx-2">•</span>
+                                        <small class="text-muted" id="performance-status">Performance: --</small>
                                     </div>
                                 </div>
                             </div>
@@ -326,7 +404,7 @@
                     </div>
                 </div>
 
-                <!-- Seções Empresariais FASE 5.1 -->
+                <!-- Seções Empresariais FASE 5 COMPLETA -->
                 <div class="row mt-4">
                     <div class="col-md-6 mb-4">
                         <div class="card h-100">
@@ -370,7 +448,7 @@
                     <div class="col-md-6 mb-4">
                         <div class="card h-100">
                             <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0"><i class="fas fa-code me-2"></i>Sistema FASE 5.1</h6>
+                                <h6 class="mb-0"><i class="fas fa-code me-2"></i>Sistema FASE 5</h6>
                                 <span class="badge bg-light text-success">PRODUÇÃO</span>
                             </div>
                             <div class="card-body">
@@ -381,15 +459,18 @@
                                     <button class="btn btn-outline-info" onclick="bizFlowApp.testarConexaoCompleta()">
                                         <i class="fas fa-network-wired me-1"></i>Teste Completo
                                     </button>
-                                    <button class="btn btn-outline-warning" onclick="limparCache()">
-                                        <i class="fas fa-broom me-1"></i>Limpar Cache
+                                    <button class="btn btn-outline-warning" onclick="bizFlowApp.verificarRedis()">
+                                        <i class="fas fa-database me-1"></i>Testar Redis
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="bizFlowApp.testarBackup()">
+                                        <i class="fas fa-save me-1"></i>Testar Backup
                                     </button>
                                 </div>
                                 <div class="mt-3">
                                     <div class="alert alert-success">
                                         <small>
                                             <i class="fas fa-check-circle me-2"></i>
-                                            <strong>Sistema FASE 5.1:</strong> Produção • Cache • Monitoramento • Performance
+                                            <strong>Sistema FASE 5 COMPLETA:</strong> Produção • Redis Cache • Monitoramento • Backup • Segurança
                                         </small>
                                     </div>
                                 </div>
@@ -444,6 +525,11 @@
                                             <i class="fas fa-sync me-1"></i>Atualizar
                                         </button>
                                     </div>
+                                    <div class="col-6">
+                                        <button class="btn btn-outline-secondary w-100" onclick="bizFlowApp.verificarLogs()">
+                                            <i class="fas fa-file-alt me-1"></i>Ver Logs
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -451,7 +537,7 @@
                 </div>
             </section>
 
-            <!-- Seções Empresariais FASE 5.1 -->
+            <!-- Seções Empresariais FASE 5 COMPLETA -->
             
             <!-- Seção Empresas -->
             <section id="empresas" class="mb-5">
@@ -649,7 +735,7 @@
                 </div>
             </section>
 
-            <!-- Seção Relatórios FASE 5.1 -->
+            <!-- Seção Relatórios FASE 5 COMPLETA -->
             <section id="relatorios" class="mb-5">
                 <div class="row">
                     <div class="col-12">
@@ -751,6 +837,52 @@
                                                 </ul>
                                                 <div class="mt-3">
                                                     <button class="btn btn-danger w-100" onclick="carregarRelatorioProdutosMaisVendidos()">
+                                                        <i class="fas fa-download me-1"></i> Gerar Relatório
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- ✅ NOVO: Relatório de Performance -->
+                                    <div class="col-md-6 mb-4">
+                                        <div class="card h-100 report-card">
+                                            <div class="card-header bg-dark text-white">
+                                                <h6 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>Relatório de Performance</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="card-text">Métricas de performance e cache do sistema.</p>
+                                                <ul class="list-unstyled small">
+                                                    <li><i class="fas fa-check text-success me-2"></i>Cache hit ratio</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Tempo de resposta</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Uso de memória</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Métricas Redis</li>
+                                                </ul>
+                                                <div class="mt-3">
+                                                    <button class="btn btn-dark w-100" onclick="carregarRelatorioPerformance()">
+                                                        <i class="fas fa-download me-1"></i> Gerar Relatório
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- ✅ NOVO: Relatório de Segurança -->
+                                    <div class="col-md-6 mb-4">
+                                        <div class="card h-100 report-card">
+                                            <div class="card-header bg-secondary text-white">
+                                                <h6 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Relatório de Segurança</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="card-text">Auditoria e logs de segurança do sistema.</p>
+                                                <ul class="list-unstyled small">
+                                                    <li><i class="fas fa-check text-success me-2"></i>Logs de acesso</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Tentativas de login</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Atividades suspeitas</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Auditoria de dados</li>
+                                                </ul>
+                                                <div class="mt-3">
+                                                    <button class="btn btn-secondary w-100" onclick="carregarRelatorioSeguranca()">
                                                         <i class="fas fa-download me-1"></i> Gerar Relatório
                                                     </button>
                                                 </div>
@@ -981,8 +1113,8 @@
                 <div class="row">
                     <div class="col-md-6">
                         <h5><i class="fas fa-building me-2"></i>BizFlow</h5>
-                        <p class="mb-0">Sistema Empresarial - FASE 5.1 PRODUÇÃO</p>
-                        <small class="text-muted">Sistema de Produção • Cache • Monitoramento • Performance</small>
+                        <p class="mb-0">Sistema Empresarial - FASE 5 COMPLETA PRODUÇÃO</p>
+                        <small class="text-muted">Redis Cache • Monitoramento • Backup • Segurança • Performance</small>
                     </div>
                     <div class="col-md-6 text-md-end">
                         <p class="mb-0">
@@ -991,58 +1123,80 @@
                             <i class="fas fa-heart text-danger mx-1"></i>
                             para escalar seu negócio
                         </p>
-                        <small class="text-muted">&copy; <span id="ano-atual">2024</span> BizFlow - FASE 5.1</small>
+                        <small class="text-muted">&copy; <span id="ano-atual">2024</span> BizFlow - FASE 5 COMPLETA</small>
                     </div>
                 </div>
             </div>
         </footer>
     </div>
 
-    <!-- ✅ MODAL CONFIGURAÇÕES FASE 5.1 -->
+    <!-- ✅ MODAL CONFIGURAÇÕES FASE 5 COMPLETA -->
     <div class="modal fade" id="configModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-cog me-2"></i>Configurações FASE 5.1</h5>
+                    <h5 class="modal-title"><i class="fas fa-cog me-2"></i>Configurações FASE 5 COMPLETA</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="config-tema" class="form-label">Tema da Interface</label>
-                        <select class="form-select" id="config-tema">
-                            <option value="light">Claro</option>
-                            <option value="dark">Escuro</option>
-                            <option value="auto">Automático</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="config-websocket" checked>
-                            <label class="form-check-label" for="config-websocket">
-                                Conexão WebSocket
-                            </label>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="config-tema" class="form-label">Tema da Interface</label>
+                                <select class="form-select" id="config-tema">
+                                    <option value="light">Claro</option>
+                                    <option value="dark">Escuro</option>
+                                    <option value="auto">Automático</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="config-websocket" checked>
+                                    <label class="form-check-label" for="config-websocket">
+                                        Conexão WebSocket
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="config-cache" checked>
+                                    <label class="form-check-label" for="config-cache">
+                                        Sistema de Cache Redis
+                                    </label>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="config-cache" checked>
-                            <label class="form-check-label" for="config-cache">
-                                Sistema de Cache
-                            </label>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="config-retry" checked>
-                            <label class="form-check-label" for="config-retry">
-                                Retry Automático
-                            </label>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="config-retry" checked>
+                                    <label class="form-check-label" for="config-retry">
+                                        Retry Automático
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="config-monitoring" checked>
+                                    <label class="form-check-label" for="config-monitoring">
+                                        Monitoramento Ativo
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="config-backup" checked>
+                                    <label class="form-check-label" for="config-backup">
+                                        Backup Automático
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="alert alert-info">
                         <small>
                             <i class="fas fa-info-circle me-2"></i>
-                            Configurações otimizadas para produção FASE 5.1
+                            Configurações otimizadas para produção FASE 5 COMPLETA
                         </small>
                     </div>
                 </div>
@@ -1054,11 +1208,65 @@
         </div>
     </div>
 
+    <!-- ✅ MODAL MONITORAMENTO FASE 5 COMPLETA -->
+    <div class="modal fade" id="monitoringModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-chart-line me-2"></i>Monitoramento do Sistema</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><i class="fas fa-database me-2"></i>Status Redis</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="redis-status">Carregando...</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0"><i class="fas fa-heartbeat me-2"></i>Saúde do Sistema</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="system-health">Carregando...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Métricas em Tempo Real</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="realtime-metrics">Carregando...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <button type="button" class="btn btn-primary" onclick="atualizarMonitoramento()">
+                        <i class="fas fa-sync me-1"></i>Atualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
     <script src="/socket.io/socket.io.js"></script>
     
-    <!-- ✅ SISTEMA DE AUTENTICAÇÃO SIMPLIFICADO FASE 5.1 -->
+    <!-- ✅ SISTEMA DE AUTENTICAÇÃO ATUALIZADO FASE 5 COMPLETA -->
     <script>
         class AuthSystem {
             constructor() {
@@ -1102,7 +1310,15 @@
                     
                     if (data.status === 'OK') {
                         document.getElementById('system-status').innerHTML = 
-                            '<span class="badge bg-success">Sistema Online - FASE 5.1</span>';
+                            '<span class="badge bg-success">Sistema Online - FASE 5 COMPLETA</span>';
+                        
+                        // Mostrar métricas do sistema
+                        document.getElementById('system-metrics').style.display = 'block';
+                        if (data.metrics) {
+                            document.getElementById('metric-uptime').textContent = `Uptime: ${data.metrics.uptime || '--'}`;
+                            document.getElementById('metric-response-time').textContent = `Response: ${data.metrics.responseTime || '--'}ms`;
+                            document.getElementById('metric-cache-status').textContent = `Cache: ${data.metrics.cacheStatus || '--'}`;
+                        }
                     } else {
                         document.getElementById('system-status').innerHTML = 
                             '<span class="badge bg-danger">Sistema Offline</span>';
@@ -1143,7 +1359,7 @@
                         localStorage.setItem('bizflow_user', JSON.stringify(this.user));
                         
                         this.showApp();
-                        this.showAlert('Login FASE 5.1 realizado com sucesso! 🚀', 'success');
+                        this.showAlert('Login FASE 5 COMPLETA realizado com sucesso! 🚀', 'success');
                     } else {
                         throw new Error(data.error || 'Erro no login');
                     }
@@ -1167,7 +1383,7 @@
                 // Atualizar interface
                 document.getElementById('user-name').textContent = this.user?.full_name || 'Usuário';
                 
-                // Inicializar BizFlow App FASE 5.1
+                // Inicializar BizFlow App FASE 5 COMPLETA
                 if (window.bizFlowApp) {
                     window.bizFlowApp.setAuthToken(this.token);
                     window.bizFlowApp.init();
@@ -1204,7 +1420,7 @@
             }
         }
 
-        // ✅ FUNÇÕES DE RELATÓRIOS FASE 5.1
+        // ✅ FUNÇÕES DE RELATÓRIOS FASE 5 COMPLETA
         async function carregarRelatorioVendas() {
             if (window.bizFlowApp) {
                 try {
@@ -1616,7 +1832,242 @@
             }
         }
 
-        // ✅ FUNÇÕES GLOBAIS FASE 5.1
+        // ✅ NOVOS RELATÓRIOS FASE 5 COMPLETA
+        async function carregarRelatorioPerformance() {
+            if (window.bizFlowApp) {
+                try {
+                    document.getElementById('resultado-relatorio').innerHTML = `
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                            <p class="mt-2">Gerando relatório de performance...</p>
+                        </div>
+                    `;
+
+                    const response = await fetch('/api/relatorios/performance');
+                    const data = await response.json();
+
+                    if (data.success) {
+                        const metrics = data.data;
+                        
+                        let html = `
+                            <h5 class="text-primary mb-4">🚀 Relatório de Performance</h5>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-3">
+                                    <div class="card bg-success text-white">
+                                        <div class="card-body text-center">
+                                            <h4>${metrics.cache_hit_ratio || '0'}%</h4>
+                                            <small>Cache Hit Ratio</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-info text-white">
+                                        <div class="card-body text-center">
+                                            <h4>${metrics.avg_response_time || '0'}ms</h4>
+                                            <small>Tempo Médio Resposta</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-warning text-dark">
+                                        <div class="card-body text-center">
+                                            <h4>${metrics.memory_usage || '0'}%</h4>
+                                            <small>Uso de Memória</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-secondary text-white">
+                                        <div class="card-body text-center">
+                                            <h4>${metrics.uptime || '0'}%</h4>
+                                            <small>Uptime</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Métrica</th>
+                                            <th>Valor</th>
+                                            <th>Status</th>
+                                            <th>Recomendação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                        `;
+
+                        const performanceMetrics = [
+                            { name: 'Cache Hit Ratio', value: metrics.cache_hit_ratio, threshold: 80 },
+                            { name: 'Response Time', value: metrics.avg_response_time, threshold: 500 },
+                            { name: 'Memory Usage', value: metrics.memory_usage, threshold: 80 },
+                            { name: 'CPU Usage', value: metrics.cpu_usage, threshold: 70 }
+                        ];
+
+                        performanceMetrics.forEach(metric => {
+                            const status = metric.value <= metric.threshold ? 'Ótimo' : 'Atenção';
+                            const statusClass = metric.value <= metric.threshold ? 'success' : 'warning';
+                            const recommendation = metric.value <= metric.threshold ? 
+                                'Dentro dos parâmetros ideais' : 
+                                'Monitorar e otimizar';
+                            
+                            html += `
+                                <tr>
+                                    <td>${metric.name}</td>
+                                    <td>${metric.value || 'N/A'}</td>
+                                    <td><span class="badge bg-${statusClass}">${status}</span></td>
+                                    <td>${recommendation}</td>
+                                </tr>
+                            `;
+                        });
+
+                        html += `
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="mt-3 text-end">
+                                <small class="text-muted">Gerado em: ${new Date().toLocaleString('pt-BR')}</small>
+                            </div>
+                        `;
+
+                        document.getElementById('resultado-relatorio').innerHTML = html;
+                    } else {
+                        throw new Error(data.error || 'Erro ao gerar relatório');
+                    }
+                } catch (error) {
+                    document.getElementById('resultado-relatorio').innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Erro ao carregar relatório: ${error.message}
+                        </div>
+                    `;
+                }
+            } else {
+                alert('Sistema não inicializado. Faça login primeiro.');
+            }
+        }
+
+        async function carregarRelatorioSeguranca() {
+            if (window.bizFlowApp) {
+                try {
+                    document.getElementById('resultado-relatorio').innerHTML = `
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                            <p class="mt-2">Gerando relatório de segurança...</p>
+                        </div>
+                    `;
+
+                    const response = await fetch('/api/relatorios/seguranca');
+                    const data = await response.json();
+
+                    if (data.success) {
+                        const security = data.data;
+                        
+                        let html = `
+                            <h5 class="text-primary mb-4">🛡️ Relatório de Segurança</h5>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-4">
+                                    <div class="card bg-success text-white">
+                                        <div class="card-body text-center">
+                                            <h4>${security.login_attempts || 0}</h4>
+                                            <small>Tentativas de Login</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card bg-warning text-dark">
+                                        <div class="card-body text-center">
+                                            <h4>${security.failed_logins || 0}</h4>
+                                            <small>Logins Falhos</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card bg-info text-white">
+                                        <div class="card-body text-center">
+                                            <h4>${security.api_calls || 0}</h4>
+                                            <small>Chamadas API</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Atividade</th>
+                                            <th>Quantidade</th>
+                                            <th>Status</th>
+                                            <th>Última Ocorrência</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                        `;
+
+                        security.activities.forEach(activity => {
+                            const statusClass = activity.status === 'normal' ? 'success' : 
+                                              activity.status === 'alerta' ? 'warning' : 'danger';
+                            
+                            html += `
+                                <tr>
+                                    <td>${activity.name}</td>
+                                    <td>${activity.count}</td>
+                                    <td><span class="badge bg-${statusClass}">${activity.status}</span></td>
+                                    <td>${new Date(activity.last_occurrence).toLocaleString('pt-BR')}</td>
+                                </tr>
+                            `;
+                        });
+
+                        html += `
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <div class="alert alert-info">
+                                    <h6><i class="fas fa-info-circle me-2"></i>Recomendações de Segurança</h6>
+                                    <ul class="mb-0">
+                                        <li>Verificar logs de acesso regularmente</li>
+                                        <li>Monitorar tentativas de login suspeitas</li>
+                                        <li>Manter certificados SSL atualizados</li>
+                                        <li>Implementar autenticação de dois fatores</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="text-end">
+                                <small class="text-muted">Gerado em: ${new Date().toLocaleString('pt-BR')}</small>
+                            </div>
+                        `;
+
+                        document.getElementById('resultado-relatorio').innerHTML = html;
+                    } else {
+                        throw new Error(data.error || 'Erro ao gerar relatório');
+                    }
+                } catch (error) {
+                    document.getElementById('resultado-relatorio').innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Erro ao carregar relatório: ${error.message}
+                        </div>
+                    `;
+                }
+            } else {
+                alert('Sistema não inicializado. Faça login primeiro.');
+            }
+        }
+
+        // ✅ FUNÇÕES GLOBAIS FASE 5 COMPLETA
         function testarConexoes() {
             if (window.bizFlowApp) {
                 window.bizFlowApp.testarConexaoCompleta();
@@ -1648,6 +2099,10 @@
             const novoTema = temaAtual === 'dark' ? 'light' : 'dark';
             
             body.setAttribute('data-bs-theme', novoTema);
+            
+            // Atualizar ícone
+            const icon = document.querySelector('.theme-switcher i');
+            icon.className = novoTema === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
         }
 
         function aplicarConfiguracoes() {
@@ -1655,11 +2110,15 @@
                 const websocket = document.getElementById('config-websocket').checked;
                 const cache = document.getElementById('config-cache').checked;
                 const retry = document.getElementById('config-retry').checked;
+                const monitoring = document.getElementById('config-monitoring').checked;
+                const backup = document.getElementById('config-backup').checked;
                 const tema = document.getElementById('config-tema').value;
                 
                 window.bizFlowApp.configuracoes.websocket = websocket;
                 window.bizFlowApp.configuracoes.cache = cache;
                 window.bizFlowApp.configuracoes.retryAuto = retry;
+                window.bizFlowApp.configuracoes.monitoring = monitoring;
+                window.bizFlowApp.configuracoes.backup = backup;
                 window.bizFlowApp.configuracoes.tema = tema;
                 
                 window.bizFlowApp.salvarConfiguracoes();
@@ -1678,14 +2137,33 @@
             }
         }
 
+        function atualizarMonitoramento() {
+            if (window.bizFlowApp) {
+                window.bizFlowApp.carregarDadosMonitoramento();
+            }
+        }
+
+        function gerarRelatorioPerformance() {
+            carregarRelatorioPerformance();
+        }
+
         // Inicializar quando o DOM estiver carregado
         document.addEventListener('DOMContentLoaded', function() {
             window.authSystem = new AuthSystem();
             document.getElementById('ano-atual').textContent = new Date().getFullYear();
+            
+            // Configurar tema salvo
+            const savedTheme = localStorage.getItem('bizflow_theme') || 'light';
+            document.body.setAttribute('data-bs-theme', savedTheme);
+            document.getElementById('config-tema').value = savedTheme;
+            
+            // Atualizar ícone do tema
+            const themeIcon = document.querySelector('.theme-switcher i');
+            themeIcon.className = savedTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
         });
     </script>
 
-    <!-- ✅ INCLUIR O APP.JS DA FASE 5.1 -->
-    <script src="/js/app-v5.1-fixed.js"></script>
+    <!-- ✅ INCLUIR O APP.JS DA FASE 5 COMPLETA -->
+    <script src="/js/app-v5-complete.js"></script>
 </body>
 </html>
