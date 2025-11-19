@@ -1,4 +1,4 @@
-// server.js - SISTEMA BIZFLOW FASE 5 COMPLETA - PRODUÇÃO OTIMIZADA
+// server.js - SISTEMA BIZFLOW FASE 5 COMPLETA - COM CACHE SERVICE FALLBACK
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -14,13 +14,13 @@ import { Server } from 'socket.io';
 import rateLimit from 'express-rate-limit';
 import winston from 'winston';
 import dotenv from 'dotenv';
-import Redis from 'ioredis';
 import client from 'prom-client';
 
-// ✅ IMPORTAR NOVOS SERVIÇOS DA FASE 5 COMPLETA
+// ✅ IMPORTAR SERVIÇOS DA FASE 5 COMPLETA
 import AuthService from './services/auth.js';
 import NotificationService from './services/notifications.js';
 import ReportsService from './services/reports.js';
+import CacheService from './services/cache-service.js';
 import BizFlowLogger from './utils/logger.js';
 import BizFlowValidators from './utils/validators.js';
 import BizFlowHelpers from './utils/helpers.js';
@@ -46,33 +46,15 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 10000;
 const HOST = '0.0.0.0';
 
-// ================= REDIS CACHE - FASE 5.2 =================
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
-  retryDelayOnFailover: 100,
-  maxRetriesPerRequest: 3,
-  enableReadyCheck: true,
-  lazyConnect: true
-});
-
-// Event handlers Redis
-redis.on('connect', () => {
-  BizFlowLogger.businessLog('Redis conectado com sucesso');
-});
-
-redis.on('error', (error) => {
-  BizFlowLogger.errorLog(error, { context: 'Redis connection' });
-});
-
-redis.on('ready', () => {
-  BizFlowLogger.businessLog('Redis pronto para uso');
-});
+// ================= CACHE SERVICE - FASE 5.2 =================
+// ✅ JÁ CONFIGURADO NO services/cache-service.js - USANDO FALLBACK AUTOMÁTICO
 
 // ✅ ESTRATÉGIAS DE CACHE
 const cacheStrategies = {
   DASHBOARD: 300,
   PRODUCTS: 120,
   REPORTS: 600,
-  SESSIONS: 86400
+  SESSIONS: 3600
 };
 
 // ✅ MIDDLEWARE DE CACHE GENÉRICO
@@ -85,15 +67,15 @@ const cacheMiddleware = (duration = 300, keyPrefix = 'cache') => {
     const cacheKey = `${keyPrefix}:${req.originalUrl}`;
     
     try {
-      const cachedData = await redis.get(cacheKey);
+      const cachedData = await CacheService.get(cacheKey);
       if (cachedData) {
-        return res.json(JSON.parse(cachedData));
+        return res.json(cachedData);
       }
 
       const originalJson = res.json;
       res.json = function(data) {
         if (data.success !== false) {
-          redis.setex(cacheKey, duration, JSON.stringify(data))
+          CacheService.set(cacheKey, data, duration)
             .catch(err => BizFlowLogger.errorLog(err, { context: 'cache save' }));
         }
         originalJson.call(this, data);
@@ -268,7 +250,7 @@ app.use('/api/auth/', authLimiter);
 
 // ================= MIDDLEWARES PERSONALIZADOS =================
 
-// ✅ MIDDLEWARE DE AUTENTICAÇÃO COM SERVIÇO
+// ✅ MIDDLEWARE DE AUTENTICAÇÃO COM CACHE SERVICE
 async function requireAuth(req, res, next) {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
@@ -292,7 +274,7 @@ async function requireAuth(req, res, next) {
   }
 }
 
-// ✅ MIDDLEWARE DE CONTEXTO EMPRESARIAL
+// ✅ MIDDLEWARE DE CONTEXTO EMPRESARIAL COM CACHE
 async function empresaContext(req, res, next) {
   try {
     let empresaId = req.headers['x-empresa-id'] || req.query.empresa_id || req.body.empresa_id;
@@ -302,11 +284,12 @@ async function empresaContext(req, res, next) {
     }
     
     if (!empresaId) {
+      // Usar cache para empresa padrão
       const cacheKey = 'empresa:default';
-      let defaultEmpresa = await redis.get(cacheKey);
+      let defaultEmpresa = await CacheService.get(cacheKey);
       
       if (defaultEmpresa) {
-        empresaId = JSON.parse(defaultEmpresa).id;
+        empresaId = defaultEmpresa.id;
       } else {
         const empresaResult = await queryWithMetrics(
           'SELECT id FROM empresas WHERE is_active = true ORDER BY id LIMIT 1',
@@ -315,7 +298,7 @@ async function empresaContext(req, res, next) {
           'empresas'
         );
         empresaId = empresaResult.rows.length > 0 ? empresaResult.rows[0].id : 1;
-        await redis.setex(cacheKey, 300, JSON.stringify({ id: empresaId }));
+        await CacheService.set(cacheKey, { id: empresaId }, 300);
       }
     }
     
@@ -365,7 +348,7 @@ app.get('/health', async (req, res) => {
   
   try {
     healthChecks.database = await testDatabaseConnection();
-    healthChecks.redis = await testRedisConnection();
+    healthChecks.cache = await testCacheConnection();
     
     const [dbMetrics, systemMetrics] = await Promise.all([
       queryWithMetrics(
@@ -435,10 +418,14 @@ async function testDatabaseConnection() {
   }
 }
 
-async function testRedisConnection() {
+async function testCacheConnection() {
   try {
-    await redis.ping();
-    return { status: 'healthy', latency: 'ok' };
+    const status = await CacheService.status();
+    return { 
+      status: status.connected ? 'healthy' : 'degraded', 
+      type: status.type,
+      details: status 
+    };
   } catch (error) {
     return { status: 'unhealthy', error: error.message };
   }
@@ -449,7 +436,7 @@ app.get('/api/status', cacheMiddleware(60, 'status'), async (req, res) => {
   const startTime = Date.now();
   
   try {
-    const [dbMetrics, businessMetrics, systemInfo, cacheMetrics] = await Promise.all([
+    const [dbMetrics, businessMetrics, systemInfo, cacheStatus] = await Promise.all([
       queryWithMetrics(
         `SELECT 
           COUNT(*) as total_connections,
@@ -481,7 +468,7 @@ app.get('/api/status', cacheMiddleware(60, 'status'), async (req, res) => {
         'select',
         'system_info'
       ),
-      getCacheMetrics()
+      CacheService.status()
     ]);
 
     const responseTime = Date.now() - startTime;
@@ -516,7 +503,7 @@ app.get('/api/status', cacheMiddleware(60, 'status'), async (req, res) => {
             user: systemInfo.rows[0].current_user
           }
         },
-        cache: cacheMetrics,
+        cache: cacheStatus,
         business: businessMetrics.rows[0],
         performance: {
           total_response_time: responseTime,
@@ -537,25 +524,6 @@ app.get('/api/status', cacheMiddleware(60, 'status'), async (req, res) => {
     });
   }
 });
-
-async function getCacheMetrics() {
-  try {
-    const redisInfo = await redis.info();
-    const keys = await redis.keys('*');
-    
-    return {
-      status: 'connected',
-      total_keys: keys.length,
-      memory_used: redisInfo.split('\r\n').find(line => line.startsWith('used_memory_human'))?.split(':')[1] || 'unknown',
-      hit_rate: 'active'
-    };
-  } catch (error) {
-    return {
-      status: 'disconnected',
-      error: error.message
-    };
-  }
-}
 
 // ================= ROTAS DE AUTENTICAÇÃO COM SERVIÇO =================
 app.post('/api/auth/login', 
@@ -826,12 +794,7 @@ app.get('/api/relatorios/performance-sistema',
 // ================= ROTAS DE CACHE MANAGEMENT =================
 app.get('/api/cache/status', requireAuth, async (req, res) => {
   try {
-    const keys = await redis.keys('*');
-    const cacheInfo = {
-      total_keys: keys.length,
-      memory_usage: await redis.info('memory'),
-      connected: redis.status === 'ready'
-    };
+    const cacheInfo = await CacheService.status();
 
     res.json({
       success: true,
@@ -852,7 +815,7 @@ app.delete('/api/cache/clear', requireAuth, async (req, res) => {
       });
     }
 
-    await redis.flushdb();
+    await CacheService.flush();
     
     res.json({
       success: true,
@@ -872,14 +835,16 @@ app.get('/api/test', (req, res) => {
     timestamp: new Date().toISOString(),
     version: '5.5.0',
     features: [
-      'Redis Cache Integration', 
+      'Cache Service (Memory/Redis)', 
       'Prometheus Metrics', 
       'Rate Limiting',
       'Advanced Security',
       'Service Architecture',
       'Structured Logging',
       'Real-time Notifications',
-      'Advanced Reporting'
+      'Advanced Reporting',
+      'Health Monitoring',
+      'WebSocket Real-time'
     ]
   });
 });
@@ -927,6 +892,71 @@ app.get('/api/dashboard', requireAuth, empresaContext, cacheMiddleware(300, 'das
   }
 });
 
+// ================= ROTAS BÁSICAS (PRODUTOS, VENDAS, ETC) =================
+app.get('/api/produtos', requireAuth, empresaContext, cacheMiddleware(120, 'produtos'), async (req, res) => {
+  try {
+    const result = await queryWithMetrics(
+      'SELECT * FROM products WHERE empresa_id = $1 AND is_active = true ORDER BY name',
+      [req.empresa_id],
+      'select',
+      'products'
+    );
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    BizFlowLogger.errorLog(error, { context: 'get produtos' });
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+app.get('/api/vendas', requireAuth, empresaContext, cacheMiddleware(180, 'vendas'), async (req, res) => {
+  try {
+    const result = await queryWithMetrics(
+      `SELECT s.*, 
+              COUNT(si.id) as items_count
+       FROM sales s
+       LEFT JOIN sale_items si ON s.id = si.sale_id
+       WHERE s.empresa_id = $1
+       GROUP BY s.id
+       ORDER BY s.sale_date DESC 
+       LIMIT 50`,
+      [req.empresa_id],
+      'select',
+      'sales'
+    );
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    BizFlowLogger.errorLog(error, { context: 'get vendas' });
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+app.get('/api/empresas', requireAuth, cacheMiddleware(300, 'empresas'), async (req, res) => {
+  try {
+    const result = await queryWithMetrics(
+      'SELECT * FROM empresas WHERE is_active = true ORDER BY nome',
+      [],
+      'select',
+      'empresas'
+    );
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    BizFlowLogger.errorLog(error, { context: 'get empresas' });
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
 // ================= WEBSOCKET INTEGRATION =================
 io.on('connection', (socket) => {
   BizFlowLogger.businessLog('Nova conexão WebSocket', { socketId: socket.id });
@@ -970,6 +1000,10 @@ io.on('connection', (socket) => {
     });
   });
 
+  socket.on('nova-venda', (data) => {
+    socket.to(`empresa-${data.empresa_id}`).emit('venda-atualizada', data);
+  });
+
   socket.on('disconnect', () => {
     BizFlowLogger.businessLog('Conexão WebSocket desconectada', { socketId: socket.id });
     activeConnectionsGauge.dec();
@@ -1009,9 +1043,6 @@ async function gracefulShutdown() {
       BizFlowLogger.businessLog('Servidor HTTP fechado');
     });
 
-    await redis.quit();
-    BizFlowLogger.businessLog('Conexão Redis fechada');
-
     await pool.end();
     BizFlowLogger.businessLog('Pool de conexões do PostgreSQL fechado');
 
@@ -1043,9 +1074,177 @@ async function createTables() {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    // ... (código de criação de tabelas mantido igual)
+
+    const tablesSQL = `
+      -- Tabela de empresas
+      CREATE TABLE IF NOT EXISTS empresas (
+        id SERIAL PRIMARY KEY,
+        nome VARCHAR(200) NOT NULL,
+        cnpj VARCHAR(20),
+        email VARCHAR(100),
+        telefone VARCHAR(20),
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Tabela de usuários
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        empresa_id INTEGER DEFAULT 1,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(100) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        full_name VARCHAR(100) NOT NULL,
+        role VARCHAR(20) DEFAULT 'user',
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Tabela de sessões
+      CREATE TABLE IF NOT EXISTS user_sessions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        session_token VARCHAR(255) UNIQUE NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Tabela de produtos
+      CREATE TABLE IF NOT EXISTS products (
+        id SERIAL PRIMARY KEY,
+        empresa_id INTEGER DEFAULT 1,
+        name VARCHAR(200) NOT NULL,
+        description TEXT,
+        price DECIMAL(10,2) NOT NULL,
+        stock_quantity INTEGER DEFAULT 0,
+        min_stock INTEGER DEFAULT 5,
+        category VARCHAR(100),
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Tabela de vendas
+      CREATE TABLE IF NOT EXISTS sales (
+        id SERIAL PRIMARY KEY,
+        empresa_id INTEGER DEFAULT 1,
+        sale_code VARCHAR(50) UNIQUE NOT NULL,
+        total_amount DECIMAL(10,2) NOT NULL,
+        total_items INTEGER NOT NULL,
+        payment_method VARCHAR(50) NOT NULL,
+        sale_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        status VARCHAR(20) DEFAULT 'completed',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Tabela de itens da venda
+      CREATE TABLE IF NOT EXISTS sale_items (
+        id SERIAL PRIMARY KEY,
+        sale_id INTEGER REFERENCES sales(id) ON DELETE CASCADE,
+        product_id INTEGER REFERENCES products(id),
+        product_name VARCHAR(200) NOT NULL,
+        quantity INTEGER NOT NULL,
+        unit_price DECIMAL(10,2) NOT NULL,
+        total_price DECIMAL(10,2) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Tabela de notificações
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        empresa_id INTEGER DEFAULT 1,
+        user_id INTEGER REFERENCES users(id),
+        title VARCHAR(200) NOT NULL,
+        message TEXT NOT NULL,
+        type VARCHAR(50) DEFAULT 'info',
+        is_read BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Tabela de contas financeiras
+      CREATE TABLE IF NOT EXISTS financial_accounts (
+        id SERIAL PRIMARY KEY,
+        empresa_id INTEGER DEFAULT 1,
+        name VARCHAR(100) NOT NULL,
+        type VARCHAR(50) CHECK (type IN ('receita', 'despesa')),
+        amount DECIMAL(15,2) NOT NULL,
+        due_date DATE,
+        status VARCHAR(50) DEFAULT 'pendente',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Tabela de relatórios
+      CREATE TABLE IF NOT EXISTS reports (
+        id SERIAL PRIMARY KEY,
+        empresa_id INTEGER DEFAULT 1,
+        report_type VARCHAR(100) NOT NULL,
+        title VARCHAR(200) NOT NULL,
+        data JSONB NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Índices para performance
+      CREATE INDEX IF NOT EXISTS idx_sales_empresa_date ON sales(empresa_id, sale_date);
+      CREATE INDEX IF NOT EXISTS idx_products_empresa_active ON products(empresa_id, is_active);
+      CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON user_sessions(session_token);
+      CREATE INDEX IF NOT EXISTS idx_user_sessions_expires ON user_sessions(expires_at);
+      CREATE INDEX IF NOT EXISTS idx_financial_due_date ON financial_accounts(due_date);
+
+      -- Inserir empresa padrão
+      INSERT INTO empresas (id, nome, cnpj, email, telefone) 
+      VALUES (1, 'Empresa Principal', '00.000.000/0001-00', 'contato@empresa.com', '(11) 9999-9999')
+      ON CONFLICT (id) DO NOTHING;
+
+      -- Inserir produtos de exemplo
+      INSERT INTO products (empresa_id, name, description, price, stock_quantity, category) VALUES 
+      (1, 'Smartphone Android', 'Smartphone Android 128GB', 899.90, 15, 'Eletrônicos'),
+      (1, 'Notebook i5', 'Notebook Core i5 8GB RAM', 1899.90, 8, 'Eletrônicos'),
+      (1, 'Café Premium', 'Café em grãos 500g', 24.90, 50, 'Alimentação'),
+      (1, 'Detergente', 'Detergente líquido 500ml', 3.90, 100, 'Limpeza'),
+      (1, 'Água Mineral', 'Água mineral 500ml', 2.50, 200, 'Bebidas')
+      ON CONFLICT DO NOTHING;
+
+      -- Inserir vendas de exemplo
+      INSERT INTO sales (empresa_id, sale_code, total_amount, total_items, payment_method) VALUES 
+      (1, 'V001', 899.90, 1, 'cartão'),
+      (1, 'V002', 1899.90, 1, 'dinheiro'),
+      (1, 'V003', 52.80, 3, 'cartão'),
+      (1, 'V004', 7.80, 2, 'dinheiro')
+      ON CONFLICT DO NOTHING;
+
+      -- Inserir itens das vendas
+      INSERT INTO sale_items (sale_id, product_id, product_name, quantity, unit_price, total_price) VALUES 
+      (1, 1, 'Smartphone Android', 1, 899.90, 899.90),
+      (2, 2, 'Notebook i5', 1, 1899.90, 1899.90),
+      (3, 3, 'Café Premium', 2, 24.90, 49.80),
+      (3, 5, 'Água Mineral', 1, 2.50, 2.50),
+      (4, 4, 'Detergente', 2, 3.90, 7.80)
+      ON CONFLICT DO NOTHING;
+
+      -- Inserir contas financeiras de exemplo
+      INSERT INTO financial_accounts (empresa_id, name, type, amount, due_date, status) VALUES 
+      (1, 'Venda Cliente A', 'receita', 1500.00, '2024-01-20', 'recebido'),
+      (1, 'Aluguel', 'despesa', 1200.00, '2024-01-15', 'pago'),
+      (1, 'Salários', 'despesa', 5000.00, '2024-01-25', 'pendente'),
+      (1, 'Venda Online', 'receita', 890.50, '2024-01-18', 'recebido')
+      ON CONFLICT DO NOTHING;
+
+      -- Inserir notificações de exemplo
+      INSERT INTO notifications (empresa_id, user_id, title, message, type) VALUES 
+      (1, NULL, 'Sistema Iniciado', 'Sistema BizFlow FASE 5 COMPLETA iniciado com sucesso!', 'success'),
+      (1, NULL, 'Bem-vindo', 'Bem-vindo ao sistema BizFlow FASE 5 COMPLETA', 'info'),
+      (1, NULL, 'Relatórios Disponíveis', 'Todos os relatórios estão disponíveis', 'info')
+      ON CONFLICT DO NOTHING;
+    `;
+
+    await client.query(tablesSQL);
     await client.query('COMMIT');
     BizFlowLogger.businessLog('Tabelas criadas/verificadas com sucesso!');
+    
   } catch (error) {
     await client.query('ROLLBACK');
     BizFlowLogger.errorLog(error, { context: 'create tables' });
@@ -1074,6 +1273,8 @@ async function createAdminUser() {
         'users'
       );
       BizFlowLogger.businessLog('Usuário admin criado com sucesso!');
+    } else {
+      BizFlowLogger.businessLog('Usuário admin já existe');
     }
   } catch (error) {
     BizFlowLogger.errorLog(error, { context: 'create admin user' });
@@ -1085,9 +1286,17 @@ async function createAdminUser() {
 async function startServer() {
   try {
     BizFlowLogger.businessLog('Iniciando BizFlow Server FASE 5 COMPLETA PRODUÇÃO...');
+    
+    // Inicializar banco de dados
     await initializeDatabase();
     
+    // Inicializar Cache Service
+    await CacheService.init();
+    
+    // Iniciar servidor
     server.listen(PORT, HOST, () => {
+      const cacheType = CacheService.redisEnabled ? 'Redis' : 'Memory';
+      
       BizFlowLogger.businessLog(`
 ╔══════════════════════════════════════════════════════════════╗
 ║              🚀 BIZFLOW FASE 5 COMPLETA                    ║
@@ -1096,7 +1305,7 @@ async function startServer() {
 ║ 📍 Porta: ${PORT}                                                  ║
 ║ 🌐 Host: ${HOST}                                                 ║
 ║ 🗄️  Banco: PostgreSQL                                         ║
-║ 🔴 Redis: ✅ CACHE ATIVADO                                    ║
+║ 🔴 Cache: ✅ ${cacheType} CACHE ATIVADO                        ║
 ║ 📊 Prometheus: ✅ MÉTRICAS ATIVADAS                          ║
 ║ 🔌 WebSocket: ✅ ATIVADO                                      ║
 ║ 📈 Services: ✅ AUTH, NOTIFICATIONS, REPORTS                 ║
@@ -1126,7 +1335,7 @@ export {
   app, 
   io, 
   pool, 
-  redis, 
   queryWithMetrics,
+  CacheService as cacheService,
   BizFlowLogger as logger 
 };
