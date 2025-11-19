@@ -1,4 +1,4 @@
-// server.js - SISTEMA BIZFLOW FASE 5.1 PRODUÇÃO - COMPLETO E OTIMIZADO
+// server.js - SISTEMA BIZFLOW FASE 5.1 PRODUÇÃO - COMPLETO E CORRIGIDO
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -246,12 +246,19 @@ app.get('/health', async (req, res) => {
 
 // ================= STATUS DO SISTEMA FASE 5.1 =================
 app.get('/api/status', async (req, res) => {
+  const startTime = Date.now();
+  
   try {
-    const [dbResult, metricsResult] = await Promise.all([
+    // Testar conexão com o banco
+    const dbTest = await pool.query('SELECT 1');
+    
+    // Coletar métricas do sistema
+    const [dbMetrics, businessMetrics, systemInfo] = await Promise.all([
       pool.query(`
         SELECT 
           COUNT(*) as total_connections,
-          (SELECT COUNT(*) FROM pg_stat_activity WHERE state = 'active') as active_connections
+          (SELECT COUNT(*) FROM pg_stat_activity WHERE state = 'active') as active_connections,
+          (SELECT COUNT(*) FROM pg_stat_activity WHERE state = 'idle') as idle_connections
         FROM pg_stat_activity
       `),
       pool.query(`
@@ -260,9 +267,18 @@ app.get('/api/status', async (req, res) => {
           (SELECT COUNT(*) FROM users WHERE is_active = true) as total_usuarios,
           (SELECT COUNT(*) FROM products WHERE is_active = true) as total_produtos,
           (SELECT COUNT(*) FROM sales) as total_vendas,
-          (SELECT COALESCE(SUM(total_amount), 0) FROM sales) as total_faturado
+          (SELECT COALESCE(SUM(total_amount), 0) FROM sales) as total_faturado,
+          (SELECT COUNT(*) FROM financial_accounts) as total_contas
+      `),
+      pool.query(`
+        SELECT 
+          version() as postgres_version,
+          current_database() as database_name,
+          current_user as current_user
       `)
     ]);
+
+    const responseTime = Date.now() - startTime;
 
     res.json({
       success: true,
@@ -270,25 +286,39 @@ app.get('/api/status', async (req, res) => {
         system: {
           status: 'operational',
           version: '5.1.0',
-          environment: process.env.NODE_ENV,
+          environment: process.env.NODE_ENV || 'development',
           uptime: process.uptime(),
-          memory: process.memoryUsage()
+          memory: process.memoryUsage(),
+          node_version: process.version
         },
         database: {
           status: 'connected',
+          response_time: responseTime,
           connections: {
-            total: parseInt(dbResult.rows[0].total_connections),
-            active: parseInt(dbResult.rows[0].active_connections)
+            total: parseInt(dbMetrics.rows[0].total_connections),
+            active: parseInt(dbMetrics.rows[0].active_connections),
+            idle: parseInt(dbMetrics.rows[0].idle_connections)
+          },
+          info: {
+            version: systemInfo.rows[0].postgres_version,
+            name: systemInfo.rows[0].database_name,
+            user: systemInfo.rows[0].current_user
           }
         },
-        metrics: metricsResult.rows[0]
+        business: businessMetrics.rows[0],
+        performance: {
+          total_response_time: responseTime,
+          health_check: '/health',
+          websocket: '/socket.io'
+        }
       }
     });
   } catch (error) {
     logger.error('Status check failed:', error);
     res.status(500).json({
       success: false,
-      error: 'Erro ao verificar status do sistema'
+      error: 'Erro ao verificar status do sistema',
+      details: error.message
     });
   }
 });
@@ -1209,6 +1239,8 @@ async function startServer() {
 ║ 📈 Dashboard: ✅ ATIVADO                                      ║
 ║ 🛡️  Segurança: ✅ RATE LIMITING + HELMET                     ║
 ║ 📝 Logs: ✅ WINSTON ESTRUTURADO                             ║
+║ 🌐 API Status: /api/status                                   ║
+║ ❤️  Health Check: /health                                    ║
 ║ 👤 Usuário: admin                                            ║
 ║ 🔑 Senha: admin123                                           ║
 ║ 🌐 URL: https://bizflow-app-xvcw.onrender.com               ║
