@@ -105,12 +105,11 @@ async function createTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
-      -- Tabela de sessões
+      -- ✅ TABELA DE SESSÕES SEM empresa_id
       CREATE TABLE IF NOT EXISTS user_sessions (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id),
         session_token VARCHAR(255) UNIQUE NOT NULL,
-        empresa_id INTEGER DEFAULT 1,
         expires_at TIMESTAMP NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -207,7 +206,7 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'index.html'));
 });
 
-// ✅ ROTA DE LOGIN - CORREÇÃO DEFINITIVA
+// ✅ ROTA DE LOGIN - CORRIGIDA SEM empresa_id
 app.post('/api/auth/login', async (req, res) => {
   console.log('🔐 Tentativa de login recebida...');
   
@@ -265,11 +264,11 @@ app.post('/api/auth/login', async (req, res) => {
     const sessionToken = 'bizflow_' + Date.now() + '_' + crypto.randomBytes(16).toString('hex');
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    // Salvar sessão
+    // ✅ SALVAR SESSÃO SEM empresa_id
     await pool.query(
-      `INSERT INTO user_sessions (user_id, session_token, empresa_id, expires_at) 
-       VALUES ($1, $2, $3, $4)`,
-      [user.id, sessionToken, user.empresa_id, expiresAt]
+      `INSERT INTO user_sessions (user_id, session_token, expires_at) 
+       VALUES ($1, $2, $3)`,
+      [user.id, sessionToken, expiresAt]
     );
 
     // Remover password hash da resposta
@@ -369,6 +368,7 @@ io.on('connection', (socket) => {
     try {
       const { token } = data;
       
+      // ✅ CONSULTA SEM empresa_id
       const sessionResult = await pool.query(
         `SELECT u.* FROM user_sessions us 
          JOIN users u ON us.user_id = u.id 
