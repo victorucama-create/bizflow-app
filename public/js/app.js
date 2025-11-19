@@ -4,7 +4,6 @@ class BizFlowApp {
         this.API_BASE_URL = window.location.origin;
         this.authToken = localStorage.getItem('bizflow_token');
         this.currentUser = JSON.parse(localStorage.getItem('bizflow_user') || 'null');
-        this.socket = null;
         
         console.log('🚀 BizFlow App inicializado');
         this.init();
@@ -14,7 +13,6 @@ class BizFlowApp {
         if (this.authToken && this.currentUser) {
             console.log('✅ Usuário autenticado:', this.currentUser.username);
             this.showApp();
-            this.connectWebSocket();
         } else {
             console.log('👤 Usuário não autenticado');
             this.showLogin();
@@ -60,29 +58,12 @@ class BizFlowApp {
         location.reload();
     }
 
-    connectWebSocket() {
-        try {
-            this.socket = io(this.API_BASE_URL);
-            
-            this.socket.on('connect', () => {
-                console.log('🔌 WebSocket conectado');
-                this.socket.emit('authenticate', { token: this.authToken });
-            });
-
-            this.socket.on('authenticated', (data) => {
-                if (data.success) {
-                    console.log('✅ WebSocket autenticado');
-                }
-            });
-        } catch (error) {
-            console.error('WebSocket error:', error);
-        }
-    }
-
     showApp() {
         document.querySelector('.auth-container').style.display = 'none';
         document.querySelector('.app-container').style.display = 'block';
-        document.getElementById('user-name').textContent = this.currentUser.full_name;
+        if (this.currentUser) {
+            document.getElementById('user-name').textContent = this.currentUser.full_name;
+        }
     }
 
     showLogin() {
