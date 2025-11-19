@@ -1,4 +1,4 @@
-// server.js - SISTEMA COMPLETO BIZFLOW FASE 5.1 - CORREÇÃO LOGIN
+// server.js - SISTEMA BIZFLOW FASE 5.1 - CORREÇÃO DEFINITIVA
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -11,7 +11,6 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import rateLimit from 'express-rate-limit';
 
 // ✅ CONFIGURAÇÃO ES6 MODULES
 const __filename = fileURLToPath(import.meta.url);
@@ -19,76 +18,38 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = createServer(app);
+const io = new Server(server, { cors: { origin: "*" } });
 
-// ✅ CONFIGURAÇÃO SOCKET.IO FASE 5.1
-const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ['GET', 'POST'],
-    credentials: true
-  },
-  pingTimeout: 60000,
-  pingInterval: 25000,
-  transports: ['websocket', 'polling']
-});
-
-// ✅ CONFIGURAÇÃO RENDER-COMPATIBLE FASE 5.1
+// ✅ CONFIGURAÇÃO
 const PORT = process.env.PORT || 10000;
 const HOST = '0.0.0.0';
 
-// ✅ CONFIGURAÇÃO POSTGRESQL FASE 5.1
+// ✅ CONFIGURAÇÃO POSTGRESQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 20,
-  min: 4,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
 });
 
-// ================= MIDDLEWARES FASE 5.1 =================
+// ================= MIDDLEWARES =================
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-app.use(cors({
-  origin: "*",
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
-}));
-
-app.use(helmet({
-  contentSecurityPolicy: false,
-  crossOriginEmbedderPolicy: false
-}));
-
+app.use(express.urlencoded({ extended: true }));
+app.use(cors());
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(compression());
 app.use(morgan('combined'));
-
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 1000,
-  message: { success: false, error: 'Muitas requisições' }
-});
-
-app.use('/api/', apiLimiter);
-
-// Servir arquivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname, 'views')));
 
 // ✅ FAVICON
-app.get('/favicon.ico', (req, res) => {
-  res.status(204).end();
-});
+app.get('/favicon.ico', (req, res) => res.status(204).end());
 
-// ================= HEALTH CHECKS FASE 5.1 =================
+// ================= HEALTH CHECK =================
 app.get('/health', async (req, res) => {
   try {
     await pool.query('SELECT 1');
     res.json({ 
       status: 'OK', 
       timestamp: new Date().toISOString(),
-      version: '5.1.0',
       database: 'connected'
     });
   } catch (error) {
@@ -99,46 +60,43 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// ================= INICIALIZAÇÃO DO BANCO FASE 5.1 =================
+// ================= INICIALIZAÇÃO DO BANCO =================
 async function initializeDatabase() {
   try {
-    console.log('🔍 Inicializando banco de dados FASE 5.1...');
+    console.log('🔍 Inicializando banco de dados...');
     
-    // ✅ CRIAR TABELAS SE NÃO EXISTIREM
-    await createTablesIfNotExist();
-    
-    // ✅ CRIAR USUÁRIO ADMIN SE NÃO EXISTIR
+    // ✅ CRIAR TABELAS E USUÁRIO ADMIN
+    await createTables();
     await createAdminUser();
     
-    console.log('✅ Banco FASE 5.1 inicializado com sucesso!');
-    
+    console.log('✅ Banco inicializado com sucesso!');
   } catch (error) {
-    console.error('❌ Erro na inicialização do banco FASE 5.1:', error);
+    console.error('❌ Erro na inicialização do banco:', error);
   }
 }
 
-async function createTablesIfNotExist() {
+async function createTables() {
   const client = await pool.connect();
-  
   try {
     await client.query('BEGIN');
 
-    // ✅ CRIAR TABELAS BÁSICAS
     const tablesSQL = `
+      -- Tabela de empresas
       CREATE TABLE IF NOT EXISTS empresas (
         id SERIAL PRIMARY KEY,
         nome VARCHAR(200) NOT NULL,
-        cnpj VARCHAR(20) UNIQUE,
+        cnpj VARCHAR(20),
         email VARCHAR(100),
         telefone VARCHAR(20),
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      -- Tabela de usuários
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         empresa_id INTEGER DEFAULT 1,
-        username VARCHAR(50) NOT NULL UNIQUE,
+        username VARCHAR(50) UNIQUE NOT NULL,
         email VARCHAR(100) NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
         full_name VARCHAR(100) NOT NULL,
@@ -147,15 +105,17 @@ async function createTablesIfNotExist() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      -- Tabela de sessões
       CREATE TABLE IF NOT EXISTS user_sessions (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        user_id INTEGER REFERENCES users(id),
         session_token VARCHAR(255) UNIQUE NOT NULL,
         empresa_id INTEGER DEFAULT 1,
         expires_at TIMESTAMP NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      -- Tabela de produtos
       CREATE TABLE IF NOT EXISTS products (
         id SERIAL PRIMARY KEY,
         empresa_id INTEGER DEFAULT 1,
@@ -167,16 +127,17 @@ async function createTablesIfNotExist() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      -- Tabela de vendas
       CREATE TABLE IF NOT EXISTS sales (
         id SERIAL PRIMARY KEY,
         empresa_id INTEGER DEFAULT 1,
         sale_code VARCHAR(50) NOT NULL,
         total_amount DECIMAL(10,2) NOT NULL,
         payment_method VARCHAR(50) NOT NULL,
-        sale_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        status VARCHAR(20) DEFAULT 'completed'
+        sale_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      -- Tabela de notificações
       CREATE TABLE IF NOT EXISTS notifications (
         id SERIAL PRIMARY KEY,
         empresa_id INTEGER DEFAULT 1,
@@ -196,6 +157,7 @@ async function createTablesIfNotExist() {
 
     await client.query(tablesSQL);
     await client.query('COMMIT');
+    console.log('✅ Tabelas criadas/verificadas com sucesso!');
     
   } catch (error) {
     await client.query('ROLLBACK');
@@ -208,17 +170,19 @@ async function createTablesIfNotExist() {
 
 async function createAdminUser() {
   try {
-    // ✅ VERIFICAR SE USUÁRIO ADMIN JÁ EXISTE
+    console.log('👤 Verificando usuário admin...');
+    
+    // ✅ VERIFICAR SE ADMIN JÁ EXISTE
     const userCheck = await pool.query(
       'SELECT id FROM users WHERE username = $1', 
       ['admin']
     );
 
     if (userCheck.rows.length === 0) {
-      console.log('👤 Criando usuário admin...');
+      console.log('🔄 Criando usuário admin...');
       
       // ✅ CRIAR SENHA HASH CORRETAMENTE
-      const passwordHash = await bcrypt.hash('admin123', 10);
+      const passwordHash = await bcrypt.hash('admin123', 12);
       
       await pool.query(
         `INSERT INTO users (empresa_id, username, email, password_hash, full_name, role) 
@@ -227,31 +191,33 @@ async function createAdminUser() {
       );
       
       console.log('✅ Usuário admin criado com sucesso!');
+      console.log('📧 Login: admin');
+      console.log('🔑 Senha: admin123');
     } else {
       console.log('✅ Usuário admin já existe');
     }
   } catch (error) {
-    console.error('❌ Erro ao criar usuário admin:', error);
+    console.error('❌ ERRO CRÍTICO ao criar usuário admin:', error);
+    throw error;
   }
 }
 
-// ================= ROTAS PÚBLICAS FASE 5.1 =================
+// ================= ROTAS PRINCIPAIS =================
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'index.html'));
 });
 
-// ✅ ROTA DE LOGIN FASE 5.1 - CORRIGIDA E SIMPLIFICADA
+// ✅ ROTA DE LOGIN - CORREÇÃO DEFINITIVA
 app.post('/api/auth/login', async (req, res) => {
-  console.log('🔐 Recebida tentativa de login...');
+  console.log('🔐 Tentativa de login recebida...');
   
   try {
     const { username, password } = req.body;
 
     console.log('📧 Usuário:', username);
 
-    // Validações básicas
+    // Validações
     if (!username || !password) {
-      console.log('❌ Campos obrigatórios faltando');
       return res.status(400).json({ 
         success: false, 
         error: 'Username e password são obrigatórios' 
@@ -261,11 +227,14 @@ app.post('/api/auth/login', async (req, res) => {
     // Buscar usuário
     console.log('🔍 Buscando usuário no banco...');
     const userResult = await pool.query(
-      'SELECT id, username, email, password_hash, full_name, role, empresa_id FROM users WHERE username = $1 AND is_active = true LIMIT 1',
+      `SELECT id, username, email, password_hash, full_name, role, empresa_id 
+       FROM users 
+       WHERE username = $1 AND is_active = true 
+       LIMIT 1`,
       [username]
     );
 
-    console.log('📊 Resultado da busca:', userResult.rows.length, 'usuários encontrados');
+    console.log('📊 Usuários encontrados:', userResult.rows.length);
 
     if (userResult.rows.length === 0) {
       console.log('❌ Usuário não encontrado:', username);
@@ -292,8 +261,8 @@ app.post('/api/auth/login', async (req, res) => {
 
     console.log('✅ Senha válida!');
 
-    // Gerar token simples
-    const sessionToken = 'bizflow_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    // Gerar token de sessão
+    const sessionToken = 'bizflow_' + Date.now() + '_' + crypto.randomBytes(16).toString('hex');
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     // Salvar sessão
@@ -323,18 +292,16 @@ app.post('/api/auth/login', async (req, res) => {
     console.error('💥 ERRO CRÍTICO NO LOGIN:', error);
     console.error('📝 Stack trace:', error.stack);
     
-    // Resposta de erro detalhada
     res.status(500).json({ 
       success: false, 
-      error: 'Erro interno do servidor',
-      message: error.message
+      error: 'Erro interno do servidor: ' + error.message
     });
   }
 });
 
-// ================= ROTAS DA APLICAÇÃO =================
+// ================= ROTAS DA API =================
 
-// Rota básica de teste
+// Teste da API
 app.get('/api/test', (req, res) => {
   res.json({
     success: true,
@@ -381,7 +348,7 @@ app.get('/api/produtos', async (req, res) => {
 app.get('/api/notifications', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM notifications ORDER BY created_at DESC LIMIT 20'
+      'SELECT * FROM notifications ORDER BY created_at DESC LIMIT 10'
     );
     
     res.json({
@@ -394,7 +361,7 @@ app.get('/api/notifications', async (req, res) => {
   }
 });
 
-// ================= WEBSOCKET FASE 5.1 =================
+// ================= WEBSOCKET =================
 io.on('connection', (socket) => {
   console.log('🔌 Nova conexão WebSocket:', socket.id);
 
@@ -418,6 +385,7 @@ io.on('connection', (socket) => {
             nome: user.full_name
           } 
         });
+        console.log('✅ Usuário autenticado via WebSocket:', user.username);
       } else {
         socket.emit('authenticated', { 
           success: false, 
@@ -437,7 +405,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// ================= MIDDLEWARE DE ERRO FASE 5.1 =================
+// ================= TRATAMENTO DE ERROS =================
 app.use((err, req, res, next) => {
   console.error('💥 Erro não tratado:', err);
   res.status(500).json({
@@ -446,7 +414,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 Handler
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
@@ -454,7 +421,7 @@ app.use('*', (req, res) => {
   });
 });
 
-// ================= INICIALIZAÇÃO DO SERVIDOR FASE 5.1 =================
+// ================= INICIALIZAÇÃO DO SERVIDOR =================
 async function startServer() {
   try {
     console.log('🚀 Iniciando BizFlow Server FASE 5.1...');
@@ -473,13 +440,14 @@ async function startServer() {
 ║ 🌐 Host: ${HOST}                                     ║
 ║ 🗄️  Banco: PostgreSQL                             ║
 ║ 🔌 WebSocket: ✅ ATIVADO                          ║
-║ 👤 Usuário: admin / admin123                     ║
+║ 👤 Usuário: admin                                ║
+║ 🔑 Senha: admin123                               ║
 ╚══════════════════════════════════════════════════╝
       `);
     });
     
   } catch (error) {
-    console.error('❌ Falha ao iniciar servidor FASE 5.1:', error);
+    console.error('❌ Falha ao iniciar servidor:', error);
     process.exit(1);
   }
 }
