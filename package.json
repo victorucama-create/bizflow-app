@@ -13,6 +13,7 @@
     "fix-login": "node fix-login.js",
     "health-check": "node health-check.js",
     "test-api": "node test-api.js",
+    "test-db": "node test-db.js",
     "test-production": "NODE_ENV=production node server.js",
     "lint": "echo 'Linting not configured - skipping'",
     "audit": "npm audit --audit-level=high",
@@ -30,8 +31,7 @@
     "morgan": "^1.10.0",
     "winston": "^3.11.0",
     "uuid": "^9.0.1",
-    "dotenv": "^16.3.1",
-    "crypto": "^1.0.1"
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
