@@ -1,4 +1,4 @@
-// server.js - SISTEMA COMPLETO BIZFLOW FASE 5.1 - CORREÇÕES CRÍTICAS
+// server.js - SISTEMA COMPLETO BIZFLOW FASE 5.1 - PRODUÇÃO
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -15,7 +15,6 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
-import winston from 'winston';
 
 // ✅ CONFIGURAÇÃO ES6 MODULES
 const __filename = fileURLToPath(import.meta.url);
@@ -43,27 +42,6 @@ const PORT = process.env.PORT || 10000;
 const HOST = '0.0.0.0';
 const JWT_SECRET = process.env.JWT_SECRET || 'bizflow-fase5-secure-key-2024-production';
 
-// ✅ CONFIGURAÇÃO LOGS FASE 5.1
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-    winston.format.json()
-  ),
-  defaultMeta: { service: 'bizflow-api' },
-  transports: [
-    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'logs/combined.log' }),
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      )
-    })
-  ]
-});
-
 // ✅ CONFIGURAÇÃO POSTGRESQL FASE 5.1 - OTIMIZADA
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -77,15 +55,11 @@ const pool = new Pool({
 
 // ✅ HEALTH CHECK DO POOL FASE 5.1
 pool.on('connect', (client) => {
-  logger.info('✅ Nova conexão PostgreSQL estabelecida');
+  console.log('✅ Nova conexão PostgreSQL estabelecida');
 });
 
 pool.on('error', (err, client) => {
-  logger.error('❌ Erro no pool PostgreSQL:', err);
-});
-
-pool.on('remove', (client) => {
-  logger.info('🔌 Cliente removido do pool PostgreSQL');
+  console.error('❌ Erro no pool PostgreSQL:', err);
 });
 
 // ================= MIDDLEWARES FASE 5.1 =================
@@ -102,15 +76,34 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Empresa-ID', 'X-API-Key']
 }));
 
-// ✅ HELMET FASE 5.1 - CONFIGURADO
+// ✅ HELMET FASE 5.1 - CONFIGURADO CORRETAMENTE
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: [
+        "'self'", 
+        "'unsafe-inline'", 
+        "https://cdnjs.cloudflare.com",
+        "https://cdn.jsdelivr.net"
+      ],
+      scriptSrc: [
+        "'self'", 
+        "'unsafe-inline'",
+        "https://cdn.jsdelivr.net"
+      ],
+      fontSrc: [
+        "'self'", 
+        "https://cdnjs.cloudflare.com",
+        "https://cdn.jsdelivr.net"
+      ],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "ws:", "wss:"]
+      connectSrc: [
+        "'self'", 
+        "ws:", 
+        "wss:",
+        "https://bizflow-app-xvcw.onrender.com"
+      ]
     }
   },
   crossOriginEmbedderPolicy: false
@@ -119,27 +112,16 @@ app.use(helmet({
 // ✅ COMPRESSÃO FASE 5.1 - OTIMIZADA
 app.use(compression({
   level: 6,
-  threshold: 1024,
-  filter: (req, res) => {
-    if (req.headers['x-no-compression']) return false;
-    return compression.filter(req, res);
-  }
+  threshold: 1024
 }));
 
-// ✅ MORGAN FASE 5.1 - COM WINSTON
-app.use(morgan('combined', {
-  stream: { write: (message) => logger.info(message.trim()) }
-}));
+// ✅ MORGAN FASE 5.1
+app.use(morgan('combined'));
 
 // ✅ RATE LIMITING FASE 5.1 - MELHORADO
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: (req) => {
-    // Limites diferentes por tipo de requisição
-    if (req.path.includes('/api/')) return 1000;
-    if (req.path.includes('/api/v1/')) return 500;
-    return 200;
-  },
+  max: 1000,
   message: {
     success: false,
     error: 'Muitas requisições deste IP - tente novamente em 15 minutos'
@@ -187,7 +169,7 @@ app.get('/health', async (req, res) => {
     healthCheck.database = 'disconnected';
     healthCheck.error = error.message;
     
-    logger.error('Health check failed:', error);
+    console.error('Health check failed:', error);
     res.status(503).json(healthCheck);
   }
 });
@@ -213,13 +195,12 @@ app.get('/health/detailed', async (req, res) => {
         active_users: parseInt(usersCount.rows[0].count),
         active_products: parseInt(productsCount.rows[0].count),
         completed_sales: parseInt(salesCount.rows[0].count),
-        websocket_connections: io.engine.clientsCount,
-        database_connections: pool.totalCount
+        websocket_connections: io.engine.clientsCount
       },
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    logger.error('Detailed health check failed:', error);
+    console.error('Detailed health check failed:', error);
     res.status(503).json({
       status: 'ERROR',
       error: error.message
@@ -232,7 +213,7 @@ async function initializeDatabase() {
   const client = await pool.connect();
   
   try {
-    logger.info('🔍 Inicializando banco de dados FASE 5.1...');
+    console.log('🔍 Inicializando banco de dados FASE 5.1...');
     
     await client.query('BEGIN');
 
@@ -257,13 +238,13 @@ async function initializeDatabase() {
     `;
 
     await client.query(indexesSQL);
-    logger.info('✅ Índices de performance criados/verificados');
+    console.log('✅ Índices de performance criados/verificados');
 
     await client.query('COMMIT');
     
   } catch (error) {
     await client.query('ROLLBACK');
-    logger.error('❌ Erro na inicialização do banco FASE 5.1:', error);
+    console.error('❌ Erro na inicialização do banco FASE 5.1:', error);
   } finally {
     client.release();
   }
@@ -278,7 +259,7 @@ async function empresaContext(req, res, next) {
   try {
     let empresaId = req.headers['x-empresa-id'] || req.query.empresa_id || req.body.empresa_id;
     
-    logger.debug('🏢 Contexto empresarial - ID fornecido:', { empresaId, path: req.path });
+    console.log('🏢 Contexto empresarial - ID fornecido:', { empresaId, path: req.path });
 
     // Se não foi fornecido, usar empresa padrão
     if (!empresaId) {
@@ -289,9 +270,9 @@ async function empresaContext(req, res, next) {
         );
         
         empresaId = empresaResult.rows.length > 0 ? empresaResult.rows[0].id : 1;
-        logger.debug('✅ Empresa padrão definida:', empresaId);
+        console.log('✅ Empresa padrão definida:', empresaId);
       } catch (dbError) {
-        logger.warn('⚠️ Erro ao buscar empresa padrão, usando fallback:', dbError);
+        console.warn('⚠️ Erro ao buscar empresa padrão, usando fallback:', dbError);
         empresaId = 1;
       }
     }
@@ -302,20 +283,19 @@ async function empresaContext(req, res, next) {
     // Log da requisição
     res.on('finish', () => {
       const duration = Date.now() - startTime;
-      logger.info('📊 Requisição processada', {
+      console.log('📊 Requisição processada', {
         requestId: req.requestId,
         method: req.method,
         path: req.path,
         empresaId: req.empresa_id,
         statusCode: res.statusCode,
-        duration: `${duration}ms`,
-        userAgent: req.get('User-Agent')
+        duration: `${duration}ms`
       });
     });
     
     next();
   } catch (error) {
-    logger.error('❌ Erro no contexto empresarial:', error);
+    console.error('❌ Erro no contexto empresarial:', error);
     // Continuar mesmo com erro no contexto
     req.empresa_id = 1;
     req.requestId = crypto.randomUUID();
@@ -329,7 +309,7 @@ async function requireAuth(req, res, next) {
     const token = req.headers.authorization?.replace('Bearer ', '');
     
     if (!token) {
-      logger.warn('🔐 Tentativa de acesso sem token', { path: req.path });
+      console.warn('🔐 Tentativa de acesso sem token', { path: req.path });
       return res.status(401).json({ 
         success: false, 
         error: 'Acesso não autorizado' 
@@ -343,7 +323,7 @@ async function requireAuth(req, res, next) {
       try {
         const decoded = jwt.verify(jwtToken, JWT_SECRET);
         
-        // Buscar usuário com cache básico
+        // Buscar usuário
         const userResult = await pool.query(
           `SELECT u.*, e.nome as empresa_nome, f.nome as filial_nome 
            FROM users u 
@@ -354,15 +334,15 @@ async function requireAuth(req, res, next) {
         );
 
         if (userResult.rows.length === 0) {
-          logger.warn('🔐 Usuário JWT não encontrado', { userId: decoded.userId });
+          console.warn('🔐 Usuário JWT não encontrado', { userId: decoded.userId });
           return res.status(401).json({ success: false, error: 'Usuário não encontrado' });
         }
 
         req.user = userResult.rows[0];
-        logger.debug('✅ Usuário autenticado via JWT', { userId: req.user.id });
+        console.log('✅ Usuário autenticado via JWT', { userId: req.user.id });
         next();
       } catch (jwtError) {
-        logger.warn('🔐 Token JWT inválido', { error: jwtError.message });
+        console.warn('🔐 Token JWT inválido', { error: jwtError.message });
         return res.status(401).json({ success: false, error: 'Token JWT inválido' });
       }
     } else {
@@ -378,7 +358,7 @@ async function requireAuth(req, res, next) {
       );
 
       if (sessionResult.rows.length === 0) {
-        logger.warn('🔐 Sessão inválida ou expirada', { token: token.substring(0, 10) + '...' });
+        console.warn('🔐 Sessão inválida ou expirada', { token: token.substring(0, 10) + '...' });
         return res.status(401).json({ 
           success: false, 
           error: 'Sessão expirada' 
@@ -386,11 +366,11 @@ async function requireAuth(req, res, next) {
       }
 
       req.user = sessionResult.rows[0];
-      logger.debug('✅ Usuário autenticado via sessão', { userId: req.user.id });
+      console.log('✅ Usuário autenticado via sessão', { userId: req.user.id });
       next();
     }
   } catch (error) {
-    logger.error('🔐 Erro na autenticação:', error);
+    console.error('🔐 Erro na autenticação:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Erro interno do servidor' 
@@ -423,7 +403,7 @@ function checkPermission(modulo, acao = 'read') {
         return next();
       }
       
-      logger.warn('🔐 Acesso negado', {
+      console.warn('🔐 Acesso negado', {
         userId: req.user.id,
         modulo,
         acao,
@@ -436,7 +416,7 @@ function checkPermission(modulo, acao = 'read') {
       });
       
     } catch (error) {
-      logger.error('🔐 Erro na verificação de permissões:', error);
+      console.error('🔐 Erro na verificação de permissões:', error);
       res.status(500).json({ success: false, error: 'Erro interno do servidor' });
     }
   };
@@ -461,7 +441,7 @@ async function logAudit(action, tableName, recordId, oldValues, newValues, req) 
       ]
     );
     
-    logger.info('📝 Auditoria registrada', {
+    console.log('📝 Auditoria registrada', {
       action,
       tableName,
       recordId,
@@ -469,7 +449,7 @@ async function logAudit(action, tableName, recordId, oldValues, newValues, req) 
       empresaId: req.empresa_id
     });
   } catch (error) {
-    logger.error('📝 Erro ao registrar auditoria:', error);
+    console.error('📝 Erro ao registrar auditoria:', error);
   }
 }
 
@@ -480,7 +460,7 @@ const connectedUsers = new Map();
 
 io.on('connection', (socket) => {
   const connectionId = socket.id;
-  logger.info('🔌 Nova conexão WebSocket estabelecida', { connectionId });
+  console.log('🔌 Nova conexão WebSocket estabelecida', { connectionId });
 
   // ✅ HEARTBEAT FASE 5.1
   socket.on('heartbeat', (data) => {
@@ -516,7 +496,7 @@ io.on('connection', (socket) => {
           } 
         });
         
-        logger.info('✅ Usuário autenticado via WebSocket', {
+        console.log('✅ Usuário autenticado via WebSocket', {
           userId: user.id,
           username: user.username,
           connectionId
@@ -526,10 +506,10 @@ io.on('connection', (socket) => {
           success: false, 
           error: 'Autenticação falhou' 
         });
-        logger.warn('❌ Falha na autenticação WebSocket', { connectionId });
+        console.warn('❌ Falha na autenticação WebSocket', { connectionId });
       }
     } catch (error) {
-      logger.error('❌ Erro na autenticação WebSocket:', error);
+      console.error('❌ Erro na autenticação WebSocket:', error);
       socket.emit('authenticated', { 
         success: false, 
         error: 'Erro interno' 
@@ -539,13 +519,13 @@ io.on('connection', (socket) => {
 
   socket.on('join_room', (room) => {
     socket.join(room);
-    logger.debug('🔌 Socket entrou na sala', { connectionId, room });
+    console.log('🔌 Socket entrou na sala', { connectionId, room });
   });
 
   socket.on('disconnect', (reason) => {
     const user = connectedUsers.get(connectionId);
     if (user) {
-      logger.info('🔌 Usuário desconectado do WebSocket', {
+      console.log('🔌 Usuário desconectado do WebSocket', {
         userId: user.id,
         username: user.username,
         connectionId,
@@ -553,12 +533,12 @@ io.on('connection', (socket) => {
       });
       connectedUsers.delete(connectionId);
     } else {
-      logger.info('🔌 Conexão WebSocket desconectada', { connectionId, reason });
+      console.log('🔌 Conexão WebSocket desconectada', { connectionId, reason });
     }
   });
 
   socket.on('error', (error) => {
-    logger.error('❌ Erro no WebSocket:', { connectionId, error: error.message });
+    console.error('❌ Erro no WebSocket:', { connectionId, error: error.message });
   });
 });
 
@@ -581,7 +561,7 @@ async function sendNotification(empresaId, userId, title, message, type = 'info'
       io.to(`empresa_${empresaId}`).emit('notification', notification);
     }
 
-    logger.info('🔔 Notificação enviada', {
+    console.log('🔔 Notificação enviada', {
       empresaId,
       userId,
       title,
@@ -590,7 +570,7 @@ async function sendNotification(empresaId, userId, title, message, type = 'info'
 
     return notification;
   } catch (error) {
-    logger.error('❌ Erro ao enviar notificação:', error);
+    console.error('❌ Erro ao enviar notificação:', error);
     throw error;
   }
 }
@@ -600,34 +580,44 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'index.html'));
 });
 
-// ✅ ROTA DE LOGIN FASE 5.1 - CORRIGIDA
+// ✅ ROTA DE LOGIN FASE 5.1 - CORREÇÃO DO ERRO 500
 app.post('/api/auth/login', async (req, res) => {
   const startTime = Date.now();
   
   try {
     const { username, password } = req.body;
     
-    logger.info('🔐 Tentativa de login', { username });
+    console.log('🔐 Tentativa de login', { username });
 
+    // ✅ VALIDAÇÃO ROBUSTA
     if (!username || !password) {
-      logger.warn('🔐 Login com campos faltando', { username });
+      console.warn('🔐 Login com campos faltando', { username });
       return res.status(400).json({ 
         success: false, 
         error: 'Username e password são obrigatórios' 
       });
     }
 
-    // Buscar usuário
-    const userResult = await pool.query(
-      `SELECT id, username, email, password_hash, full_name, role, empresa_id, filial_id 
-       FROM users 
-       WHERE username = $1 AND is_active = true 
-       LIMIT 1`,
-      [username]
-    );
+    // ✅ BUSCAR USUÁRIO COM TRATAMENTO DE ERRO
+    let userResult;
+    try {
+      userResult = await pool.query(
+        `SELECT id, username, email, password_hash, full_name, role, empresa_id, filial_id 
+         FROM users 
+         WHERE username = $1 AND is_active = true 
+         LIMIT 1`,
+        [username]
+      );
+    } catch (dbError) {
+      console.error('❌ Erro no banco de dados durante login:', dbError);
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Erro interno do servidor - banco de dados' 
+      });
+    }
 
     if (userResult.rows.length === 0) {
-      logger.warn('🔐 Login com usuário não encontrado', { username });
+      console.warn('🔐 Login com usuário não encontrado', { username });
       return res.status(401).json({ 
         success: false, 
         error: 'Credenciais inválidas' 
@@ -636,39 +626,56 @@ app.post('/api/auth/login', async (req, res) => {
 
     const user = userResult.rows[0];
 
-    // Verificar senha
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    // ✅ VERIFICAR SENHA COM TRATAMENTO DE ERRO
+    let isValidPassword;
+    try {
+      isValidPassword = await bcrypt.compare(password, user.password_hash);
+    } catch (bcryptError) {
+      console.error('❌ Erro ao verificar senha:', bcryptError);
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Erro interno do servidor' 
+      });
+    }
     
     if (!isValidPassword) {
-      logger.warn('🔐 Login com senha inválida', { username, userId: user.id });
+      console.warn('🔐 Login com senha inválida', { username, userId: user.id });
       return res.status(401).json({ 
         success: false, 
         error: 'Credenciais inválidas' 
       });
     }
 
-    // Gerar token de sessão
+    // ✅ GERAR TOKEN DE SESSÃO
     const sessionToken = 'bizflow_' + Date.now() + '_' + crypto.randomBytes(16).toString('hex');
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    // Salvar sessão
-    await pool.query(
-      `INSERT INTO user_sessions (user_id, session_token, empresa_id, expires_at) 
-       VALUES ($1, $2, $3, $4)`,
-      [user.id, sessionToken, user.empresa_id, expiresAt]
-    );
+    // ✅ SALVAR SESSÃO COM TRATAMENTO DE ERRO
+    try {
+      await pool.query(
+        `INSERT INTO user_sessions (user_id, session_token, empresa_id, expires_at) 
+         VALUES ($1, $2, $3, $4)`,
+        [user.id, sessionToken, user.empresa_id, expiresAt]
+      );
+    } catch (sessionError) {
+      console.error('❌ Erro ao salvar sessão:', sessionError);
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Erro ao criar sessão' 
+      });
+    }
 
-    // Remover password hash da resposta
+    // ✅ REMOVER PASSWORD HASH DA RESPOSTA
     const { password_hash, ...userWithoutPassword } = user;
 
     const duration = Date.now() - startTime;
-    logger.info('✅ Login realizado com sucesso', {
+    console.log('✅ Login realizado com sucesso', {
       username,
       userId: user.id,
       duration: `${duration}ms`
     });
 
-    // Resposta de sucesso
+    // ✅ RESPOSTA DE SUCESSO
     res.json({
       success: true,
       message: 'Login realizado com sucesso!',
@@ -681,22 +688,149 @@ app.post('/api/auth/login', async (req, res) => {
 
   } catch (error) {
     const duration = Date.now() - startTime;
-    logger.error('💥 ERRO CRÍTICO NO LOGIN:', {
+    console.error('💥 ERRO CRÍTICO NO LOGIN:', {
       error: error.message,
       stack: error.stack,
       duration: `${duration}ms`
     });
     
+    // ✅ RESPOSTA DE ERRO GENÉRICA MAS SEGURA
     res.status(500).json({ 
       success: false, 
-      error: 'Erro interno do servidor'
+      error: 'Erro interno do servidor. Tente novamente.'
     });
+  }
+});
+
+// ================= ROTAS DA APLICAÇÃO (ATUALIZADAS FASE 5.1) =================
+
+// Rota básica de teste
+app.get('/api/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'API BizFlow FASE 5.1 funcionando!',
+    timestamp: new Date().toISOString(),
+    version: '5.1.0'
+  });
+});
+
+// Empresas
+app.get('/api/empresas', requireAuth, checkPermission('empresas', 'read'), async (req, res) => {
+  try {
+    let query = 'SELECT * FROM empresas WHERE is_active = true';
+    let params = [];
+    
+    // Se não for admin, só mostra a própria empresa
+    if (req.user.role !== 'admin') {
+      query += ' AND id = $1';
+      params.push(req.user.empresa_id);
+    }
+    
+    query += ' ORDER BY nome';
+    
+    const result = await pool.query(query, params);
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Erro ao buscar empresas:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// Filiais
+app.get('/api/filiais', requireAuth, empresaContext, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT f.*, e.nome as empresa_nome 
+       FROM filiais f 
+       LEFT JOIN empresas e ON f.empresa_id = e.id 
+       WHERE f.empresa_id = $1 AND f.is_active = true 
+       ORDER BY f.nome`,
+      [req.empresa_id]
+    );
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Erro ao buscar filiais:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// Produtos
+app.get('/api/produtos', requireAuth, empresaContext, async (req, res) => {
+  try {
+    const { filial_id } = req.query;
+    
+    let query = `
+      SELECT p.*, c.name as categoria, f.nome as filial_nome
+      FROM products p 
+      LEFT JOIN categories c ON p.category_id = c.id 
+      LEFT JOIN filiais f ON p.filial_id = f.id
+      WHERE p.empresa_id = $1 AND p.is_active = true 
+    `;
+    
+    let params = [req.empresa_id];
+    
+    if (filial_id) {
+      query += ' AND p.filial_id = $2';
+      params.push(filial_id);
+    }
+    
+    query += ' ORDER BY p.name';
+    
+    const result = await pool.query(query, params);
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Erro ao buscar produtos:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// Notificações
+app.get('/api/notifications', requireAuth, empresaContext, async (req, res) => {
+  try {
+    const { limit = 20, offset = 0, unread_only } = req.query;
+    
+    let query = `
+      SELECT * FROM notifications 
+      WHERE empresa_id = $1 AND (user_id IS NULL OR user_id = $2)
+    `;
+    
+    let params = [req.empresa_id, req.user.id];
+    
+    if (unread_only === 'true') {
+      query += ' AND is_read = false';
+    }
+    
+    query += ' ORDER BY created_at DESC LIMIT $3 OFFSET $4';
+    
+    params.push(limit, offset);
+    
+    const result = await pool.query(query, params);
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Erro ao buscar notificações:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
   }
 });
 
 // ================= MIDDLEWARE DE ERRO FASE 5.1 =================
 app.use((err, req, res, next) => {
-  logger.error('💥 Erro não tratado:', {
+  console.error('💥 Erro não tratado:', {
     error: err.message,
     stack: err.stack,
     path: req.path,
@@ -715,7 +849,7 @@ app.use((err, req, res, next) => {
 
 // 404 Handler
 app.use('*', (req, res) => {
-  logger.warn('🔍 Rota não encontrada', {
+  console.warn('🔍 Rota não encontrada', {
     path: req.originalUrl,
     method: req.method,
     ip: req.ip
@@ -730,14 +864,14 @@ app.use('*', (req, res) => {
 // ================= INICIALIZAÇÃO DO SERVIDOR FASE 5.1 =================
 async function startServer() {
   try {
-    logger.info('🚀 Iniciando BizFlow Server FASE 5.1 - SISTEMA DE PRODUÇÃO...');
+    console.log('🚀 Iniciando BizFlow Server FASE 5.1 - SISTEMA DE PRODUÇÃO...');
     
     // Inicializar banco de dados
     await initializeDatabase();
     
     // Iniciar servidor
     server.listen(PORT, HOST, () => {
-      logger.info(`
+      console.log(`
 ╔══════════════════════════════════════════════════╗
 ║              🚀 BIZFLOW API FASE 5.1            ║
 ║           SISTEMA DE PRODUÇÃO - CORREÇÕES       ║
@@ -746,7 +880,6 @@ async function startServer() {
 ║ 🌐 Host: ${HOST}                                     ║
 ║ 🗄️  Banco: PostgreSQL                             ║
 ║ 🔌 WebSocket: ✅ ESTABILIZADO                     ║
-║ 📊 Logs: ✅ WINSTON IMPLEMENTADO                 ║
 ║ 🏢 Multi-empresa: ✅ OTIMIZADO                   ║
 ║ ⚡ Performance: ✅ ÍNDICES CRIADOS                ║
 ║ 🛡️  Segurança: ✅ REFORÇADA                      ║
@@ -757,25 +890,25 @@ async function startServer() {
     
     // Graceful shutdown
     process.on('SIGTERM', async () => {
-      logger.info('🔻 Recebido SIGTERM, encerrando graciosamente...');
+      console.log('🔻 Recebido SIGTERM, encerrando graciosamente...');
       await pool.end();
       server.close(() => {
-        logger.info('🔻 Servidor encerrado');
+        console.log('🔻 Servidor encerrado');
         process.exit(0);
       });
     });
 
     process.on('SIGINT', async () => {
-      logger.info('🔻 Recebido SIGINT, encerrando graciosamente...');
+      console.log('🔻 Recebido SIGINT, encerrando graciosamente...');
       await pool.end();
       server.close(() => {
-        logger.info('🔻 Servidor encerrado');
+        console.log('🔻 Servidor encerrado');
         process.exit(0);
       });
     });
     
   } catch (error) {
-    logger.error('❌ Falha ao iniciar servidor FASE 5.1:', error);
+    console.error('❌ Falha ao iniciar servidor FASE 5.1:', error);
     process.exit(1);
   }
 }
