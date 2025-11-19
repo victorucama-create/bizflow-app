@@ -13,10 +13,14 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import rateLimit from 'express-rate-limit';
 import winston from 'winston';
+import dotenv from 'dotenv';
 
 // ✅ CONFIGURAÇÃO ES6 MODULES
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// ✅ CONFIGURAR VARIÁVEIS DE AMBIENTE
+dotenv.config();
 
 const app = express();
 const server = createServer(app);
@@ -56,7 +60,6 @@ const pool = new Pool({
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
-  maxUses: 7500,
 });
 
 // ✅ RATE LIMITING FASE 5.1
@@ -471,9 +474,9 @@ async function createTables() {
 
       -- Inserir notificações de exemplo
       INSERT INTO notifications (empresa_id, user_id, title, message, type) VALUES 
-      (1, 1, 'Sistema Iniciado', 'Sistema BizFlow FASE 5.1 iniciado com sucesso!', 'success'),
-      (1, 1, 'Bem-vindo', 'Bem-vindo ao sistema BizFlow FASE 5.1', 'info'),
-      (1, 1, 'Relatórios Disponíveis', 'Todos os relatórios estão disponíveis', 'info')
+      (1, NULL, 'Sistema Iniciado', 'Sistema BizFlow FASE 5.1 iniciado com sucesso!', 'success'),
+      (1, NULL, 'Bem-vindo', 'Bem-vindo ao sistema BizFlow FASE 5.1', 'info'),
+      (1, NULL, 'Relatórios Disponíveis', 'Todos os relatórios estão disponíveis', 'info')
       ON CONFLICT DO NOTHING;
     `;
 
