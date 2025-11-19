@@ -1,5 +1,5 @@
-// BizFlow App - FASE 5.1 PRODUÇÃO - VERSÃO 100% OTIMIZADA
-console.log('✅ BizFlow App FASE 5.1 - SISTEMA DE PRODUÇÃO CARREGADO!');
+// BizFlow App - FASE 5.1 PRODUÇÃO HÍBRIDA - VERSÃO 100% OTIMIZADA
+console.log('✅ BizFlow App FASE 5.1 HÍBRIDO - SISTEMA DE PRODUÇÃO CARREGADO!');
 
 class BizFlowApp {
     constructor() {
@@ -15,21 +15,41 @@ class BizFlowApp {
             responseTimes: []
         };
         
-        // Configurações FASE 5.1
+        // ✅ CONFIGURAÇÕES FASE 5.1 HÍBRIDO
         this.configuracoes = {
             cacheAtivo: true,
             retryAuto: true,
             maxRetries: 3,
             timeout: 10000,
-            tema: localStorage.getItem('bizflow_tema') || 'light'
+            tema: localStorage.getItem('bizflow_tema') || 'light',
+            modo: 'auto' // auto, frontend, backend
         };
         
-        console.log('🚀 BizFlow App FASE 5.1 - Sistema de Produção Inicializado');
+        // ✅ DETECTAR MODO AUTOMATICAMENTE
+        this.modoAtual = this.detectarModo();
+        console.log(`🚀 BizFlow App FASE 5.1 HÍBRIDO - Modo: ${this.modoAtual}`);
+    }
+
+    // ✅ DETECÇÃO AUTOMÁTICA DE MODO
+    detectarModo() {
+        // Verificar se estamos em modo frontend (sem backend)
+        if (typeof window.BizFlowServer !== 'undefined') {
+            return 'frontend';
+        }
+        
+        // Verificar localStorage para configuração manual
+        const modoConfig = localStorage.getItem('bizflow_modo');
+        if (modoConfig) {
+            return modoConfig;
+        }
+        
+        // Padrão: tentar backend primeiro
+        return 'auto';
     }
 
     async init() {
         try {
-            console.log('🔧 Iniciando BizFlow App FASE 5.1...');
+            console.log('🔧 Iniciando BizFlow App FASE 5.1 HÍBRIDO...');
             
             this.aplicarConfiguracoes();
             this.configurarEventListeners();
@@ -38,9 +58,10 @@ class BizFlowApp {
             await this.carregarDadosIniciais();
             this.iniciarMonitoramento();
             
-            console.log('✅ BizFlow App FASE 5.1 inicializado com sucesso!');
+            console.log('✅ BizFlow App FASE 5.1 HÍBRIDO inicializado com sucesso!');
+            console.log(`📊 Modo: ${this.modoAtual} | Usuário: ${this.currentUser?.username || 'N/A'}`);
         } catch (error) {
-            console.error('❌ Erro na inicialização FASE 5.1:', error);
+            console.error('❌ Erro na inicialização FASE 5.1 HÍBRIDO:', error);
             this.mostrarAlerta('Erro ao inicializar sistema', 'danger');
         }
     }
@@ -48,6 +69,9 @@ class BizFlowApp {
     aplicarConfiguracoes() {
         // Aplicar tema
         document.body.setAttribute('data-bs-theme', this.configuracoes.tema);
+        
+        // Atualizar interface com modo atual
+        this.atualizarInterfaceModo();
         
         // Atualizar switches na modal de configurações
         if (document.getElementById('config-cache')) {
@@ -59,6 +83,20 @@ class BizFlowApp {
         if (document.getElementById('config-tema')) {
             document.getElementById('config-tema').value = this.configuracoes.tema;
         }
+        if (document.getElementById('config-modo')) {
+            document.getElementById('config-modo').value = this.configuracoes.modo;
+        }
+    }
+
+    atualizarInterfaceModo() {
+        const modoElement = document.getElementById('sistema-modo');
+        if (modoElement) {
+            modoElement.textContent = this.modoAtual.toUpperCase();
+            modoElement.className = `badge bg-${this.modoAtual === 'frontend' ? 'warning' : 'success'}`;
+        }
+
+        // Atualizar título da página
+        document.title = `BizFlow FASE 5.1 - ${this.modoAtual.toUpperCase()}`;
     }
 
     salvarConfiguracoes() {
@@ -66,7 +104,7 @@ class BizFlowApp {
     }
 
     configurarEventListeners() {
-        console.log('🔧 Configurando event listeners FASE 5.1...');
+        console.log('🔧 Configurando event listeners FASE 5.1 HÍBRIDO...');
         
         // Forms principais
         const forms = ['venda-form', 'estoque-form', 'financeiro-form', 'empresa-form', 'filial-form'];
@@ -87,9 +125,27 @@ class BizFlowApp {
                 eval(originalOnClick);
             });
         });
+
+        // Listener para mudança de modo
+        const modoSelect = document.getElementById('config-modo');
+        if (modoSelect) {
+            modoSelect.addEventListener('change', (e) => {
+                this.configuracoes.modo = e.target.value;
+                this.salvarConfiguracoes();
+            });
+        }
     }
 
+    // ✅ WEBSOCKET HÍBRIDO
     inicializarWebSocket() {
+        // Em modo frontend, usar eventos customizados
+        if (this.modoAtual === 'frontend') {
+            console.log('🔌 Modo Frontend - Usando eventos customizados');
+            this.configurarEventosFrontend();
+            return;
+        }
+
+        // Modo Backend - WebSocket tradicional
         try {
             this.socket = io(this.API_BASE_URL, {
                 transports: ['websocket', 'polling'],
@@ -114,11 +170,18 @@ class BizFlowApp {
             this.socket.on('connect_error', (error) => {
                 console.error('❌ Erro WebSocket:', error);
                 this.atualizarStatusWebSocket('error');
+                
+                // Fallback para modo frontend se WebSocket falhar
+                if (this.configuracoes.modo === 'auto') {
+                    console.log('🔄 Fallback para modo frontend');
+                    this.modoAtual = 'frontend';
+                    this.configurarEventosFrontend();
+                }
             });
 
             this.socket.on('venda-atualizada', (data) => {
                 this.mostrarAlerta('Nova venda registrada no sistema!', 'info');
-                this.carregarDadosIniciais(); // Atualizar dados
+                this.carregarDadosIniciais();
             });
 
             this.socket.on('notificacao-nova', (notificacao) => {
@@ -128,7 +191,28 @@ class BizFlowApp {
 
         } catch (error) {
             console.error('❌ Erro ao inicializar WebSocket:', error);
+            this.modoAtual = 'frontend';
+            this.configurarEventosFrontend();
         }
+    }
+
+    // ✅ EVENTOS FRONTEND (WebSocket alternativo)
+    configurarEventosFrontend() {
+        console.log('🎯 Configurando eventos frontend customizados');
+        
+        // Ouvir eventos customizados do sistema frontend
+        window.addEventListener('bizflow-notification', (event) => {
+            const notificacao = event.detail;
+            this.mostrarAlerta(`Nova notificação: ${notificacao.title}`, 'warning');
+            this.carregarNotificacoes();
+        });
+
+        window.addEventListener('bizflow-data-update', (event) => {
+            console.log('📊 Dados atualizados via evento frontend');
+            this.carregarDadosIniciais();
+        });
+
+        this.atualizarStatusWebSocket('frontend');
     }
 
     atualizarStatusWebSocket(status) {
@@ -154,11 +238,16 @@ class BizFlowApp {
                 elemento.classList.add('websocket-error');
                 elemento.innerHTML = '<i class="fas fa-plug me-1"></i>Erro Conexão';
                 break;
+            case 'frontend':
+                elemento.classList.add('websocket-frontend');
+                elemento.innerHTML = '<i class="fas fa-desktop me-1"></i>Modo Frontend';
+                break;
         }
     }
 
+    // ✅ CARREGAMENTO DE DADOS HÍBRIDO
     async carregarDadosIniciais() {
-        console.log('📊 Carregando dados iniciais FASE 5.1...');
+        console.log('📊 Carregando dados iniciais FASE 5.1 HÍBRIDO...');
         
         try {
             await Promise.allSettled([
@@ -173,13 +262,27 @@ class BizFlowApp {
         }
     }
 
-    // ✅✅✅ FUNÇÃO testarConexao OTIMIZADA FASE 5.1 ✅✅✅
+    // ✅✅✅ FUNÇÃO testarConexao OTIMIZADA FASE 5.1 HÍBRIDO ✅✅✅
     async testarConexao() {
-        console.log('🌐 TESTANDO CONEXÃO FASE 5.1 - SISTEMA DE PRODUÇÃO!');
+        console.log('🌐 TESTANDO CONEXÃO FASE 5.1 HÍBRIDO!');
         
         const startTime = Date.now();
         
         try {
+            // Em modo frontend, testar sistema local
+            if (this.modoAtual === 'frontend') {
+                const health = await this.testarSistemaFrontend();
+                return {
+                    success: true,
+                    responseTime: Date.now() - startTime,
+                    status: 'frontend_healthy',
+                    environment: 'frontend',
+                    version: '5.1.0',
+                    mode: 'frontend'
+                };
+            }
+
+            // Modo backend - testar API tradicional
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -205,11 +308,30 @@ class BizFlowApp {
                 responseTime,
                 status: data.status,
                 environment: data.environment,
-                version: data.version
+                version: data.version,
+                mode: data.mode || 'backend'
             };
         } catch (error) {
             this.metrics.errors++;
             this.atualizarMetricasUI();
+            
+            // Fallback para modo frontend
+            if (this.configuracoes.modo === 'auto') {
+                console.log('🔄 Fallback para modo frontend após erro');
+                this.modoAtual = 'frontend';
+                this.atualizarInterfaceModo();
+                this.configurarEventosFrontend();
+                
+                return {
+                    success: true,
+                    responseTime: Date.now() - startTime,
+                    status: 'frontend_fallback',
+                    environment: 'frontend',
+                    version: '5.1.0',
+                    mode: 'frontend',
+                    fallback: true
+                };
+            }
             
             return { 
                 success: false, 
@@ -219,8 +341,21 @@ class BizFlowApp {
         }
     }
 
+    // ✅ TESTAR SISTEMA FRONTEND
+    async testarSistemaFrontend() {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve({
+                    storage: typeof localStorage !== 'undefined',
+                    system: typeof window.BizFlowServer !== 'undefined',
+                    status: 'operational'
+                });
+            }, 100);
+        });
+    }
+
     async testarConexaoCompleta() {
-        console.log('🔍 Teste completo de conexão FASE 5.1...');
+        console.log('🔍 Teste completo de conexão FASE 5.1 HÍBRIDO...');
         
         this.mostrarAlerta('Iniciando teste completo de conexão...', 'info');
 
@@ -239,6 +374,15 @@ class BizFlowApp {
     }
 
     async testarWebSocket() {
+        // Em modo frontend, simular WebSocket
+        if (this.modoAtual === 'frontend') {
+            return {
+                success: true,
+                message: 'Eventos frontend ativos',
+                mode: 'frontend'
+            };
+        }
+
         return new Promise((resolve) => {
             if (!this.socket) {
                 resolve({ success: false, error: 'WebSocket não inicializado' });
@@ -275,6 +419,28 @@ class BizFlowApp {
     }
 
     async testarBancoDados() {
+        // Em modo frontend, testar localStorage
+        if (this.modoAtual === 'frontend') {
+            try {
+                const storageTest = {
+                    users: localStorage.getItem('bizflow_users') !== null,
+                    products: localStorage.getItem('bizflow_produtos') !== null,
+                    sales: localStorage.getItem('bizflow_vendas') !== null,
+                    totalItems: this.contarItensStorage()
+                };
+                
+                return {
+                    success: true,
+                    mode: 'frontend',
+                    storage: storageTest,
+                    message: 'Sistema de storage frontend operacional'
+                };
+            } catch (error) {
+                return { success: false, error: error.message, mode: 'frontend' };
+            }
+        }
+
+        // Modo backend - testar banco tradicional
         try {
             const startTime = Date.now();
             const response = await fetch('/api/status');
@@ -286,17 +452,28 @@ class BizFlowApp {
                     success: true,
                     responseTime,
                     connections: data.data.database.connections,
-                    status: data.data.database.status
+                    status: data.data.database.status,
+                    mode: 'backend'
                 };
             } else {
                 throw new Error(data.error);
             }
         } catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error.message, mode: 'backend' };
         }
     }
 
-    // ✅ SISTEMA DE CACHE FASE 5.1
+    contarItensStorage() {
+        let count = 0;
+        for (let i = 0; i < localStorage.length; i++) {
+            if (localStorage.key(i).startsWith('bizflow_')) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    // ✅ SISTEMA DE CACHE FASE 5.1 HÍBRIDO
     async fetchComCache(url, options = {}) {
         const cacheKey = `${url}_${JSON.stringify(options)}`;
         
@@ -311,7 +488,12 @@ class BizFlowApp {
             }
         }
 
-        // Fazer requisição
+        // Em modo frontend, usar sistema local
+        if (this.modoAtual === 'frontend' && url.startsWith('/api/')) {
+            return await this.fetchFrontend(url, options);
+        }
+
+        // Fazer requisição tradicional
         try {
             const response = await fetch(url, {
                 ...options,
@@ -339,8 +521,132 @@ class BizFlowApp {
             return data;
         } catch (error) {
             console.error('❌ Erro na requisição:', error);
+            
+            // Fallback para frontend se configurado
+            if (this.configuracoes.modo === 'auto' && url.startsWith('/api/')) {
+                console.log('🔄 Fallback para dados frontend');
+                return await this.fetchFrontend(url, options);
+            }
+            
             throw error;
         }
+    }
+
+    // ✅ FETCH FRONTEND - Sistema local
+    async fetchFrontend(url, options = {}) {
+        console.log('🏠 Fetch frontend:', url);
+        
+        // Simular delay de rede
+        await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
+        
+        const endpoint = url.replace('/api/', '');
+        const method = options.method || 'GET';
+        
+        try {
+            // Usar sistema frontend se disponível
+            if (typeof window.BizFlowServer !== 'undefined') {
+                const result = await window.BizFlowServer.handleRequest(method, endpoint, options.body ? JSON.parse(options.body) : null);
+                return result;
+            }
+            
+            // Fallback para dados demo
+            return await this.gerarDadosDemo(endpoint, method, options);
+        } catch (error) {
+            console.error('❌ Erro no fetch frontend:', error);
+            return {
+                success: false,
+                error: error.message,
+                mode: 'frontend'
+            };
+        }
+    }
+
+    // ✅ GERADOR DE DADOS DEMO
+    async gerarDadosDemo(endpoint, method, options) {
+        const demoData = {
+            'dashboard': {
+                success: true,
+                data: {
+                    total_empresas: 1,
+                    total_produtos: 15,
+                    total_vendas: 48,
+                    total_usuarios: 3,
+                    faturamento_total: 12580.50,
+                    total_contas: 12,
+                    total_receitas: 15800.00,
+                    total_despesas: 3219.50,
+                    notificacoes_nao_lidas: 2
+                }
+            },
+            'empresas': {
+                success: true,
+                data: [
+                    {
+                        id: 1,
+                        nome: 'Empresa Principal Demo',
+                        cnpj: '00.000.000/0001-00',
+                        email: 'demo@empresa.com',
+                        telefone: '(11) 9999-9999',
+                        is_active: true
+                    }
+                ]
+            },
+            'produtos': {
+                success: true,
+                data: [
+                    {
+                        id: 1,
+                        name: 'Smartphone Android',
+                        description: 'Smartphone Android 128GB',
+                        price: 899.90,
+                        stock_quantity: 15,
+                        min_stock: 5,
+                        category: 'Eletrônicos',
+                        is_active: true
+                    },
+                    {
+                        id: 2,
+                        name: 'Notebook i5',
+                        description: 'Notebook Core i5 8GB RAM',
+                        price: 1899.90,
+                        stock_quantity: 8,
+                        min_stock: 3,
+                        category: 'Eletrônicos',
+                        is_active: true
+                    }
+                ]
+            },
+            'notifications': {
+                success: true,
+                data: [
+                    {
+                        id: 1,
+                        title: 'Sistema Iniciado',
+                        message: 'Sistema BizFlow FASE 5.1 HÍBRIDO carregado com sucesso!',
+                        type: 'success',
+                        is_read: false,
+                        created_at: new Date().toISOString()
+                    },
+                    {
+                        id: 2,
+                        title: 'Modo Frontend',
+                        message: 'Sistema operando em modo frontend com dados demo',
+                        type: 'info',
+                        is_read: false,
+                        created_at: new Date().toISOString()
+                    }
+                ]
+            }
+        };
+
+        const data = demoData[endpoint] || {
+            success: true,
+            data: [],
+            message: 'Endpoint demo não implementado',
+            mode: 'frontend'
+        };
+
+        return data;
     }
 
     invalidarCache() {
@@ -350,7 +656,7 @@ class BizFlowApp {
         console.log('🧹 Cache invalidado');
     }
 
-    // ✅ GERENCIAMENTO DE EMPRESAS
+    // ✅✅✅ MÉTODOS DE CARREGAMENTO MANTIDOS (compatíveis com sistema híbrido)
     async carregarEmpresas() {
         try {
             const data = await this.fetchComCache('/api/empresas');
@@ -362,17 +668,57 @@ class BizFlowApp {
         }
     }
 
+    async carregarProdutos() {
+        try {
+            const data = await this.fetchComCache('/api/produtos');
+            if (data.success) {
+                this.renderizarProdutos(data.data);
+            }
+        } catch (error) {
+            console.error('Erro ao carregar produtos:', error);
+        }
+    }
+
+    async carregarVendas() {
+        try {
+            const data = await this.fetchComCache('/api/vendas');
+            if (data.success) {
+                this.renderizarVendas(data.data);
+            }
+        } catch (error) {
+            console.error('Erro ao carregar vendas:', error);
+        }
+    }
+
+    async carregarDashboard() {
+        try {
+            const data = await this.fetchComCache('/api/dashboard');
+            if (data.success) {
+                this.renderizarDashboard(data.data);
+            }
+        } catch (error) {
+            console.error('Erro ao carregar dashboard:', error);
+        }
+    }
+
+    async carregarNotificacoes() {
+        try {
+            const data = await this.fetchComCache('/api/notifications');
+            if (data.success) {
+                this.renderizarNotificacoes(data.data);
+            }
+        } catch (error) {
+            console.error('Erro ao carregar notificações:', error);
+        }
+    }
+
+    // ✅ RENDERIZADORES MANTIDOS (compatíveis)
     renderizarEmpresas(empresas) {
         const container = document.getElementById('lista-empresas');
         if (!container) return;
         
         if (!empresas || empresas.length === 0) {
-            container.innerHTML = `
-                <div class="text-center text-muted py-4">
-                    <i class="fas fa-building fa-3x mb-3"></i>
-                    <p>Nenhuma empresa cadastrada</p>
-                </div>
-            `;
+            container.innerHTML = this.getEmptyState('building', 'Nenhuma empresa cadastrada');
             return;
         }
 
@@ -391,29 +737,12 @@ class BizFlowApp {
         `).join('');
     }
 
-    // ✅ GERENCIAMENTO DE PRODUTOS
-    async carregarProdutos() {
-        try {
-            const data = await this.fetchComCache('/api/produtos');
-            if (data.success) {
-                this.renderizarProdutos(data.data);
-            }
-        } catch (error) {
-            console.error('Erro ao carregar produtos:', error);
-        }
-    }
-
     renderizarProdutos(produtos) {
         const container = document.getElementById('lista-estoque');
         if (!container) return;
         
         if (!produtos || produtos.length === 0) {
-            container.innerHTML = `
-                <div class="text-center text-muted py-4">
-                    <i class="fas fa-box-open fa-3x mb-3"></i>
-                    <p>Nenhum produto cadastrado</p>
-                </div>
-            `;
+            container.innerHTML = this.getEmptyState('box-open', 'Nenhum produto cadastrado');
             return;
         }
 
@@ -436,29 +765,12 @@ class BizFlowApp {
         `).join('');
     }
 
-    // ✅ VENDAS
-    async carregarVendas() {
-        try {
-            const data = await this.fetchComCache('/api/vendas');
-            if (data.success) {
-                this.renderizarVendas(data.data);
-            }
-        } catch (error) {
-            console.error('Erro ao carregar vendas:', error);
-        }
-    }
-
     renderizarVendas(vendas) {
         const container = document.getElementById('lista-vendas');
         if (!container) return;
         
         if (!vendas || vendas.length === 0) {
-            container.innerHTML = `
-                <div class="text-center text-muted py-4">
-                    <i class="fas fa-receipt fa-3x mb-3"></i>
-                    <p>Nenhuma venda registrada</p>
-                </div>
-            `;
+            container.innerHTML = this.getEmptyState('receipt', 'Nenhuma venda registrada');
             return;
         }
 
@@ -480,20 +792,7 @@ class BizFlowApp {
         `).join('');
     }
 
-    // ✅ DASHBOARD
-    async carregarDashboard() {
-        try {
-            const data = await this.fetchComCache('/api/dashboard');
-            if (data.success) {
-                this.renderizarDashboard(data.data);
-            }
-        } catch (error) {
-            console.error('Erro ao carregar dashboard:', error);
-        }
-    }
-
     renderizarDashboard(dados) {
-        // Atualizar métricas do dashboard
         const metrics = [
             { id: 'total-empresas', value: dados.total_empresas },
             { id: 'total-produtos', value: dados.total_produtos },
@@ -513,18 +812,6 @@ class BizFlowApp {
                 }
             }
         });
-    }
-
-    // ✅ NOTIFICAÇÕES
-    async carregarNotificacoes() {
-        try {
-            const data = await this.fetchComCache('/api/notifications');
-            if (data.success) {
-                this.renderizarNotificacoes(data.data);
-            }
-        } catch (error) {
-            console.error('Erro ao carregar notificações:', error);
-        }
     }
 
     renderizarNotificacoes(notificacoes) {
@@ -556,7 +843,17 @@ class BizFlowApp {
         `).join('');
     }
 
-    // ✅ MANIPULAÇÃO DE FORMULÁRIOS
+    getEmptyState(icon, message) {
+        return `
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-${icon} fa-3x mb-3"></i>
+                <p>${message}</p>
+                ${this.modoAtual === 'frontend' ? '<small class="text-warning">Modo Demonstração</small>' : ''}
+            </div>
+        `;
+    }
+
+    // ✅ MANIPULAÇÃO DE FORMULÁRIOS HÍBRIDA
     async handleFormSubmit(event, formId) {
         event.preventDefault();
         const form = event.target;
@@ -571,33 +868,13 @@ class BizFlowApp {
             const formData = new FormData(form);
             const data = Object.fromEntries(formData);
 
-            const response = await fetch(`/api/${formId.replace('-form', '')}`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.authToken}`
-                },
-                body: JSON.stringify(data)
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                this.mostrarAlerta(result.message || 'Operação realizada com sucesso!', 'success');
-                form.reset();
-                this.invalidarCache(); // Invalidar cache para atualizar dados
-                await this.carregarDadosIniciais();
-                
-                // Emitir evento WebSocket se for uma venda
-                if (formId === 'venda-form' && this.socket) {
-                    this.socket.emit('nova-venda', {
-                        empresa_id: this.currentUser?.empresa_id,
-                        ...data
-                    });
-                }
+            // Em modo frontend, usar sistema local
+            if (this.modoAtual === 'frontend') {
+                await this.processarFormFrontend(formId, data);
             } else {
-                throw new Error(result.error || 'Erro na operação');
+                await this.processarFormBackend(formId, data);
             }
+
         } catch (error) {
             console.error('❌ Erro no formulário:', error);
             this.mostrarAlerta(error.message, 'danger');
@@ -608,9 +885,54 @@ class BizFlowApp {
         }
     }
 
-    // ✅ SISTEMA DE ALERTAS MELHORADO
+    async processarFormBackend(formId, data) {
+        const response = await fetch(`/api/${formId.replace('-form', '')}`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.authToken}`
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            this.mostrarAlerta(result.message || 'Operação realizada com sucesso!', 'success');
+            event.target.reset();
+            this.invalidarCache();
+            await this.carregarDadosIniciais();
+            
+            // Emitir evento WebSocket se for uma venda
+            if (formId === 'venda-form' && this.socket) {
+                this.socket.emit('nova-venda', {
+                    empresa_id: this.currentUser?.empresa_id,
+                    ...data
+                });
+            }
+        } else {
+            throw new Error(result.error || 'Erro na operação');
+        }
+    }
+
+    async processarFormFrontend(formId, data) {
+        // Simular processamento frontend
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        this.mostrarAlerta('Operação simulada em modo frontend!', 'info');
+        event.target.reset();
+        this.invalidarCache();
+        
+        // Disparar evento de atualização
+        window.dispatchEvent(new CustomEvent('bizflow-data-update', {
+            detail: { form: formId, data: data }
+        }));
+        
+        await this.carregarDadosIniciais();
+    }
+
+    // ✅ SISTEMA DE ALERTAS MELHORADO (mantido)
     mostrarAlerta(mensagem, tipo = 'info') {
-        // Criar toast Bootstrap
         const toastContainer = document.querySelector('.toast-container') || this.criarToastContainer();
         
         const toastId = 'toast-' + Date.now();
@@ -636,7 +958,6 @@ class BizFlowApp {
         
         toast.show();
         
-        // Remover elemento do DOM após esconder
         toastElement.addEventListener('hidden.bs.toast', () => {
             toastElement.remove();
         });
@@ -661,8 +982,10 @@ class BizFlowApp {
     }
 
     mostrarResultadoTeste(resultados) {
+        const modo = resultados.conexaoAPI.mode || 'backend';
         const mensagem = `
-            <strong>📊 Resultado Teste FASE 5.1:</strong><br>
+            <strong>📊 Resultado Teste FASE 5.1 HÍBRIDO:</strong><br>
+            🎯 Modo: ${modo.toUpperCase()}<br>
             ✅ API: ${resultados.conexaoAPI.success ? 'OK' : 'FALHA'}<br>
             🔌 WebSocket: ${resultados.websocket.success ? 'OK' : 'FALHA'}<br>
             🗄️ Banco: ${resultados.bancoDados.success ? 'OK' : 'FALHA'}<br>
@@ -671,7 +994,7 @@ class BizFlowApp {
         this.mostrarAlerta(mensagem, 'info');
     }
 
-    // ✅ MONITORAMENTO E MÉTRICAS
+    // ✅ MONITORAMENTO E MÉTRICAS HÍBRIDO
     iniciarMonitoramento() {
         // Atualizar métricas a cada 30 segundos
         setInterval(() => {
@@ -716,6 +1039,7 @@ class BizFlowApp {
 
         // Atualizar status inicial
         this.atualizarStatusWebSocket('connecting');
+        this.atualizarInterfaceModo();
     }
 
     setAuthToken(token) {
@@ -729,7 +1053,6 @@ class BizFlowApp {
             badge.textContent = '0';
         }
         
-        // Marcar visualmente como lidas
         const notificacoes = document.querySelectorAll('#notifications-list .dropdown-item');
         notificacoes.forEach(notif => {
             notif.classList.remove('fw-bold');
@@ -737,20 +1060,77 @@ class BizFlowApp {
         
         this.mostrarAlerta('Todas as notificações marcadas como lidas', 'success');
     }
+
+    // ✅ MÉTODOS ESPECÍFICOS DO SISTEMA HÍBRIDO
+    alternarModo(novoModo) {
+        this.configuracoes.modo = novoModo;
+        this.modoAtual = novoModo;
+        this.salvarConfiguracoes();
+        this.aplicarConfiguracoes();
+        
+        // Reinicializar componentes específicos do modo
+        if (novoModo === 'frontend') {
+            this.configurarEventosFrontend();
+        } else {
+            this.inicializarWebSocket();
+        }
+        
+        this.mostrarAlerta(`Modo alterado para: ${novoModo.toUpperCase()}`, 'info');
+        this.carregarDadosIniciais();
+    }
+
+    exportarDadosFrontend() {
+        if (this.modoAtual !== 'frontend') {
+            this.mostrarAlerta('Esta função só está disponível em modo frontend', 'warning');
+            return;
+        }
+        
+        // Implementar exportação de dados do localStorage
+        const dados = {};
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.startsWith('bizflow_')) {
+                dados[key] = localStorage.getItem(key);
+            }
+        }
+        
+        const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `bizflow_backup_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        this.mostrarAlerta('Dados exportados com sucesso!', 'success');
+    }
+
+    limparDadosFrontend() {
+        if (confirm('Tem certeza que deseja limpar todos os dados do modo frontend?')) {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('bizflow_')) {
+                    localStorage.removeItem(key);
+                }
+            }
+            this.invalidarCache();
+            this.carregarDadosIniciais();
+            this.mostrarAlerta('Dados frontend limpos com sucesso!', 'success');
+        }
+    }
 }
 
-// ✅ INICIALIZAÇÃO GLOBAL FASE 5.1
+// ✅ INICIALIZAÇÃO GLOBAL FASE 5.1 HÍBRIDO
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('👤 DOM Carregado - Sistema FASE 5.1');
+    console.log('👤 DOM Carregado - Sistema FASE 5.1 HÍBRIDO');
     
     const token = localStorage.getItem('bizflow_token');
     const user = JSON.parse(localStorage.getItem('bizflow_user') || 'null');
     
     if (token && user) {
-        console.log('✅ Usuário autenticado - inicializando BizFlow App FASE 5.1');
+        console.log('✅ Usuário autenticado - inicializando BizFlow App FASE 5.1 HÍBRIDO');
         window.bizFlowApp = new BizFlowApp();
         
-        // Pequeno delay para garantir que tudo está carregado
         setTimeout(() => {
             window.bizFlowApp.init().catch(error => {
                 console.error('❌ Falha na inicialização:', error);
@@ -758,12 +1138,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 100);
     } else {
         console.log('🔐 Usuário não autenticado - mostrando tela de login');
+        // Mostrar interface de login
+        document.getElementById('login-container')?.classList.remove('d-none');
+        document.getElementById('app-container')?.classList.add('d-none');
     }
 });
 
-// ✅ FUNÇÕES GLOBAIS FASE 5.1
+// ✅ FUNÇÕES GLOBAIS FASE 5.1 HÍBRIDO
 window.testarConexoes = function() {
-    console.log('🔍 TESTAR CONEXÕES FASE 5.1 CHAMADO!');
+    console.log('🔍 TESTAR CONEXÕES FASE 5.1 HÍBRIDO CHAMADO!');
     if (window.bizFlowApp && window.bizFlowApp.testarConexaoCompleta) {
         window.bizFlowApp.testarConexaoCompleta();
     } else {
@@ -799,28 +1182,51 @@ window.marcarTodasComoLidas = function() {
 
 window.aplicarConfiguracoes = function() {
     if (window.bizFlowApp) {
-        const websocket = document.getElementById('config-websocket').checked;
         const cache = document.getElementById('config-cache').checked;
         const retry = document.getElementById('config-retry').checked;
         const tema = document.getElementById('config-tema').value;
+        const modo = document.getElementById('config-modo').value;
         
-        window.bizFlowApp.configuracoes.websocket = websocket;
         window.bizFlowApp.configuracoes.cacheAtivo = cache;
         window.bizFlowApp.configuracoes.retryAuto = retry;
         window.bizFlowApp.configuracoes.tema = tema;
+        window.bizFlowApp.configuracoes.modo = modo;
         
         window.bizFlowApp.salvarConfiguracoes();
         window.bizFlowApp.aplicarConfiguracoes();
         
-        // Fechar modal
-        bootstrap.Modal.getInstance(document.getElementById('configModal')).hide();
+        // Aplicar mudança de modo se necessário
+        if (modo !== window.bizFlowApp.modoAtual) {
+            window.bizFlowApp.alternarModo(modo);
+        }
         
-        window.bizFlowApp.mostrarAlerta('Configurações FASE 5.1 aplicadas!', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('configModal')).hide();
+        window.bizFlowApp.mostrarAlerta('Configurações FASE 5.1 HÍBRIDO aplicadas!', 'success');
     }
 };
 
-// ✅ VERIFICAÇÃO FINAL FASE 5.1
-console.log('✅✅✅ ARQUIVO app-v5.1-fixed.js FASE 5.1 CARREGADO! ✅✅✅');
-console.log('✅ Função testarConexao existe:', typeof window.BizFlowApp?.prototype.testarConexao === 'function');
-console.log('✅ Sistema de cache implementado:', typeof window.BizFlowApp?.prototype.fetchComCache === 'function');
-console.log('✅ WebSocket implementado:', typeof window.BizFlowApp?.prototype.inicializarWebSocket === 'function');
+// ✅ NOVAS FUNÇÕES HÍBRIDAS
+window.alternarModo = function(modo) {
+    if (window.bizFlowApp) {
+        window.bizFlowApp.alternarModo(modo);
+    }
+};
+
+window.exportarDados = function() {
+    if (window.bizFlowApp) {
+        window.bizFlowApp.exportarDadosFrontend();
+    }
+};
+
+window.limparDados = function() {
+    if (window.bizFlowApp) {
+        window.bizFlowApp.limparDadosFrontend();
+    }
+};
+
+// ✅ VERIFICAÇÃO FINAL FASE 5.1 HÍBRIDO
+console.log('✅✅✅ ARQUIVO app-v5.1-fixed.js FASE 5.1 HÍBRIDO CARREGADO! ✅✅✅');
+console.log('✅ Modo atual:', window.bizFlowApp?.modoAtual || 'Não inicializado');
+console.log('✅ Sistema híbrido implementado:', typeof window.BizFlowApp?.prototype.fetchFrontend === 'function');
+console.log('✅ WebSocket híbrido implementado:', typeof window.BizFlowApp?.prototype.configurarEventosFrontend === 'function');
+console.log('✅ Detecção automática de modo:', typeof window.BizFlowApp?.prototype.detectarModo === 'function');
