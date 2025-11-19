@@ -1,16 +1,329 @@
-// services/auth.js - SISTEMA BIZFLOW FASE 5 COMPLETA - VERSÃO COMPLETA
+// services/auth.js - SISTEMA BIZFLOW FASE 5 COMPLETA HÍBRIDO
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { queryWithMetrics, logger } from '../core/server.js';
 import CacheService from './cache-service.js';
+import BizFlowLogger from '../utils/logger.js';
 
-class AuthService {
-  // ✅ LOGIN COM CACHE SERVICE - COMPLETO
+// ✅ DETECÇÃO AUTOMÁTICA DE AMBIENTE
+const IS_FRONTEND_MODE = typeof window !== 'undefined' || process.env.FRONTEND_MODE === 'true';
+const IS_BROWSER = typeof window !== 'undefined';
+
+// ✅ IMPORT DINÂMICO DO BACKEND (apenas se não for frontend)
+let queryWithMetrics;
+let pool;
+
+if (!IS_FRONTEND_MODE) {
+  import('../core/server.js').then(module => {
+    queryWithMetrics = module.queryWithMetrics;
+    pool = module.pool;
+  }).catch(error => {
+    BizFlowLogger.errorLog(error, { context: 'AuthService backend import' });
+  });
+}
+
+// ✅ SISTEMA DE AUTENTICAÇÃO FRONTEND
+class FrontendAuth {
+  constructor() {
+    this.users = [
+      {
+        id: 1,
+        username: 'admin',
+        email: 'admin@bizflow.com',
+        password_hash: this.hashPassword('admin123'),
+        full_name: 'Administrador do Sistema',
+        role: 'admin',
+        empresa_id: 1,
+        is_active: true,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 2,
+        username: 'user',
+        email: 'user@bizflow.com',
+        password_hash: this.hashPassword('user123'),
+        full_name: 'Usuário Demo',
+        role: 'user',
+        empresa_id: 1,
+        is_active: true,
+        created_at: new Date().toISOString()
+      }
+    ];
+    this.sessions = new Map();
+    this.init();
+  }
+
+  init() {
+    // Carregar usuários do localStorage se existirem
+    this.loadUsersFromStorage();
+    BizFlowLogger.authLog('Sistema de autenticação frontend inicializado');
+  }
+
+  loadUsersFromStorage() {
+    try {
+      const storedUsers = localStorage.getItem('bizflow_users');
+      if (storedUsers) {
+        this.users = JSON.parse(storedUsers);
+      }
+    } catch (error) {
+      BizFlowLogger.errorLog(error, { context: 'FrontendAuth.loadUsersFromStorage' });
+    }
+  }
+
+  saveUsersToStorage() {
+    try {
+      localStorage.setItem('bizflow_users', JSON.stringify(this.users));
+    } catch (error) {
+      BizFlowLogger.errorLog(error, { context: 'FrontendAuth.saveUsersToStorage' });
+    }
+  }
+
+  hashPassword(password) {
+    // Simulação de hash para frontend (em produção usar Web Crypto API)
+    return btoa(unescape(encodeURIComponent(password))).split('').reverse().join('');
+  }
+
+  verifyPassword(password, hash) {
+    return this.hashPassword(password) === hash;
+  }
+
   async login(username, password) {
     try {
-      logger.authLog('Tentativa de login', { username });
+      BizFlowLogger.authLog('Tentativa de login frontend', { username });
 
-      // Validar inputs
+      if (!username || !password) {
+        throw new Error('Username e password são obrigatórios');
+      }
+
+      const user = this.users.find(u => 
+        u.username === username && u.is_active
+      );
+
+      if (!user || !this.verifyPassword(password, user.password_hash)) {
+        BizFlowLogger.authLog('Credenciais inválidas frontend', { username });
+        throw new Error('Credenciais inválidas');
+      }
+
+      // Gerar token de sessão
+      const sessionToken = this.generateSecureToken();
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      // Salvar sessão
+      this.sessions.set(sessionToken, {
+        user_id: user.id,
+        expires_at: expiresAt
+      });
+
+      // Salvar no localStorage também
+      this.saveSessionToStorage(sessionToken, user.id, expiresAt);
+
+      // Remover password hash da resposta
+      const { password_hash, ...userWithoutPassword } = user;
+
+      BizFlowLogger.authLog('Login frontend realizado com sucesso', {
+        userId: user.id,
+        username: user.username,
+        role: user.role
+      });
+
+      return {
+        user: userWithoutPassword,
+        session_token: sessionToken,
+        expires_at: expiresAt
+      };
+
+    } catch (error) {
+      BizFlowLogger.errorLog(error, { context: 'FrontendAuth.login' });
+      throw error;
+    }
+  }
+
+  async validateToken(token) {
+    try {
+      if (!token) {
+        throw new Error('Token não fornecido');
+      }
+
+      // Verificar na memória
+      const session = this.sessions.get(token);
+      if (session && new Date(session.expires_at) > new Date()) {
+        const user = this.users.find(u => u.id === session.user_id);
+        if (user && user.is_active) {
+          BizFlowLogger.cacheLog('Sessão frontend validada na memória', true, { 
+            token: token.substring(0, 10) + '...' 
+          });
+          return user;
+        }
+      }
+
+      // Verificar no localStorage
+      const storedSession = this.getSessionFromStorage(token);
+      if (storedSession && new Date(storedSession.expires_at) > new Date()) {
+        const user = this.users.find(u => u.id === storedSession.user_id);
+        if (user && user.is_active) {
+          // Restaurar na memória
+          this.sessions.set(token, storedSession);
+          BizFlowLogger.cacheLog('Sessão frontend validada do localStorage', true, {
+            token: token.substring(0, 10) + '...'
+          });
+          return user;
+        }
+      }
+
+      throw new Error('Sessão expirada ou inválida');
+
+    } catch (error) {
+      BizFlowLogger.errorLog(error, { context: 'FrontendAuth.validateToken' });
+      throw error;
+    }
+  }
+
+  async logout(token) {
+    try {
+      if (!token) return;
+
+      // Remover da memória
+      this.sessions.delete(token);
+      
+      // Remover do localStorage
+      this.removeSessionFromStorage(token);
+
+      BizFlowLogger.authLog('Logout frontend realizado', { 
+        token: token.substring(0, 10) + '...' 
+      });
+
+    } catch (error) {
+      BizFlowLogger.errorLog(error, { context: 'FrontendAuth.logout' });
+      throw error;
+    }
+  }
+
+  generateSecureToken() {
+    return 'bizflow_frontend_' + Date.now() + '_' + Math.random().toString(36).substr(2, 16);
+  }
+
+  saveSessionToStorage(token, userId, expiresAt) {
+    try {
+      const sessions = this.getStoredSessions();
+      sessions[token] = { user_id: userId, expires_at: expiresAt.toISOString() };
+      localStorage.setItem('bizflow_sessions', JSON.stringify(sessions));
+    } catch (error) {
+      BizFlowLogger.errorLog(error, { context: 'FrontendAuth.saveSessionToStorage' });
+    }
+  }
+
+  getSessionFromStorage(token) {
+    try {
+      const sessions = this.getStoredSessions();
+      const session = sessions[token];
+      if (session) {
+        return {
+          user_id: session.user_id,
+          expires_at: new Date(session.expires_at)
+        };
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  removeSessionFromStorage(token) {
+    try {
+      const sessions = this.getStoredSessions();
+      delete sessions[token];
+      localStorage.setItem('bizflow_sessions', JSON.stringify(sessions));
+    } catch (error) {
+      BizFlowLogger.errorLog(error, { context: 'FrontendAuth.removeSessionFromStorage' });
+    }
+  }
+
+  getStoredSessions() {
+    try {
+      const sessions = localStorage.getItem('bizflow_sessions');
+      return sessions ? JSON.parse(sessions) : {};
+    } catch (error) {
+      return {};
+    }
+  }
+
+  async createUser(userData) {
+    try {
+      const { username, email, password, full_name, role = 'user', empresa_id = 1 } = userData;
+
+      if (!username || !email || !password || !full_name) {
+        throw new Error('Todos os campos obrigatórios devem ser preenchidos');
+      }
+
+      // Verificar se usuário já existe
+      const existingUser = this.users.find(u => 
+        u.username === username || u.email === email
+      );
+
+      if (existingUser) {
+        throw new Error('Username ou email já cadastrado');
+      }
+
+      // Criar novo usuário
+      const newUser = {
+        id: Date.now(),
+        username,
+        email,
+        password_hash: this.hashPassword(password),
+        full_name,
+        role,
+        empresa_id,
+        is_active: true,
+        created_at: new Date().toISOString()
+      };
+
+      this.users.push(newUser);
+      this.saveUsersToStorage();
+
+      BizFlowLogger.authLog('Usuário frontend criado com sucesso', {
+        userId: newUser.id,
+        username: newUser.username
+      });
+
+      const { password_hash, ...userWithoutPassword } = newUser;
+      return userWithoutPassword;
+
+    } catch (error) {
+      BizFlowLogger.errorLog(error, { context: 'FrontendAuth.createUser' });
+      throw error;
+    }
+  }
+
+  hasPermission(user, requiredRole) {
+    const roleHierarchy = {
+      'user': 1,
+      'manager': 2,
+      'admin': 3
+    };
+
+    const userLevel = roleHierarchy[user.role] || 0;
+    const requiredLevel = roleHierarchy[requiredRole] || 0;
+
+    return userLevel >= requiredLevel;
+  }
+
+  // Limpar sessões expiradas
+  cleanupExpiredSessions() {
+    const now = new Date();
+    for (const [token, session] of this.sessions.entries()) {
+      if (new Date(session.expires_at) <= now) {
+        this.sessions.delete(token);
+        this.removeSessionFromStorage(token);
+      }
+    }
+  }
+}
+
+// ✅ SISTEMA DE AUTENTICAÇÃO BACKEND
+class BackendAuth {
+  async login(username, password) {
+    try {
+      BizFlowLogger.authLog('Tentativa de login backend', { username });
+
       if (!username || !password) {
         throw new Error('Username e password são obrigatórios');
       }
@@ -27,7 +340,7 @@ class AuthService {
       );
 
       if (userResult.rows.length === 0) {
-        logger.authLog('Usuário não encontrado', { username });
+        BizFlowLogger.authLog('Usuário não encontrado backend', { username });
         throw new Error('Credenciais inválidas');
       }
 
@@ -37,7 +350,7 @@ class AuthService {
       const isValidPassword = await bcrypt.compare(password, user.password_hash);
       
       if (!isValidPassword) {
-        logger.authLog('Senha inválida', { username });
+        BizFlowLogger.authLog('Senha inválida backend', { username });
         throw new Error('Credenciais inválidas');
       }
 
@@ -60,7 +373,7 @@ class AuthService {
       // Remover password hash da resposta
       const { password_hash, ...userWithoutPassword } = user;
 
-      logger.authLog('Login realizado com sucesso', { 
+      BizFlowLogger.authLog('Login backend realizado com sucesso', { 
         userId: user.id, 
         username: user.username,
         role: user.role 
@@ -73,12 +386,11 @@ class AuthService {
       };
 
     } catch (error) {
-      logger.errorLog(error, { context: 'AuthService.login' });
+      BizFlowLogger.errorLog(error, { context: 'BackendAuth.login' });
       throw error;
     }
   }
 
-  // ✅ VALIDAR TOKEN COM CACHE SERVICE - COMPLETO
   async validateToken(token) {
     try {
       if (!token) {
@@ -89,7 +401,9 @@ class AuthService {
       const userSession = await CacheService.getSession(token);
       
       if (userSession) {
-        logger.cacheLog('Sessão encontrada no cache', true, { token: token.substring(0, 10) + '...' });
+        BizFlowLogger.cacheLog('Sessão encontrada no cache backend', true, { 
+          token: token.substring(0, 10) + '...' 
+        });
         return userSession;
       }
 
@@ -113,7 +427,7 @@ class AuthService {
       // ✅ SALVAR NO CACHE SERVICE
       await CacheService.cacheSession(token, user);
       
-      logger.authLog('Sessão validada e cacheadada', { 
+      BizFlowLogger.authLog('Sessão backend validada e cacheadada', { 
         userId: user.id,
         username: user.username 
       });
@@ -121,12 +435,11 @@ class AuthService {
       return user;
 
     } catch (error) {
-      logger.errorLog(error, { context: 'AuthService.validateToken' });
+      BizFlowLogger.errorLog(error, { context: 'BackendAuth.validateToken' });
       throw error;
     }
   }
 
-  // ✅ LOGOUT COM CACHE SERVICE - COMPLETO
   async logout(token) {
     try {
       if (!token) {
@@ -144,20 +457,18 @@ class AuthService {
         'user_sessions'
       );
 
-      logger.authLog('Logout realizado', { token: token.substring(0, 10) + '...' });
+      BizFlowLogger.authLog('Logout backend realizado', { token: token.substring(0, 10) + '...' });
 
     } catch (error) {
-      logger.errorLog(error, { context: 'AuthService.logout' });
+      BizFlowLogger.errorLog(error, { context: 'BackendAuth.logout' });
       throw error;
     }
   }
 
-  // ✅ GERAR TOKEN SEGURO
   generateSecureToken() {
-    return 'bizflow_' + Date.now() + '_' + crypto.randomBytes(32).toString('hex');
+    return 'bizflow_backend_' + Date.now() + '_' + crypto.randomBytes(32).toString('hex');
   }
 
-  // ✅ VERIFICAR PERMISSÕES
   hasPermission(user, requiredRole) {
     const roleHierarchy = {
       'user': 1,
@@ -171,7 +482,6 @@ class AuthService {
     return userLevel >= requiredLevel;
   }
 
-  // ✅ ATUALIZAR SENHA - COMPLETO
   async updatePassword(userId, currentPassword, newPassword) {
     try {
       // Buscar usuário
@@ -215,7 +525,7 @@ class AuthService {
       // Invalidar todas as sessões do usuário
       await this.invalidateUserSessions(userId);
 
-      logger.authLog('Senha atualizada com sucesso', { userId });
+      BizFlowLogger.authLog('Senha atualizada com sucesso backend', { userId });
 
       return { 
         success: true, 
@@ -223,12 +533,11 @@ class AuthService {
       };
 
     } catch (error) {
-      logger.errorLog(error, { context: 'AuthService.updatePassword' });
+      BizFlowLogger.errorLog(error, { context: 'BackendAuth.updatePassword' });
       throw error;
     }
   }
 
-  // ✅ VALIDAR FORÇA DA SENHA
   validatePasswordStrength(password) {
     const checks = {
       minLength: password.length >= 8,
@@ -248,7 +557,6 @@ class AuthService {
     };
   }
 
-  // ✅ INVALIDAR TODAS AS SESSÕES DO USUÁRIO
   async invalidateUserSessions(userId) {
     try {
       // Buscar todos os tokens do usuário
@@ -272,15 +580,14 @@ class AuthService {
         'user_sessions'
       );
 
-      logger.authLog('Todas as sessões do usuário invalidadas', { userId });
+      BizFlowLogger.authLog('Todas as sessões do usuário invalidadas backend', { userId });
 
     } catch (error) {
-      logger.errorLog(error, { context: 'AuthService.invalidateUserSessions' });
+      BizFlowLogger.errorLog(error, { context: 'BackendAuth.invalidateUserSessions' });
       throw error;
     }
   }
 
-  // ✅ CRIAR USUÁRIO - COMPLETO
   async createUser(userData) {
     try {
       const { username, email, password, full_name, role = 'user', empresa_id = 1 } = userData;
@@ -327,7 +634,7 @@ class AuthService {
         'users'
       );
 
-      logger.authLog('Usuário criado com sucesso', { 
+      BizFlowLogger.authLog('Usuário backend criado com sucesso', { 
         userId: result.rows[0].id, 
         username: result.rows[0].username 
       });
@@ -335,12 +642,11 @@ class AuthService {
       return result.rows[0];
 
     } catch (error) {
-      logger.errorLog(error, { context: 'AuthService.createUser' });
+      BizFlowLogger.errorLog(error, { context: 'BackendAuth.createUser' });
       throw error;
     }
   }
 
-  // ✅ VALIDAR EMAIL
   validateEmail(email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const isValid = emailRegex.test(email);
@@ -351,81 +657,124 @@ class AuthService {
       normalized: isValid ? email.toLowerCase() : null
     };
   }
+}
 
-  // ✅ RENOVAR SESSÃO
-  async renewSession(token) {
-    try {
-      const user = await this.validateToken(token);
-      
-      if (!user) {
-        throw new Error('Sessão inválida');
-      }
+// ✅ SERVIÇO DE AUTENTICAÇÃO HÍBRIDO PRINCIPAL
+class HybridAuthService {
+  constructor() {
+    this.frontendAuth = new FrontendAuth();
+    this.backendAuth = new BackendAuth();
+    this.mode = IS_FRONTEND_MODE ? 'frontend' : 'backend';
+  }
 
-      // Nova expiração
-      const newExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-      // Atualizar no banco
-      await queryWithMetrics(
-        'UPDATE user_sessions SET expires_at = $1, updated_at = CURRENT_TIMESTAMP WHERE session_token = $2',
-        [newExpiresAt, token],
-        'update',
-        'user_sessions'
-      );
-
-      // Atualizar no cache
-      await CacheService.cacheSession(token, user);
-
-      logger.authLog('Sessão renovada', { 
-        userId: user.id,
-        username: user.username 
-      });
-
-      return {
-        success: true,
-        expires_at: newExpiresAt,
-        message: 'Sessão renovada com sucesso'
-      };
-
-    } catch (error) {
-      logger.errorLog(error, { context: 'AuthService.renewSession' });
-      throw error;
+  async login(username, password) {
+    if (IS_FRONTEND_MODE) {
+      return await this.frontendAuth.login(username, password);
+    } else {
+      return await this.backendAuth.login(username, password);
     }
   }
 
-  // ✅ LISTAR SESSÕES ATIVAS (APENAS ADMIN)
-  async getActiveSessions(userId, requesterRole) {
-    try {
-      if (requesterRole !== 'admin') {
-        throw new Error('Acesso negado. Apenas administradores podem ver sessões ativas.');
-      }
-
-      const sessions = await queryWithMetrics(
-        `SELECT 
-          us.session_token,
-          us.expires_at,
-          us.created_at,
-          u.username,
-          u.full_name,
-          u.role
-         FROM user_sessions us
-         JOIN users u ON us.user_id = u.id
-         WHERE us.expires_at > NOW()
-         ORDER BY us.expires_at DESC`,
-        [],
-        'select',
-        'user_sessions'
-      );
-
-      return sessions.rows.map(session => ({
-        ...session,
-        session_token: session.session_token.substring(0, 10) + '...' // Mask token
-      }));
-
-    } catch (error) {
-      logger.errorLog(error, { context: 'AuthService.getActiveSessions' });
-      throw error;
+  async validateToken(token) {
+    if (IS_FRONTEND_MODE) {
+      return await this.frontendAuth.validateToken(token);
+    } else {
+      return await this.backendAuth.validateToken(token);
     }
+  }
+
+  async logout(token) {
+    if (IS_FRONTEND_MODE) {
+      return await this.frontendAuth.logout(token);
+    } else {
+      return await this.backendAuth.logout(token);
+    }
+  }
+
+  hasPermission(user, requiredRole) {
+    if (IS_FRONTEND_MODE) {
+      return this.frontendAuth.hasPermission(user, requiredRole);
+    } else {
+      return this.backendAuth.hasPermission(user, requiredRole);
+    }
+  }
+
+  async updatePassword(userId, currentPassword, newPassword) {
+    if (IS_FRONTEND_MODE) {
+      throw new Error('Alteração de senha não disponível em modo frontend');
+    } else {
+      return await this.backendAuth.updatePassword(userId, currentPassword, newPassword);
+    }
+  }
+
+  async createUser(userData) {
+    if (IS_FRONTEND_MODE) {
+      return await this.frontendAuth.createUser(userData);
+    } else {
+      return await this.backendAuth.createUser(userData);
+    }
+  }
+
+  validatePasswordStrength(password) {
+    if (IS_FRONTEND_MODE) {
+      // Versão simplificada para frontend
+      return {
+        isValid: password.length >= 6,
+        error: password.length >= 6 ? null : 'Senha deve ter pelo menos 6 caracteres',
+        checks: { minLength: password.length >= 6 }
+      };
+    } else {
+      return this.backendAuth.validatePasswordStrength(password);
+    }
+  }
+
+  validateEmail(email) {
+    if (IS_FRONTEND_MODE) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const isValid = emailRegex.test(email);
+      
+      return {
+        isValid,
+        error: isValid ? null : 'Email inválido'
+      };
+    } else {
+      return this.backendAuth.validateEmail(email);
+    }
+  }
+
+  // ✅ MÉTODOS ESPECÍFICOS DO FRONTEND
+  cleanupFrontendSessions() {
+    if (IS_FRONTEND_MODE) {
+      this.frontendAuth.cleanupExpiredSessions();
+    }
+  }
+
+  getFrontendUsers() {
+    if (IS_FRONTEND_MODE) {
+      return this.frontendAuth.users.map(user => {
+        const { password_hash, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+    }
+    return [];
+  }
+
+  // ✅ OBTER MODO ATUAL
+  getCurrentMode() {
+    return this.mode;
+  }
+
+  // ✅ VERIFICAR SE É FRONTEND
+  isFrontendMode() {
+    return IS_FRONTEND_MODE;
   }
 }
 
-export default new AuthService();
+// ✅ EXPORTAR INSTÂNCIA ÚNICA
+const authService = new HybridAuthService();
+export default authService;
+
+// ✅ EXPORTAR PARA USO NO BROWSER
+if (IS_BROWSER) {
+  window.BizFlowAuth = authService;
+}
