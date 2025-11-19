@@ -1,4 +1,4 @@
-// BizFlow App - FASE 5.1 PRODUÇÃO - CORREÇÃO DEFINITIVA
+// BizFlow App - FASE 5.1 PRODUÇÃO - CORREÇÃO COMPLETA
 class BizFlowApp {
     constructor() {
         this.API_BASE_URL = window.location.origin;
@@ -20,74 +20,83 @@ class BizFlowApp {
             tema: 'light'
         };
 
-        this.carregarConfiguracoes();
-        console.log('🚀 BizFlow App FASE 5.1 inicializado - SISTEMA DE PRODUÇÃO');
+        console.log('🚀 BizFlow App FASE 5.1 construído - SISTEMA DE PRODUÇÃO');
     }
 
     async init() {
         try {
-            console.log('🔧 Inicializando componentes FASE 5.1...');
+            console.log('🔧 Iniciando BizFlow App FASE 5.1...');
             
-            // ✅ INICIALIZAÇÃO SEGURA
-            await this.inicializarComponentes();
-            await this.carregarDadosIniciaisFase5();
-            this.inicializarWebSocket();
-            this.iniciarMonitoramento();
+            // ✅ INICIALIZAÇÃO SEGURA - SEM testarConexao() inicial
+            await this.inicializarComponentesBasicos();
+            await this.carregarDadosIniciais();
             
             console.log('✅ BizFlow App FASE 5.1 inicializado com sucesso!');
         } catch (error) {
-            console.error('❌ Erro ao inicializar app FASE 5.1:', error);
-            this.mostrarAlerta('Sistema inicializado com limitações', 'warning');
+            console.error('❌ Erro na inicialização:', error);
+            this.mostrarAlerta('Sistema carregado com funcionalidades básicas', 'info');
         }
     }
 
-    async inicializarComponentes() {
-        // ✅ INICIALIZAÇÃO SEGURA SEM DEPENDÊNCIAS EXTERNAS
-        this.setupEventListeners();
+    async inicializarComponentesBasicos() {
+        console.log('🔧 Configurando componentes básicos...');
+        
+        // Configurar listeners de forma segura
+        this.configurarEventListeners();
         this.atualizarInterfaceUsuario();
+        
+        // Inicializar WebSocket se configurado
+        if (this.configuracoes.websocket) {
+            this.inicializarWebSocket();
+        }
     }
 
-    setupEventListeners() {
+    configurarEventListeners() {
         console.log('🔧 Configurando event listeners...');
         
-        // Forms principais
-        const forms = ['venda-form', 'estoque-form', 'financeiro-form', 'empresa-form'];
-        forms.forEach(formId => {
-            const form = document.getElementById(formId);
-            if (form) {
-                form.addEventListener('submit', (e) => this.handleFormSubmit(e, formId));
-            }
-        });
-
-        // Navegação
-        const navLinks = document.querySelectorAll('.nav-link[href^="#"]');
-        navLinks.forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const targetId = link.getAttribute('href').substring(1);
-                this.scrollToSection(targetId);
+        try {
+            // Forms principais - com verificação de existência
+            const forms = ['venda-form', 'estoque-form', 'financeiro-form', 'empresa-form'];
+            forms.forEach(formId => {
+                const form = document.getElementById(formId);
+                if (form) {
+                    form.addEventListener('submit', (e) => this.handleFormSubmit(e, formId));
+                }
             });
-        });
+
+            // Navegação suave
+            const navLinks = document.querySelectorAll('.nav-link[href^="#"]');
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetId = link.getAttribute('href').substring(1);
+                    this.scrollToSection(targetId);
+                });
+            });
+
+        } catch (error) {
+            console.error('Erro ao configurar listeners:', error);
+        }
     }
 
-    async carregarDadosIniciaisFase5() {
-        console.log('📊 Carregando dados FASE 5.1...');
+    async carregarDadosIniciais() {
+        console.log('📊 Carregando dados iniciais FASE 5.1...');
         
         try {
-            await Promise.all([
+            // Carregar dados essenciais
+            await Promise.allSettled([
                 this.carregarEmpresas(),
                 this.carregarProdutos(),
-                this.carregarNotificacoes(),
-                this.atualizarMetricasDashboard()
+                this.carregarNotificacoes()
             ]);
             
-            this.mostrarAlerta('Sistema FASE 5.1 carregado!', 'success');
+            this.mostrarAlerta('Sistema BizFlow FASE 5.1 carregado!', 'success');
         } catch (error) {
             console.error('Erro ao carregar dados:', error);
         }
     }
 
-    // ✅ FUNÇÕES DE CONEXÃO CORRIGIDAS
+    // ✅ FUNÇÃO testarConexao IMPLEMENTADA
     async testarConexao() {
         console.log('🌐 Testando conexão com API...');
         
@@ -100,6 +109,7 @@ class BizFlowApp {
             this.metricas.responseTime = responseTime;
             this.atualizarStatusConexao('online', responseTime);
             
+            console.log('✅ Conexão API OK:', responseTime + 'ms');
             return {
                 success: true,
                 responseTime,
@@ -108,6 +118,7 @@ class BizFlowApp {
         } catch (error) {
             this.metricas.errors++;
             this.atualizarStatusConexao('offline');
+            console.error('❌ Falha na conexão API:', error);
             return { success: false, error: error.message };
         }
     }
@@ -138,7 +149,7 @@ class BizFlowApp {
 
             const timeout = setTimeout(() => {
                 resolve({ success: false, error: 'Timeout WebSocket' });
-            }, 5000);
+            }, 3000);
 
             this.socket.emit('ping', { timestamp: Date.now() }, (response) => {
                 clearTimeout(timeout);
@@ -189,21 +200,18 @@ class BizFlowApp {
                 }
             });
 
-            this.socket.on('notification', (data) => {
-                this.processarNovaNotificacao(data);
-            });
-
         } catch (error) {
             console.error('❌ Erro ao inicializar WebSocket:', error);
         }
     }
 
-    // ✅ SISTEMA DE CACHE FASE 5.1
+    // ✅ SISTEMA DE CACHE
     async fetchComCache(url, options = {}) {
         const cacheKey = `${url}_${JSON.stringify(options)}`;
         
         if (this.configuracoes.cache && this.cache.has(cacheKey)) {
             this.metricas.cacheHits++;
+            console.log('💾 Cache hit:', url);
             return this.cache.get(cacheKey);
         }
 
@@ -231,22 +239,6 @@ class BizFlowApp {
         console.log('🗑️ Cache limpo FASE 5.1');
     }
 
-    // ✅ MÉTRICAS E MONITORAMENTO
-    iniciarMonitoramento() {
-        // Atualizar métricas a cada 30 segundos
-        setInterval(() => this.atualizarMetricasDashboard(), 30000);
-        
-        // Teste de conexão a cada minuto
-        setInterval(() => this.testarConexao(), 60000);
-    }
-
-    atualizarMetricasDashboard() {
-        document.getElementById('metric-requests').textContent = this.metricas.requests;
-        document.getElementById('metric-cache').textContent = this.metricas.cacheHits;
-        document.getElementById('metric-errors').textContent = this.metricas.errors;
-        document.getElementById('metric-response').textContent = `${this.metricas.responseTime}ms`;
-    }
-
     // ✅ GERENCIAMENTO DE EMPRESAS
     async carregarEmpresas() {
         try {
@@ -254,8 +246,7 @@ class BizFlowApp {
             
             if (data.success) {
                 this.renderizarEmpresas(data.data);
-                document.getElementById('total-empresas').textContent = data.data.length;
-                document.getElementById('total-empresas-card').textContent = data.data.length;
+                this.atualizarContadorEmpresas(data.data.length);
             }
         } catch (error) {
             console.error('Erro ao carregar empresas:', error);
@@ -264,6 +255,7 @@ class BizFlowApp {
 
     renderizarEmpresas(empresas) {
         const container = document.getElementById('lista-empresas');
+        if (!container) return;
         
         if (!empresas || empresas.length === 0) {
             container.innerHTML = `
@@ -292,6 +284,20 @@ class BizFlowApp {
         `).join('');
     }
 
+    atualizarContadorEmpresas(total) {
+        const elementos = [
+            'total-empresas', 
+            'total-empresas-card'
+        ];
+        
+        elementos.forEach(id => {
+            const elemento = document.getElementById(id);
+            if (elemento) {
+                elemento.textContent = total;
+            }
+        });
+    }
+
     // ✅ GERENCIAMENTO DE PRODUTOS
     async carregarProdutos() {
         try {
@@ -306,6 +312,7 @@ class BizFlowApp {
 
     renderizarProdutos(produtos) {
         const container = document.getElementById('lista-estoque');
+        if (!container) return;
         
         if (!produtos || produtos.length === 0) {
             container.innerHTML = `
@@ -353,7 +360,9 @@ class BizFlowApp {
         const container = document.getElementById('notifications-list');
         const badge = document.getElementById('notification-count');
         
-        const naoLidas = notificacoes.filter(n => !n.is_read);
+        if (!container || !badge) return;
+
+        const naoLidas = notificacoes ? notificacoes.filter(n => !n.is_read) : [];
         badge.textContent = naoLidas.length;
         badge.classList.toggle('d-none', naoLidas.length === 0);
 
@@ -378,18 +387,6 @@ class BizFlowApp {
         `).join('');
     }
 
-    processarNovaNotificacao(notificacao) {
-        this.mostrarAlerta(`Nova notificação: ${notificacao.title}`, 'info');
-        this.carregarNotificacoes(); // Recarregar lista
-    }
-
-    marcarTodasNotificacoesComoLidas() {
-        // Implementação simplificada
-        const badge = document.getElementById('notification-count');
-        badge.classList.add('d-none');
-        this.mostrarAlerta('Notificações marcadas como lidas', 'success');
-    }
-
     // ✅ CONFIGURAÇÕES
     carregarConfiguracoes() {
         const saved = localStorage.getItem('bizflow_config');
@@ -405,12 +402,8 @@ class BizFlowApp {
 
     aplicarConfiguracoes() {
         // Aplicar tema
-        document.body.setAttribute('data-bs-theme', this.configuracoes.tema);
-        
-        // Aplicar outras configurações
-        if (!this.configuracoes.websocket && this.socket) {
-            this.socket.disconnect();
-            this.socket = null;
+        if (document.body) {
+            document.body.setAttribute('data-bs-theme', this.configuracoes.tema);
         }
     }
 
@@ -456,8 +449,8 @@ class BizFlowApp {
             if (data.success) {
                 this.mostrarAlerta('Operação realizada com sucesso!', 'success');
                 form.reset();
-                this.invalidarCache(); // Forçar atualização
-                this.carregarDadosIniciaisFase5();
+                this.invalidarCache();
+                this.carregarDadosIniciais();
             } else {
                 throw new Error(data.error || 'Erro na operação');
             }
@@ -474,16 +467,16 @@ class BizFlowApp {
     }
 
     mostrarAlerta(mensagem, tipo = 'info') {
-        // Implementação simples - pode ser substituída por um sistema de toasts
+        // Implementação simples de alerta
         const alerta = document.createElement('div');
-        alerta.className = `alert alert-${tipo} alert-dismissible fade show`;
+        alerta.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
+        alerta.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
         alerta.innerHTML = `
-            ${mensagem}
+            <strong>${tipo.toUpperCase()}:</strong> ${mensagem}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
         
-        const container = document.querySelector('.container');
-        container.insertBefore(alerta, container.firstChild);
+        document.body.appendChild(alerta);
         
         setTimeout(() => {
             if (alerta.parentNode) {
@@ -494,9 +487,9 @@ class BizFlowApp {
 
     mostrarResultadoTeste(resultados) {
         const mensagem = `
-            📊 Resultado Teste FASE 5.1:
-            ✅ API: ${resultados.conexaoAPI.success ? 'OK' : 'FALHA'}
-            🔌 WebSocket: ${resultados.websocket.success ? 'OK' : 'FALHA'} 
+            <strong>📊 Resultado Teste FASE 5.1:</strong><br>
+            ✅ API: ${resultados.conexaoAPI.success ? 'OK' : 'FALHA'}<br>
+            🔌 WebSocket: ${resultados.websocket.success ? 'OK' : 'FALHA'}<br>
             🗄️ Banco: ${resultados.banco.success ? 'OK' : 'FALHA'}
         `;
         this.mostrarAlerta(mensagem, 'info');
@@ -516,22 +509,25 @@ class BizFlowApp {
     }
 }
 
-// ✅ INICIALIZAÇÃO GLOBAL
+// ✅ INICIALIZAÇÃO GLOBAL SEGURA
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('👤 Verificando autenticação...');
+    console.log('👤 DOM Carregado - Verificando autenticação...');
     
-    // Verificar se há token de autenticação
     const token = localStorage.getItem('bizflow_token');
     const user = JSON.parse(localStorage.getItem('bizflow_user') || 'null');
     
     if (token && user) {
         console.log('✅ Usuário autenticado - inicializando app FASE 5.1');
         window.bizFlowApp = new BizFlowApp();
-        window.bizFlowApp.init().catch(error => {
-            console.error('❌ Falha na inicialização do app:', error);
-        });
+        
+        // Inicialização segura com timeout
+        setTimeout(() => {
+            window.bizFlowApp.init().catch(error => {
+                console.error('❌ Falha na inicialização:', error);
+            });
+        }, 100);
     } else {
-        console.log('👤 Usuário não autenticado - carregando interface pública');
+        console.log('👤 Usuário não autenticado - interface pública');
     }
 });
 
@@ -539,6 +535,8 @@ document.addEventListener('DOMContentLoaded', function() {
 window.testarConexoes = function() {
     if (window.bizFlowApp) {
         window.bizFlowApp.testarConexaoCompleta();
+    } else {
+        alert('Sistema não inicializado. Faça login primeiro.');
     }
 };
 
@@ -551,6 +549,21 @@ window.limparCache = function() {
 
 window.carregarDashboard = function() {
     if (window.bizFlowApp) {
-        window.bizFlowApp.carregarDadosIniciaisFase5();
+        window.bizFlowApp.carregarDadosIniciais();
     }
+};
+
+window.marcarTodasComoLidas = function() {
+    if (window.bizFlowApp) {
+        window.bizFlowApp.marcarTodasNotificacoesComoLidas();
+    }
+};
+
+// ✅ Adicionar método faltante
+BizFlowApp.prototype.marcarTodasNotificacoesComoLidas = function() {
+    const badge = document.getElementById('notification-count');
+    if (badge) {
+        badge.classList.add('d-none');
+    }
+    this.mostrarAlerta('Notificações marcadas como lidas', 'success');
 };
