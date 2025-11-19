@@ -145,4 +145,227 @@ class BizFlowHelpers {
     if (result !== parseInt(digits.charAt(0), 10)) return false;
 
     size = size + 1;
-    numbers = cnpj.substring(0, size
+    numbers = cnpj.substring(0, size);
+    sum = 0;
+    pos = size - 7;
+
+    for (let i = size; i >= 1; i--) {
+      sum += numbers.charAt(size - i) * pos--;
+      if (pos < 2) pos = 9;
+    }
+
+    result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    if (result !== parseInt(digits.charAt(1), 10)) return false;
+
+    return true;
+  }
+
+  // ✅ MASCARAR DADOS SENSÍVEIS
+  maskData(data, type = 'email') {
+    if (!data) return '';
+
+    switch (type) {
+      case 'email':
+        const [username, domain] = data.split('@');
+        return `${username.substring(0, 2)}***@${domain}`;
+      
+      case 'cpf':
+        return data.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.***.$3-**');
+      
+      case 'cnpj':
+        return data.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.***/$4-$5');
+      
+      case 'phone':
+        return data.replace(/(\d{2})(\d{4,5})(\d{4})/, '($1) $2-****');
+      
+      default:
+        return data;
+    }
+  }
+
+  // ✅ CALCULAR IDADE
+  calculateAge(birthDate) {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+
+    return age;
+  }
+
+  // ✅ TRUNCAR TEXTO
+  truncateText(text, maxLength = 100, suffix = '...') {
+    if (!text || text.length <= maxLength) {
+      return text;
+    }
+
+    return text.substring(0, maxLength - suffix.length) + suffix;
+  }
+
+  // ✅ CONVERTER STRING PARA SLUG
+  stringToSlug(text) {
+    return text
+      .toString()
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^\w\-]+/g, '')
+      .replace(/\-\-+/g, '-')
+      .replace(/^-+/, '')
+      .replace(/-+$/, '');
+  }
+
+  // ✅ GERAR HASH SEGURO
+  generateHash(data, algorithm = 'sha256') {
+    return crypto
+      .createHash(algorithm)
+      .update(data + process.env.HASH_SALT || 'bizflow-secret')
+      .digest('hex');
+  }
+
+  // ✅ DEEP CLONE OBJECT
+  deepClone(obj) {
+    if (obj === null || typeof obj !== 'object') return obj;
+    if (obj instanceof Date) return new Date(obj.getTime());
+    if (obj instanceof Array) return obj.map(item => this.deepClone(item));
+    if (obj instanceof Object) {
+      const clonedObj = {};
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          clonedObj[key] = this.deepClone(obj[key]);
+        }
+      }
+      return clonedObj;
+    }
+  }
+
+  // ✅ MERGE OBJECTS DEEP
+  deepMerge(target, source) {
+    const output = Object.assign({}, target);
+    
+    if (this.isObject(target) && this.isObject(source)) {
+      Object.keys(source).forEach(key => {
+        if (this.isObject(source[key])) {
+          if (!(key in target)) {
+            Object.assign(output, { [key]: source[key] });
+          } else {
+            output[key] = this.deepMerge(target[key], source[key]);
+          }
+        } else {
+          Object.assign(output, { [key]: source[key] });
+        }
+      });
+    }
+    
+    return output;
+  }
+
+  // ✅ VERIFICAR SE É OBJECT
+  isObject(item) {
+    return item && typeof item === 'object' && !Array.isArray(item);
+  }
+
+  // ✅ DELAY PROMISE
+  delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // ✅ RETRY OPERATION COM BACKOFF
+  async retryOperation(operation, maxRetries = 3, baseDelay = 1000) {
+    let lastError;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error;
+        
+        if (attempt === maxRetries) {
+          break;
+        }
+        
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+        await this.delay(delay);
+      }
+    }
+    
+    throw lastError;
+  }
+
+  // ✅ CALCULAR PORCENTAGEM
+  calculatePercentage(part, total, decimals = 2) {
+    if (total === 0) return 0;
+    return ((part / total) * 100).toFixed(decimals);
+  }
+
+  // ✅ FORMATAR BYTES PARA LEGÍVEL
+  formatBytes(bytes, decimals = 2) {
+    if (bytes === 0) return '0 Bytes';
+
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB'];
+
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  }
+
+  // ✅ VALIDAR URL
+  isValidURL(string) {
+    try {
+      new URL(string);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ✅ EXTRAIR PARÂMETROS DE URL
+  getURLParams(url) {
+    try {
+      const urlObj = new URL(url);
+      const params = {};
+      
+      urlObj.searchParams.forEach((value, key) => {
+        params[key] = value;
+      });
+      
+      return params;
+    } catch (error) {
+      return {};
+    }
+  }
+
+  // ✅ GERAR UUID
+  generateUUID() {
+    return crypto.randomUUID();
+  }
+
+  // ✅ CALCULAR DIGITO VERIFICADOR
+  calculateCheckDigit(number) {
+    let sum = 0;
+    let isEven = false;
+
+    for (let i = number.length - 1; i >= 0; i--) {
+      let digit = parseInt(number.charAt(i), 10);
+
+      if (isEven) {
+        digit *= 2;
+        if (digit > 9) {
+          digit -= 9;
+        }
+      }
+
+      sum += digit;
+      isEven = !isEven;
+    }
+
+    return (10 - (sum % 10)) % 10;
+  }
+}
+
+export default new BizFlowHelpers();
