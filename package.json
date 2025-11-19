@@ -1,20 +1,77 @@
 {
   "name": "bizflow-app",
   "version": "5.1.0",
+  "description": "Sistema Empresarial BizFlow - FASE 5.1 PRODUÇÃO - Sistema de Produção & Escalabilidade Empresarial",
   "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "dev-with-errors": "node --watch server.js --trace-warnings --unhandled-rejections=strict",
+    "init-db": "node init-db.js",
+    "fix-admin": "node fix-admin.js",
+    "fix-login": "node fix-login.js",
+    "health-check": "node health-check.js",
+    "test-api": "node test-api.js",
+    "test-production": "NODE_ENV=production node server.js",
+    "lint": "echo 'Linting not configured - skipping'",
+    "audit": "npm audit --audit-level=high",
+    "postinstall": "echo '✅ BizFlow FASE 5.1 - Dependências instaladas com sucesso!'"
   },
   "dependencies": {
     "express": "^4.18.2",
+    "socket.io": "^4.7.5",
     "pg": "^8.11.3",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "helmet": "^7.1.0",
     "compression": "^1.7.4",
+    "express-rate-limit": "^7.1.5",
     "morgan": "^1.10.0",
-    "bcryptjs": "^2.4.3",
-    "socket.io": "^4.7.2"
-  }
+    "winston": "^3.11.0",
+    "uuid": "^9.0.1",
+    "dotenv": "^16.3.1",
+    "crypto": "^1.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": [
+    "bizflow",
+    "empresarial",
+    "gestao",
+    "producao",
+    "fase5.1",
+    "sistema-producao",
+    "escalabilidade",
+    "monitoramento",
+    "cache",
+    "performance",
+    "postgresql",
+    "websocket",
+    "real-time"
+  ],
+  "author": "BizFlow Team <dev@bizflow.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bizflow/bizflow-app-fase5.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bizflow/bizflow-app-fase5/issues"
+  },
+  "homepage": "https://bizflow-app-xvcw.onrender.com",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "os": [
+    "linux",
+    "darwin",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ]
 }
