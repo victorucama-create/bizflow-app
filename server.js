@@ -1,4 +1,4 @@
-// server.js - SISTEMA BIZFLOW FASE 5.1 - CORREÇÃO DEFINITIVA
+// server.js - SISTEMA BIZFLOW FASE 5.1 - COMPLETO COM RELATÓRIOS
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -52,7 +52,7 @@ app.get('/health', async (req, res) => {
       timestamp: new Date().toISOString(),
       database: 'connected',
       version: '5.1.0',
-      phase: 'FASE 5.1 - Sistema Otimizado & Corrigido'
+      phase: 'FASE 5.1 - Sistema Completo com Relatórios'
     });
   } catch (error) {
     res.status(503).json({ 
@@ -124,6 +124,8 @@ async function createTables() {
         description TEXT,
         price DECIMAL(10,2) NOT NULL,
         stock_quantity INTEGER DEFAULT 0,
+        min_stock INTEGER DEFAULT 5,
+        category VARCHAR(100),
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -134,8 +136,22 @@ async function createTables() {
         empresa_id INTEGER DEFAULT 1,
         sale_code VARCHAR(50) NOT NULL,
         total_amount DECIMAL(10,2) NOT NULL,
+        total_items INTEGER NOT NULL,
         payment_method VARCHAR(50) NOT NULL,
-        sale_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        sale_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        status VARCHAR(20) DEFAULT 'completed'
+      );
+
+      -- Tabela de itens da venda
+      CREATE TABLE IF NOT EXISTS sale_items (
+        id SERIAL PRIMARY KEY,
+        sale_id INTEGER REFERENCES sales(id),
+        product_id INTEGER REFERENCES products(id),
+        product_name VARCHAR(200) NOT NULL,
+        quantity INTEGER NOT NULL,
+        unit_price DECIMAL(10,2) NOT NULL,
+        total_price DECIMAL(10,2) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
       -- Tabela de notificações
@@ -162,23 +178,60 @@ async function createTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      -- Tabela de relatórios
+      CREATE TABLE IF NOT EXISTS reports (
+        id SERIAL PRIMARY KEY,
+        empresa_id INTEGER DEFAULT 1,
+        report_type VARCHAR(100) NOT NULL,
+        title VARCHAR(200) NOT NULL,
+        data JSONB NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
       -- Inserir empresa padrão
       INSERT INTO empresas (id, nome, cnpj, email, telefone) 
       VALUES (1, 'Empresa Principal', '00.000.000/0001-00', 'contato@empresa.com', '(11) 9999-9999')
       ON CONFLICT (id) DO NOTHING;
 
       -- Inserir produtos de exemplo
-      INSERT INTO products (empresa_id, name, description, price, stock_quantity) VALUES 
-      (1, 'Smartphone Android', 'Smartphone Android 128GB', 899.90, 15),
-      (1, 'Notebook i5', 'Notebook Core i5 8GB RAM', 1899.90, 8),
-      (1, 'Café Premium', 'Café em grãos 500g', 24.90, 50),
-      (1, 'Detergente', 'Detergente líquido 500ml', 3.90, 100)
+      INSERT INTO products (empresa_id, name, description, price, stock_quantity, category) VALUES 
+      (1, 'Smartphone Android', 'Smartphone Android 128GB', 899.90, 15, 'Eletrônicos'),
+      (1, 'Notebook i5', 'Notebook Core i5 8GB RAM', 1899.90, 8, 'Eletrônicos'),
+      (1, 'Café Premium', 'Café em grãos 500g', 24.90, 50, 'Alimentação'),
+      (1, 'Detergente', 'Detergente líquido 500ml', 3.90, 100, 'Limpeza'),
+      (1, 'Água Mineral', 'Água mineral 500ml', 2.50, 200, 'Bebidas')
+      ON CONFLICT DO NOTHING;
+
+      -- Inserir vendas de exemplo
+      INSERT INTO sales (empresa_id, sale_code, total_amount, total_items, payment_method) VALUES 
+      (1, 'V001', 899.90, 1, 'cartão'),
+      (1, 'V002', 1899.90, 1, 'dinheiro'),
+      (1, 'V003', 52.80, 3, 'cartão'),
+      (1, 'V004', 7.80, 2, 'dinheiro')
+      ON CONFLICT DO NOTHING;
+
+      -- Inserir itens das vendas
+      INSERT INTO sale_items (sale_id, product_id, product_name, quantity, unit_price, total_price) VALUES 
+      (1, 1, 'Smartphone Android', 1, 899.90, 899.90),
+      (2, 2, 'Notebook i5', 1, 1899.90, 1899.90),
+      (3, 3, 'Café Premium', 2, 24.90, 49.80),
+      (3, 5, 'Água Mineral', 1, 2.50, 2.50),
+      (4, 4, 'Detergente', 2, 3.90, 7.80)
+      ON CONFLICT DO NOTHING;
+
+      -- Inserir contas financeiras de exemplo
+      INSERT INTO financial_accounts (empresa_id, name, type, amount, due_date, status) VALUES 
+      (1, 'Venda Cliente A', 'receita', 1500.00, '2024-01-20', 'recebido'),
+      (1, 'Aluguel', 'despesa', 1200.00, '2024-01-15', 'pago'),
+      (1, 'Salários', 'despesa', 5000.00, '2024-01-25', 'pendente'),
+      (1, 'Venda Online', 'receita', 890.50, '2024-01-18', 'recebido')
       ON CONFLICT DO NOTHING;
 
       -- Inserir notificações de exemplo
       INSERT INTO notifications (empresa_id, user_id, title, message, type) VALUES 
       (1, 1, 'Sistema Iniciado', 'Sistema BizFlow FASE 5.1 iniciado com sucesso!', 'success'),
-      (1, 1, 'Bem-vindo', 'Bem-vindo ao sistema BizFlow FASE 5.1', 'info')
+      (1, 1, 'Bem-vindo', 'Bem-vindo ao sistema BizFlow FASE 5.1', 'info'),
+      (1, 1, 'Relatórios Disponíveis', 'Todos os relatórios estão disponíveis', 'info')
       ON CONFLICT DO NOTHING;
     `;
 
@@ -199,7 +252,6 @@ async function createAdminUser() {
   try {
     console.log('👤 Verificando usuário admin...');
     
-    // ✅ VERIFICAR SE ADMIN JÁ EXISTE
     const userCheck = await pool.query(
       'SELECT id FROM users WHERE username = $1', 
       ['admin']
@@ -208,7 +260,6 @@ async function createAdminUser() {
     if (userCheck.rows.length === 0) {
       console.log('🔄 Criando usuário admin...');
       
-      // ✅ CRIAR SENHA HASH CORRETAMENTE
       const passwordHash = await bcrypt.hash('admin123', 12);
       
       await pool.query(
@@ -218,8 +269,6 @@ async function createAdminUser() {
       );
       
       console.log('✅ Usuário admin criado com sucesso!');
-      console.log('📧 Login: admin');
-      console.log('🔑 Senha: admin123');
     } else {
       console.log('✅ Usuário admin já existe');
     }
@@ -241,9 +290,6 @@ app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    console.log('📧 Usuário:', username);
-
-    // Validações
     if (!username || !password) {
       return res.status(400).json({ 
         success: false, 
@@ -252,7 +298,6 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     // Buscar usuário
-    console.log('🔍 Buscando usuário no banco...');
     const userResult = await pool.query(
       `SELECT id, username, email, password_hash, full_name, role, empresa_id 
        FROM users 
@@ -261,10 +306,7 @@ app.post('/api/auth/login', async (req, res) => {
       [username]
     );
 
-    console.log('📊 Usuários encontrados:', userResult.rows.length);
-
     if (userResult.rows.length === 0) {
-      console.log('❌ Usuário não encontrado:', username);
       return res.status(401).json({ 
         success: false, 
         error: 'Credenciais inválidas' 
@@ -272,21 +314,16 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const user = userResult.rows[0];
-    console.log('✅ Usuário encontrado:', user.username);
 
     // Verificar senha
-    console.log('🔑 Verificando senha...');
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
     
     if (!isValidPassword) {
-      console.log('❌ Senha inválida para:', username);
       return res.status(401).json({ 
         success: false, 
         error: 'Credenciais inválidas' 
       });
     }
-
-    console.log('✅ Senha válida!');
 
     // Gerar token de sessão
     const sessionToken = 'bizflow_' + Date.now() + '_' + crypto.randomBytes(16).toString('hex');
@@ -317,8 +354,6 @@ app.post('/api/auth/login', async (req, res) => {
 
   } catch (error) {
     console.error('💥 ERRO CRÍTICO NO LOGIN:', error);
-    console.error('📝 Stack trace:', error.stack);
-    
     res.status(500).json({ 
       success: false, 
       error: 'Erro interno do servidor: ' + error.message
@@ -333,15 +368,7 @@ app.get('/api/test', (req, res) => {
   res.json({
     success: true,
     message: 'API BizFlow FASE 5.1 funcionando!',
-    timestamp: new Date().toISOString(),
-    features: [
-      'Sistema Multi-empresa',
-      'Gestão Completa',
-      'API REST',
-      'WebSocket em Tempo Real',
-      'Dashboard Interativo',
-      'Sistema de Cache'
-    ]
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -362,7 +389,6 @@ app.get('/api/empresas', async (req, res) => {
   }
 });
 
-// Criar empresa
 app.post('/api/empresas', async (req, res) => {
   try {
     const { nome, cnpj, email, telefone } = req.body;
@@ -402,16 +428,15 @@ app.get('/api/produtos', async (req, res) => {
   }
 });
 
-// Criar produto
 app.post('/api/produtos', async (req, res) => {
   try {
-    const { name, description, price, stock_quantity } = req.body;
+    const { name, description, price, stock_quantity, category } = req.body;
     
     const result = await pool.query(
-      `INSERT INTO products (empresa_id, name, description, price, stock_quantity) 
-       VALUES (1, $1, $2, $3, $4) 
+      `INSERT INTO products (empresa_id, name, description, price, stock_quantity, category) 
+       VALUES (1, $1, $2, $3, $4, $5) 
        RETURNING *`,
-      [name, description, price, stock_quantity]
+      [name, description, price, stock_quantity, category]
     );
 
     res.json({
@@ -429,7 +454,13 @@ app.post('/api/produtos', async (req, res) => {
 app.get('/api/vendas', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM sales ORDER BY sale_date DESC LIMIT 50'
+      `SELECT s.*, 
+              COUNT(si.id) as items_count
+       FROM sales s
+       LEFT JOIN sale_items si ON s.id = si.sale_id
+       GROUP BY s.id
+       ORDER BY s.sale_date DESC 
+       LIMIT 50`
     );
     
     res.json({
@@ -442,27 +473,57 @@ app.get('/api/vendas', async (req, res) => {
   }
 });
 
-// Criar venda
 app.post('/api/vendas', async (req, res) => {
+  const client = await pool.connect();
+  
   try {
-    const { total_amount, payment_method } = req.body;
+    await client.query('BEGIN');
+    
+    const { items, total_amount, total_items, payment_method } = req.body;
     const sale_code = 'V' + Date.now();
     
-    const result = await pool.query(
-      `INSERT INTO sales (empresa_id, sale_code, total_amount, payment_method) 
-       VALUES (1, $1, $2, $3) 
+    // Inserir venda
+    const saleResult = await client.query(
+      `INSERT INTO sales (empresa_id, sale_code, total_amount, total_items, payment_method) 
+       VALUES (1, $1, $2, $3, $4) 
        RETURNING *`,
-      [sale_code, total_amount, payment_method]
+      [sale_code, total_amount, total_items, payment_method]
     );
+    
+    const sale = saleResult.rows[0];
+    
+    // Inserir itens da venda
+    for (const item of items) {
+      await client.query(
+        `INSERT INTO sale_items (sale_id, product_id, product_name, quantity, unit_price, total_price) 
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [sale.id, item.product_id, item.product_name, item.quantity, item.unit_price, item.total_price]
+      );
+
+      // Atualizar estoque
+      if (item.product_id) {
+        await client.query(
+          `UPDATE products SET stock_quantity = stock_quantity - $1 
+           WHERE id = $2`,
+          [item.quantity, item.product_id]
+        );
+      }
+    }
+    
+    await client.query('COMMIT');
 
     res.json({
       success: true,
-      data: result.rows[0],
+      data: sale,
       message: "Venda registrada com sucesso!"
     });
+    
   } catch (error) {
-    console.error('Erro ao criar venda:', error);
+    await client.query('ROLLBACK');
+    console.error('Erro ao registrar venda:', error);
     res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  } finally {
+    client.release();
   }
 });
 
@@ -500,7 +561,6 @@ app.get('/api/financeiro', async (req, res) => {
   }
 });
 
-// Criar conta financeira
 app.post('/api/financeiro', async (req, res) => {
   try {
     const { name, type, amount, due_date } = req.body;
@@ -523,6 +583,179 @@ app.post('/api/financeiro', async (req, res) => {
   }
 });
 
+// ================= ROTAS DE RELATÓRIOS FASE 5.1 =================
+
+// Relatório de Vendas
+app.get('/api/relatorios/vendas', async (req, res) => {
+  try {
+    const { periodo = '7' } = req.query;
+    const dias = parseInt(periodo);
+    
+    const result = await pool.query(
+      `SELECT 
+        DATE(s.sale_date) as data,
+        COUNT(*) as total_vendas,
+        SUM(s.total_amount) as total_valor,
+        AVG(s.total_amount) as valor_medio,
+        s.payment_method,
+        COUNT(DISTINCT s.id) as vendas_por_dia
+      FROM sales s
+      WHERE s.sale_date >= CURRENT_DATE - INTERVAL '${dias} days'
+      GROUP BY DATE(s.sale_date), s.payment_method
+      ORDER BY data DESC, s.payment_method`
+    );
+    
+    // Estatísticas resumidas
+    const statsResult = await pool.query(
+      `SELECT 
+        COUNT(*) as total_vendas_periodo,
+        SUM(s.total_amount) as total_faturado,
+        AVG(s.total_amount) as ticket_medio,
+        MAX(s.total_amount) as maior_venda,
+        MIN(s.total_amount) as menor_venda
+      FROM sales s
+      WHERE s.sale_date >= CURRENT_DATE - INTERVAL '${dias} days'`
+    );
+    
+    res.json({
+      success: true,
+      data: {
+        detalhes: result.rows,
+        estatisticas: statsResult.rows[0]
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao gerar relatório de vendas:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// Relatório de Estoque
+app.get('/api/relatorios/estoque', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        p.name as produto,
+        p.stock_quantity as quantidade,
+        p.min_stock as estoque_minimo,
+        p.price as preco,
+        p.category as categoria,
+        CASE 
+          WHEN p.stock_quantity <= p.min_stock THEN 'CRÍTICO'
+          WHEN p.stock_quantity <= p.min_stock * 2 THEN 'ALERTA' 
+          ELSE 'NORMAL'
+        END as status_estoque,
+        (p.stock_quantity * p.price) as valor_total_estoque
+      FROM products p
+      WHERE p.is_active = true
+      ORDER BY status_estoque, p.stock_quantity ASC`
+    );
+    
+    // Estatísticas do estoque
+    const statsResult = await pool.query(
+      `SELECT 
+        COUNT(*) as total_produtos,
+        SUM(p.stock_quantity) as total_itens_estoque,
+        SUM(p.stock_quantity * p.price) as valor_total_estoque,
+        AVG(p.price) as preco_medio,
+        COUNT(CASE WHEN p.stock_quantity <= p.min_stock THEN 1 END) as produtos_estoque_baixo,
+        COUNT(CASE WHEN p.stock_quantity = 0 THEN 1 END) as produtos_sem_estoque
+      FROM products p
+      WHERE p.is_active = true`
+    );
+    
+    res.json({
+      success: true,
+      data: {
+        produtos: result.rows,
+        estatisticas: statsResult.rows[0]
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao gerar relatório de estoque:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// Relatório Financeiro
+app.get('/api/relatorios/financeiro', async (req, res) => {
+  try {
+    const { mes, ano } = req.query;
+    const mesAtual = mes || new Date().getMonth() + 1;
+    const anoAtual = ano || new Date().getFullYear();
+    
+    // Receitas e Despesas
+    const financeiroResult = await pool.query(
+      `SELECT 
+        type as tipo,
+        COUNT(*) as total_contas,
+        SUM(amount) as total_valor,
+        AVG(amount) as valor_medio,
+        status
+      FROM financial_accounts 
+      WHERE EXTRACT(MONTH FROM due_date) = $1 
+        AND EXTRACT(YEAR FROM due_date) = $2
+      GROUP BY type, status
+      ORDER BY type, status`,
+      [mesAtual, anoAtual]
+    );
+    
+    // Vendas do período
+    const vendasResult = await pool.query(
+      `SELECT 
+        SUM(total_amount) as total_vendas,
+        COUNT(*) as total_vendas_quantidade,
+        AVG(total_amount) as ticket_medio
+      FROM sales 
+      WHERE EXTRACT(MONTH FROM sale_date) = $1 
+        AND EXTRACT(YEAR FROM sale_date) = $2`,
+      [mesAtual, anoAtual]
+    );
+    
+    res.json({
+      success: true,
+      data: {
+        financeiro: financeiroResult.rows,
+        vendas: vendasResult.rows[0] || { total_vendas: 0, total_vendas_quantidade: 0, ticket_medio: 0 }
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao gerar relatório financeiro:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// Relatório de Produtos Mais Vendidos
+app.get('/api/relatorios/produtos-mais-vendidos', async (req, res) => {
+  try {
+    const { limite = '10' } = req.query;
+    
+    const result = await pool.query(
+      `SELECT 
+        p.name as produto,
+        p.category as categoria,
+        SUM(si.quantity) as total_vendido,
+        SUM(si.total_price) as total_faturado,
+        COUNT(DISTINCT si.sale_id) as vezes_vendido,
+        AVG(si.quantity) as media_por_venda
+      FROM sale_items si
+      JOIN products p ON si.product_id = p.id
+      GROUP BY p.id, p.name, p.category
+      ORDER BY total_vendido DESC
+      LIMIT $1`,
+      [limite]
+    );
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Erro ao gerar relatório de produtos mais vendidos:', error);
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
 // Dashboard Data
 app.get('/api/dashboard', async (req, res) => {
   try {
@@ -530,12 +763,18 @@ app.get('/api/dashboard', async (req, res) => {
       empresasResult,
       produtosResult,
       vendasResult,
-      usuariosResult
+      usuariosResult,
+      financeiroResult
     ] = await Promise.all([
       pool.query('SELECT COUNT(*) as total FROM empresas WHERE is_active = true'),
       pool.query('SELECT COUNT(*) as total FROM products WHERE is_active = true'),
       pool.query('SELECT COUNT(*) as total, COALESCE(SUM(total_amount), 0) as total_vendas FROM sales'),
-      pool.query('SELECT COUNT(*) as total FROM users WHERE is_active = true')
+      pool.query('SELECT COUNT(*) as total FROM users WHERE is_active = true'),
+      pool.query(`SELECT 
+        COUNT(*) as total_contas,
+        SUM(CASE WHEN type = 'receita' THEN amount ELSE 0 END) as total_receitas,
+        SUM(CASE WHEN type = 'despesa' THEN amount ELSE 0 END) as total_despesas
+        FROM financial_accounts`)
     ]);
 
     res.json({
@@ -545,7 +784,10 @@ app.get('/api/dashboard', async (req, res) => {
         total_produtos: parseInt(produtosResult.rows[0].total),
         total_vendas: parseInt(vendasResult.rows[0].total),
         total_usuarios: parseInt(usuariosResult.rows[0].total),
-        faturamento_total: parseFloat(vendasResult.rows[0].total_vendas)
+        faturamento_total: parseFloat(vendasResult.rows[0].total_vendas),
+        total_contas: parseInt(financeiroResult.rows[0].total_contas),
+        total_receitas: parseFloat(financeiroResult.rows[0].total_receitas || 0),
+        total_despesas: parseFloat(financeiroResult.rows[0].total_despesas || 0)
       }
     });
   } catch (error) {
@@ -562,7 +804,6 @@ io.on('connection', (socket) => {
     try {
       const { token } = data;
       
-      // ✅ CONSULTA SEM empresa_id (CORREÇÃO FASE 5.1)
       const sessionResult = await pool.query(
         `SELECT u.* FROM user_sessions us 
          JOIN users u ON us.user_id = u.id 
@@ -596,44 +837,17 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('join_dashboard', () => {
-    socket.join('dashboard');
-    console.log('📊 Socket entrou na sala do dashboard:', socket.id);
-  });
-
-  socket.on('new_sale', (data) => {
-    // Broadcast para todos na sala do dashboard
-    socket.to('dashboard').emit('sale_update', data);
-    console.log('💰 Nova venda notificada via WebSocket');
-  });
-
-  socket.on('new_notification', (data) => {
-    socket.broadcast.emit('notification_added', data);
-    console.log('🔔 Nova notificação via WebSocket');
-  });
-
   socket.on('disconnect', () => {
     console.log('🔌 Conexão WebSocket desconectada FASE 5.1:', socket.id);
   });
 });
-
-// Função para enviar notificações via WebSocket
-function sendNotification(socket, title, message, type = 'info') {
-  socket.emit('notification', {
-    title,
-    message,
-    type,
-    timestamp: new Date().toISOString()
-  });
-}
 
 // ================= TRATAMENTO DE ERROS =================
 app.use((err, req, res, next) => {
   console.error('💥 Erro não tratado:', err);
   res.status(500).json({
     success: false,
-    error: 'Erro interno do servidor',
-    message: process.env.NODE_ENV === 'production' ? undefined : err.message
+    error: 'Erro interno do servidor'
   });
 });
 
@@ -657,16 +871,15 @@ async function startServer() {
       console.log(`
 ╔══════════════════════════════════════════════════╗
 ║              🚀 BIZFLOW API FASE 5.1            ║
-║           SISTEMA DE PRODUÇÃO - CORREÇÕES       ║
+║           SISTEMA COMPLETO COM RELATÓRIOS       ║
 ╠══════════════════════════════════════════════════╣
 ║ 📍 Porta: ${PORT}                                      ║
 ║ 🌐 Host: ${HOST}                                     ║
 ║ 🗄️  Banco: PostgreSQL                             ║
 ║ 🔌 WebSocket: ✅ ATIVADO                          ║
-║ 🏢 Multi-empresa: ✅ ATIVADO                      ║
-║ 📊 Dashboard: ✅ ATIVADO                          ║
-║ 🔔 Notificações: ✅ ATIVADO                       ║
-║ 💰 Gestão Financeira: ✅ ATIVADO                  ║
+║ 📊 Relatórios: ✅ COMPLETOS                       ║
+║ 💰 Financeiro: ✅ ATIVADO                         ║
+║ 📈 Dashboard: ✅ ATIVADO                          ║
 ║ 👤 Usuário: admin                                ║
 ║ 🔑 Senha: admin123                               ║
 ╚══════════════════════════════════════════════════╝
