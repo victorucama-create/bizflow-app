@@ -1,13 +1,14 @@
-// services/auth.js - SISTEMA BIZFLOW FASE 5 COMPLETA
+// services/auth.js - ATUALIZADO PARA FASE 5 COMPLETA
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { queryWithMetrics, redis, logger } from '../core/server.js';
+import { queryWithMetrics, logger } from '../core/server.js';
+import CacheService from './cache-service.js';
 
 class AuthService {
-  // ✅ LOGIN COM CACHE E MÉTRICAS
+  // ✅ LOGIN COM CACHE SERVICE
   async login(username, password) {
     try {
-      logger.info('Tentativa de login:', { username });
+      logger.authLog('Tentativa de login', { username });
 
       // Validar inputs
       if (!username || !password) {
@@ -26,7 +27,7 @@ class AuthService {
       );
 
       if (userResult.rows.length === 0) {
-        logger.warn('Usuário não encontrado:', username);
+        logger.authLog('Usuário não encontrado', { username });
         throw new Error('Credenciais inválidas');
       }
 
@@ -36,7 +37,7 @@ class AuthService {
       const isValidPassword = await bcrypt.compare(password, user.password_hash);
       
       if (!isValidPassword) {
-        logger.warn('Senha inválida para usuário:', username);
+        logger.authLog('Senha inválida', { username });
         throw new Error('Credenciais inválidas');
       }
 
@@ -53,14 +54,13 @@ class AuthService {
         'user_sessions'
       );
 
-      // Salvar sessão no cache Redis (1 hora)
-      const cacheKey = `session:${sessionToken}`;
-      await redis.setex(cacheKey, 3600, JSON.stringify(user));
+      // ✅ USAR CACHE SERVICE PARA SESSÃO
+      await CacheService.cacheSession(sessionToken, user);
 
       // Remover password hash da resposta
       const { password_hash, ...userWithoutPassword } = user;
 
-      logger.info('Login realizado com sucesso:', { 
+      logger.authLog('Login realizado com sucesso', { 
         userId: user.id, 
         username: user.username,
         role: user.role 
@@ -73,24 +73,23 @@ class AuthService {
       };
 
     } catch (error) {
-      logger.error('Erro no serviço de auth:', error);
+      logger.errorLog(error, { context: 'AuthService.login' });
       throw error;
     }
   }
 
-  // ✅ VALIDAR TOKEN COM CACHE
+  // ✅ VALIDAR TOKEN COM CACHE SERVICE
   async validateToken(token) {
     try {
       if (!token) {
         throw new Error('Token não fornecido');
       }
 
-      // Tentar buscar do cache primeiro
-      const cacheKey = `session:${token}`;
-      let userSession = await redis.get(cacheKey);
+      // ✅ TENTAR CACHE SERVICE PRIMEIRO
+      const userSession = await CacheService.getSession(token);
       
       if (userSession) {
-        return JSON.parse(userSession);
+        return userSession;
       }
 
       // Buscar do banco se não encontrou no cache
@@ -110,26 +109,26 @@ class AuthService {
 
       const user = sessionResult.rows[0];
       
-      // Salvar no cache por 1 hora
-      await redis.setex(cacheKey, 3600, JSON.stringify(user));
+      // ✅ SALVAR NO CACHE SERVICE
+      await CacheService.cacheSession(token, user);
       
       return user;
 
     } catch (error) {
-      logger.error('Erro na validação do token:', error);
+      logger.errorLog(error, { context: 'AuthService.validateToken' });
       throw error;
     }
   }
 
-  // ✅ LOGOUT COM LIMPEZA DE CACHE
+  // ✅ LOGOUT COM CACHE SERVICE
   async logout(token) {
     try {
       if (!token) {
         return;
       }
 
-      // Remover do cache
-      await redis.del(`session:${token}`);
+      // ✅ REMOVER DO CACHE SERVICE
+      await CacheService.deleteSession(token);
       
       // Invalidar sessão no banco
       await queryWithMetrics(
@@ -139,10 +138,10 @@ class AuthService {
         'user_sessions'
       );
 
-      logger.info('Logout realizado:', { token: token.substring(0, 10) + '...' });
+      logger.authLog('Logout realizado', { token: token.substring(0, 10) + '...' });
 
     } catch (error) {
-      logger.error('Erro no logout:', error);
+      logger.errorLog(error, { context: 'AuthService.logout' });
       throw error;
     }
   }
@@ -201,55 +200,12 @@ class AuthService {
         'users'
       );
 
-      logger.info('Senha atualizada com sucesso:', { userId });
+      logger.authLog('Senha atualizada', { userId });
 
       return { success: true, message: 'Senha atualizada com sucesso' };
 
     } catch (error) {
-      logger.error('Erro ao atualizar senha:', error);
-      throw error;
-    }
-  }
-
-  // ✅ CRIAR USUÁRIO
-  async createUser(userData) {
-    try {
-      const { username, email, password, full_name, role = 'user', empresa_id = 1 } = userData;
-
-      // Verificar se usuário já existe
-      const existingUser = await queryWithMetrics(
-        'SELECT id FROM users WHERE username = $1 OR email = $2',
-        [username, email],
-        'select',
-        'users'
-      );
-
-      if (existingUser.rows.length > 0) {
-        throw new Error('Username ou email já cadastrado');
-      }
-
-      // Hash da senha
-      const passwordHash = await bcrypt.hash(password, 12);
-
-      // Inserir usuário
-      const result = await queryWithMetrics(
-        `INSERT INTO users (empresa_id, username, email, password_hash, full_name, role) 
-         VALUES ($1, $2, $3, $4, $5, $6) 
-         RETURNING id, username, email, full_name, role, empresa_id, created_at`,
-        [empresa_id, username, email, passwordHash, full_name, role],
-        'insert',
-        'users'
-      );
-
-      logger.info('Usuário criado com sucesso:', { 
-        userId: result.rows[0].id, 
-        username: result.rows[0].username 
-      });
-
-      return result.rows[0];
-
-    } catch (error) {
-      logger.error('Erro ao criar usuário:', error);
+      logger.errorLog(error, { context: 'AuthService.updatePassword' });
       throw error;
     }
   }
