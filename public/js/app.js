@@ -1,4 +1,6 @@
-// BizFlow App - FASE 5.1 PRODUÇÃO - VERSÃO CORRIGIDA
+// BizFlow App - FASE 5.1 PRODUÇÃO - VERSÃO CORRIGIDA DEFINITIVA
+console.log('🔄 Carregando BizFlow App FASE 5.1 - VERSÃO CORRIGIDA');
+
 class BizFlowApp {
     constructor() {
         this.API_BASE_URL = window.location.origin;
@@ -13,63 +15,70 @@ class BizFlowApp {
             responseTime: 0
         };
         
+        this.configuracoes = {
+            websocket: true,
+            cache: true,
+            retryAuto: true,
+            tema: 'light'
+        };
+
         console.log('🚀 BizFlow App FASE 5.1 - CONSTRUÍDO COM SUCESSO');
     }
 
     async init() {
         try {
-            console.log('🔧 Iniciando BizFlow App...');
+            console.log('🔧 Iniciando BizFlow App FASE 5.1...');
             
-            // ✅ INICIALIZAÇÃO SEGURA - SEM CHAMAR testarConexao()
-            await this.inicializarComponentesBasicos();
+            // ✅ INICIALIZAÇÃO SEGURA - SEM testarConexao() no início
+            this.configurarEventListeners();
+            this.atualizarInterfaceUsuario();
             await this.carregarDadosIniciais();
             
-            console.log('✅ BizFlow App inicializado com sucesso!');
+            console.log('✅ BizFlow App FASE 5.1 inicializado com sucesso!');
         } catch (error) {
             console.error('❌ Erro na inicialização:', error);
         }
     }
 
-    async inicializarComponentesBasicos() {
-        console.log('🔧 Configurando componentes básicos...');
-        
-        this.configurarEventListeners();
-        this.atualizarInterfaceUsuario();
-        this.inicializarWebSocket();
-    }
-
     configurarEventListeners() {
-        console.log('🔧 Configurando event listeners...');
+        console.log('🔧 Configurando event listeners FASE 5.1...');
         
-        // Forms principais
-        const forms = ['venda-form', 'estoque-form', 'financeiro-form', 'empresa-form'];
-        forms.forEach(formId => {
-            const form = document.getElementById(formId);
-            if (form) {
-                form.addEventListener('submit', (e) => this.handleFormSubmit(e, formId));
-            }
-        });
+        try {
+            // Forms principais
+            const forms = ['venda-form', 'estoque-form', 'financeiro-form', 'empresa-form'];
+            forms.forEach(formId => {
+                const form = document.getElementById(formId);
+                if (form) {
+                    form.addEventListener('submit', (e) => this.handleFormSubmit(e, formId));
+                }
+            });
+
+        } catch (error) {
+            console.error('Erro ao configurar listeners:', error);
+        }
     }
 
     async carregarDadosIniciais() {
-        console.log('📊 Carregando dados iniciais...');
+        console.log('📊 Carregando dados iniciais FASE 5.1...');
         
         try {
             await Promise.allSettled([
                 this.carregarEmpresas(),
                 this.carregarProdutos(),
-                this.carregarNotificacoes()
+                this.carregarNotificacoes(),
+                this.carregarVendas(),
+                this.carregarFinanceiro()
             ]);
             
-            console.log('✅ Dados iniciais carregados');
+            console.log('✅ Dados iniciais carregados FASE 5.1');
         } catch (error) {
             console.error('Erro ao carregar dados:', error);
         }
     }
 
-    // ✅ FUNÇÃO testarConexao IMPLEMENTADA
+    // ✅✅✅ FUNÇÃO testarConexao IMPLEMENTADA ✅✅✅
     async testarConexao() {
-        console.log('🌐 Testando conexão com API...');
+        console.log('🌐 TESTANDO CONEXÃO COM API - FUNÇÃO EXISTE!');
         
         try {
             const startTime = Date.now();
@@ -77,7 +86,6 @@ class BizFlowApp {
             const data = await response.json();
             const responseTime = Date.now() - startTime;
 
-            this.metricas.responseTime = responseTime;
             this.atualizarStatusConexao('online', responseTime);
             
             return {
@@ -86,14 +94,13 @@ class BizFlowApp {
                 status: data.status
             };
         } catch (error) {
-            this.metricas.errors++;
             this.atualizarStatusConexao('offline');
             return { success: false, error: error.message };
         }
     }
 
     async testarConexaoCompleta() {
-        console.log('🔍 Teste completo de conexão...');
+        console.log('🔍 Teste completo de conexão FASE 5.1...');
         
         const resultados = await Promise.allSettled([
             this.testarConexao(),
@@ -115,7 +122,6 @@ class BizFlowApp {
                 resolve({ success: false, error: 'WebSocket não conectado' });
                 return;
             }
-
             resolve({ success: true, message: 'WebSocket conectado' });
         });
     }
@@ -140,7 +146,7 @@ class BizFlowApp {
             });
 
             this.socket.on('connect', () => {
-                console.log('🔌 WebSocket conectado');
+                console.log('🔌 WebSocket conectado FASE 5.1');
                 this.atualizarStatusWebSocket('connected');
             });
 
@@ -154,42 +160,11 @@ class BizFlowApp {
         }
     }
 
-    // ✅ SISTEMA DE CACHE
-    async fetchComCache(url, options = {}) {
-        const cacheKey = `${url}_${JSON.stringify(options)}`;
-        
-        if (this.cache.has(cacheKey)) {
-            this.metricas.cacheHits++;
-            return this.cache.get(cacheKey);
-        }
-
-        try {
-            this.metricas.requests++;
-            const response = await fetch(url, options);
-            const data = await response.json();
-
-            if (data.success) {
-                this.cache.set(cacheKey, data);
-                setTimeout(() => this.cache.delete(cacheKey), 60000);
-            }
-
-            return data;
-        } catch (error) {
-            this.metricas.errors++;
-            throw error;
-        }
-    }
-
-    invalidarCache() {
-        this.cache.clear();
-        this.metricas.cacheHits = 0;
-        console.log('🗑️ Cache limpo');
-    }
-
     // ✅ GERENCIAMENTO DE EMPRESAS
     async carregarEmpresas() {
         try {
-            const data = await this.fetchComCache('/api/empresas');
+            const response = await fetch('/api/empresas');
+            const data = await response.json();
             
             if (data.success) {
                 this.renderizarEmpresas(data.data);
@@ -245,7 +220,8 @@ class BizFlowApp {
     // ✅ GERENCIAMENTO DE PRODUTOS
     async carregarProdutos() {
         try {
-            const data = await this.fetchComCache('/api/produtos');
+            const response = await fetch('/api/produtos');
+            const data = await response.json();
             if (data.success) {
                 this.renderizarProdutos(data.data);
             }
@@ -291,7 +267,8 @@ class BizFlowApp {
     // ✅ NOTIFICAÇÕES
     async carregarNotificacoes() {
         try {
-            const data = await this.fetchComCache('/api/notifications');
+            const response = await fetch('/api/notifications');
+            const data = await response.json();
             if (data.success) {
                 this.renderizarNotificacoes(data.data);
             }
@@ -325,6 +302,98 @@ class BizFlowApp {
                     <p class="mb-1 small">${notif.message}</p>
                 </a>
             </li>
+        `).join('');
+    }
+
+    // ✅ VENDAS
+    async carregarVendas() {
+        try {
+            const response = await fetch('/api/vendas');
+            const data = await response.json();
+            if (data.success) {
+                this.renderizarVendas(data.data);
+            }
+        } catch (error) {
+            console.error('Erro ao carregar vendas:', error);
+        }
+    }
+
+    renderizarVendas(vendas) {
+        const container = document.getElementById('lista-vendas');
+        if (!container) return;
+        
+        if (!vendas || vendas.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-receipt fa-3x mb-3"></i>
+                    <p>Nenhuma venda registrada</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = vendas.map(venda => `
+            <div class="card mb-2">
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Venda ${venda.sale_code}</h6>
+                            <small class="text-muted">
+                                ${new Date(venda.sale_date).toLocaleDateString()} | 
+                                R$ ${parseFloat(venda.total_amount).toFixed(2)}
+                            </small>
+                        </div>
+                        <span class="badge bg-success">${venda.payment_method}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // ✅ FINANCEIRO
+    async carregarFinanceiro() {
+        try {
+            const response = await fetch('/api/financeiro');
+            const data = await response.json();
+            if (data.success) {
+                this.renderizarFinanceiro(data.data);
+            }
+        } catch (error) {
+            console.error('Erro ao carregar financeiro:', error);
+        }
+    }
+
+    renderizarFinanceiro(contas) {
+        const container = document.getElementById('lista-contas');
+        if (!container) return;
+        
+        if (!contas || contas.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-file-invoice-dollar fa-3x mb-3"></i>
+                    <p>Nenhuma conta registrada</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = contas.map(conta => `
+            <div class="card mb-2">
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">${conta.name}</h6>
+                            <small class="text-muted">
+                                Venc: ${new Date(conta.due_date).toLocaleDateString()} | 
+                                R$ ${parseFloat(conta.amount).toFixed(2)}
+                            </small>
+                        </div>
+                        <span class="badge ${conta.type === 'receita' ? 'bg-success' : 'bg-danger'}">
+                            ${conta.type}
+                        </span>
+                    </div>
+                </div>
+            </div>
         `).join('');
     }
 
@@ -364,7 +433,6 @@ class BizFlowApp {
             if (data.success) {
                 this.mostrarAlerta('Operação realizada com sucesso!', 'success');
                 form.reset();
-                this.invalidarCache();
                 this.carregarDadosIniciais();
             } else {
                 throw new Error(data.error || 'Erro na operação');
@@ -375,12 +443,13 @@ class BizFlowApp {
     }
 
     mostrarAlerta(mensagem, tipo = 'info') {
+        // Implementação simples de alerta
         alert(`[${tipo.toUpperCase()}] ${mensagem}`);
     }
 
     mostrarResultadoTeste(resultados) {
         const mensagem = `
-            📊 Resultado Teste:
+            📊 Resultado Teste FASE 5.1:
             ✅ API: ${resultados.conexaoAPI.success ? 'OK' : 'FALHA'}
             🔌 WebSocket: ${resultados.websocket.success ? 'OK' : 'FALHA'}
             🗄️ Banco: ${resultados.banco.success ? 'OK' : 'FALHA'}
@@ -410,34 +479,39 @@ class BizFlowApp {
     }
 }
 
-// ✅ INICIALIZAÇÃO GLOBAL SIMPLIFICADA
+// ✅ INICIALIZAÇÃO GLOBAL FASE 5.1
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('👤 DOM Carregado - Verificando autenticação...');
+    console.log('👤 DOM Carregado - Verificando autenticação FASE 5.1...');
     
     const token = localStorage.getItem('bizflow_token');
     const user = JSON.parse(localStorage.getItem('bizflow_user') || 'null');
     
     if (token && user) {
-        console.log('✅ Usuário autenticado - inicializando app');
+        console.log('✅ Usuário autenticado - inicializando app FASE 5.1');
         window.bizFlowApp = new BizFlowApp();
         
         // Inicialização segura
         setTimeout(() => {
             window.bizFlowApp.init();
         }, 100);
+    } else {
+        console.log('👤 Usuário não autenticado - interface pública');
     }
 });
 
-// ✅ FUNÇÕES GLOBAIS
+// ✅ FUNÇÕES GLOBAIS FASE 5.1
 window.testarConexoes = function() {
-    if (window.bizFlowApp) {
+    console.log('🔍 TESTAR CONEXÕES CHAMADO - FUNÇÃO EXISTE!');
+    if (window.bizFlowApp && window.bizFlowApp.testarConexaoCompleta) {
         window.bizFlowApp.testarConexaoCompleta();
+    } else {
+        alert('BizFlow App não inicializado corretamente');
     }
 };
 
 window.limparCache = function() {
     if (window.bizFlowApp) {
-        window.bizFlowApp.invalidarCache();
+        window.bizFlowApp.cache && window.bizFlowApp.cache.clear();
         window.bizFlowApp.mostrarAlerta('Cache limpo com sucesso!', 'success');
     }
 };
@@ -453,3 +527,6 @@ window.marcarTodasComoLidas = function() {
         window.bizFlowApp.marcarTodasNotificacoesComoLidas();
     }
 };
+
+console.log('✅ BizFlow App FASE 5.1 - CARREGADO COM SUCESSO!');
+console.log('✅ Função testarConexao disponível:', typeof window.bizFlowApp?.testarConexao);
