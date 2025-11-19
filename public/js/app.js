@@ -219,7 +219,7 @@ class BizFlowApp {
 
     // ================= SISTEMA DE CACHE FASE 5.1 =================
 
-    async fetchComCache(url, options = {}, cacheKey = null, ttl = 300000) { // 5 minutos default
+    async fetchComCache(url, options = {}, cacheKey = null, ttl = 300000) {
         const chave = cacheKey || url;
         const agora = Date.now();
         
@@ -314,7 +314,7 @@ class BizFlowApp {
                 `${this.API_BASE_URL}/api/empresas`,
                 {},
                 'empresas',
-                600000 // 10 minutos
+                600000
             );
             
             if (data.success) {
@@ -334,7 +334,7 @@ class BizFlowApp {
                 `${this.API_BASE_URL}/api/filiais`,
                 {},
                 `filiais_${this.empresaAtual.id}`,
-                300000 // 5 minutos
+                300000
             );
             
             if (data.success) {
@@ -349,7 +349,6 @@ class BizFlowApp {
 
     async carregarApiKeys() {
         try {
-            // Por enquanto, vamos simular - implementar quando a rota estiver disponível
             this.apiKeys = [];
             this.exibirApiKeys(this.apiKeys);
         } catch (error) {
@@ -363,7 +362,7 @@ class BizFlowApp {
                 `${this.API_BASE_URL}/api/grupos`,
                 {},
                 `grupos_${this.empresaAtual.id}`,
-                600000 // 10 minutos
+                600000
             );
             
             if (data.success) {
@@ -394,7 +393,7 @@ class BizFlowApp {
                 `${this.API_BASE_URL}/api/notifications?unread_only=true&limit=10`,
                 {},
                 `notifications_${this.currentUser?.id}`,
-                120000 // 2 minutos
+                120000
             );
             
             if (data.success) {
@@ -473,7 +472,6 @@ class BizFlowApp {
     }
 
     mostrarToastNotificacao(notification) {
-        // Implementar toast notifications bonitas
         const toast = document.createElement('div');
         toast.className = `notification-toast toast show align-items-center text-white bg-${notification.type || 'info'} border-0`;
         toast.innerHTML = `
@@ -490,7 +488,6 @@ class BizFlowApp {
         const container = document.getElementById('notification-toast-container') || this.criarToastContainer();
         container.appendChild(toast);
         
-        // Auto-remove após 5 segundos
         setTimeout(() => {
             if (toast.parentNode) {
                 toast.remove();
@@ -520,7 +517,6 @@ class BizFlowApp {
             });
             
             if (response.ok) {
-                // Atualizar localmente
                 const notification = this.notifications.find(n => n.id === notificationId);
                 if (notification) {
                     notification.is_read = true;
@@ -549,7 +545,6 @@ class BizFlowApp {
     // ================= CONFIGURAÇÕES FASE 5.1 =================
 
     configurarEventListenersFase5() {
-        // WebSocket toggle
         const websocketSwitch = document.getElementById('config-websocket');
         if (websocketSwitch) {
             websocketSwitch.checked = this.configuracoes.websocket;
@@ -564,7 +559,6 @@ class BizFlowApp {
             });
         }
 
-        // Cache toggle
         const cacheSwitch = document.getElementById('config-cache');
         if (cacheSwitch) {
             cacheSwitch.checked = this.configuracoes.cache;
@@ -577,7 +571,6 @@ class BizFlowApp {
             });
         }
 
-        // Retry auto toggle
         const retrySwitch = document.getElementById('config-retry');
         if (retrySwitch) {
             retrySwitch.checked = this.configuracoes.retryAuto;
@@ -587,7 +580,6 @@ class BizFlowApp {
             });
         }
 
-        // Botão de limpar cache
         const clearCacheBtn = document.getElementById('btn-clear-cache');
         if (clearCacheBtn) {
             clearCacheBtn.addEventListener('click', () => {
@@ -596,7 +588,6 @@ class BizFlowApp {
             });
         }
 
-        // Botão de testar conexão
         const testConnectionBtn = document.getElementById('btn-test-connection');
         if (testConnectionBtn) {
             testConnectionBtn.addEventListener('click', () => {
@@ -652,15 +643,13 @@ class BizFlowApp {
     // ================= MÉTRICAS E MONITORAMENTO FASE 5.1 =================
 
     iniciarMonitoramento() {
-        // Monitorar performance da aplicação
         this.performanceMonitor = setInterval(() => {
             this.registrarMetricasPerformance();
-        }, 60000); // A cada 1 minuto
+        }, 60000);
         
-        // Monitorar conexão
         this.connectionMonitor = setInterval(() => {
             this.verificarConexao();
-        }, 30000); // A cada 30 segundos
+        }, 30000);
     }
 
     registrarMetricasPerformance() {
@@ -670,21 +659,15 @@ class BizFlowApp {
             errors: this.metrics.errors,
             cacheHits: this.metrics.cacheHits,
             avgResponseTime: this.metrics.avgResponseTime,
-            websocketConnected: this.isWebSocketConnected,
-            memory: performance.memory ? {
-                used: performance.memory.usedJSHeapSize,
-                total: performance.memory.totalJSHeapSize
-            } : null
+            websocketConnected: this.isWebSocketConnected
         };
         
         console.log('📊 Métricas de performance:', metrics);
         
-        // Enviar métricas para o servidor (opcional)
         if (this.metrics.requests > 0) {
             this.enviarMetricasParaServidor(metrics);
         }
         
-        // Reset contadores periódicos
         this.metrics.requests = 0;
         this.metrics.errors = 0;
         this.metrics.cacheHits = 0;
@@ -698,7 +681,6 @@ class BizFlowApp {
                 body: JSON.stringify(metrics)
             });
         } catch (error) {
-            // Silencioso - não quebrar a aplicação por métricas
             console.debug('❌ Erro ao enviar métricas:', error);
         }
     }
@@ -712,7 +694,6 @@ class BizFlowApp {
         
         this.isOnline = true;
         
-        // Testar conexão com API
         fetch(`${this.API_BASE_URL}/health`, { 
             method: 'HEAD',
             cache: 'no-cache'
@@ -749,7 +730,7 @@ class BizFlowApp {
 
     setEmpresaAtual(empresa) {
         this.empresaAtual = empresa;
-        this.invalidarCache(); // Invalidar cache ao trocar empresa
+        this.invalidarCache();
         this.carregarDadosEmpresa();
     }
 
@@ -778,10 +759,8 @@ class BizFlowApp {
     }
 
     aplicarConfiguracoes() {
-        // Aplicar tema
         document.documentElement.setAttribute('data-bs-theme', this.configuracoes.tema);
         
-        // Aplicar outras configurações
         if (!this.configuracoes.websocket) {
             this.desconectarWebSocket();
         }
@@ -833,7 +812,6 @@ class BizFlowApp {
     }
 
     mostrarAlerta(mensagem, tipo = 'info') {
-        // Implementação existente do alerta
         const alertDiv = document.createElement('div');
         alertDiv.className = `alert alert-${tipo} alert-dismissible fade show`;
         alertDiv.innerHTML = `
@@ -844,7 +822,6 @@ class BizFlowApp {
         const container = document.getElementById('alert-container') || this.criarContainerAlertas();
         container.appendChild(alertDiv);
         
-        // Auto-remove após 5 segundos
         setTimeout(() => {
             if (alertDiv.parentNode) {
                 alertDiv.remove();
@@ -874,20 +851,83 @@ class BizFlowApp {
         this.configuracoes.retryAuto = false;
         this.desconectarWebSocket();
         
-        // Usar dados em cache quando possível
         this.mostrarAlerta('Modo resiliente ativado. Algumas funcionalidades podem estar limitadas.', 'warning');
     }
 
-    // Manter métodos existentes da FASE 4 para compatibilidade
-    exibirEmpresas(empresas) { /* implementação existente */ }
-    exibirFiliais(filiais) { /* implementação existente */ }
-    exibirApiKeys(apiKeys) { /* implementação existente */ }
-    carregarDadosEmpresa() { /* implementação existente */ }
+    // Métodos de compatibilidade com FASE 4
+    exibirEmpresas(empresas) {
+        const container = document.getElementById('lista-empresas');
+        if (container && empresas) {
+            const html = empresas.map(empresa => `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">${empresa.nome}</h6>
+                            <small class="text-muted">${empresa.cnpj || 'Sem CNPJ'}</small>
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm" onclick="trocarEmpresa(${empresa.id}, '${empresa.nome}')">
+                            Selecionar
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            container.innerHTML = html;
+        }
+    }
+
+    exibirFiliais(filiais) {
+        const container = document.getElementById('lista-filiais');
+        if (container && filiais) {
+            const html = filiais.map(filial => `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">${filial.nome}</h6>
+                            <small class="text-muted">${filial.codigo} - ${filial.responsavel || 'Sem responsável'}</small>
+                        </div>
+                        <span class="badge ${filial.is_active ? 'bg-success' : 'bg-secondary'}">
+                            ${filial.is_active ? 'Ativa' : 'Inativa'}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+            container.innerHTML = html;
+        }
+    }
+
+    exibirApiKeys(apiKeys) {
+        const container = document.getElementById('lista-api-keys');
+        if (container) {
+            if (!apiKeys || apiKeys.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-4">Nenhuma API Key gerada</div>';
+                return;
+            }
+            
+            const html = apiKeys.map(apiKey => `
+                <div class="api-key-item border-bottom pb-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">${apiKey.name}</h6>
+                            <small class="text-muted">Criada em: ${new Date(apiKey.created_at).toLocaleDateString('pt-BR')}</small>
+                        </div>
+                        <span class="badge ${apiKey.is_active ? 'bg-success' : 'bg-danger'}">
+                            ${apiKey.is_active ? 'Ativa' : 'Inativa'}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+            container.innerHTML = html;
+        }
+    }
+
+    carregarDadosEmpresa() {
+        this.carregarEmpresas();
+        this.carregarFiliais();
+    }
 }
 
 // ================= INICIALIZAÇÃO E FUNÇÕES GLOBAIS FASE 5.1 =================
 
-// Funções globais FASE 5.1
 function trocarEmpresa(empresaId, empresaNome) {
     if (window.bizFlowApp) {
         window.bizFlowApp.setEmpresaAtual({ id: empresaId, nome: empresaNome });
@@ -918,7 +958,6 @@ function limparCache() {
 document.addEventListener('DOMContentLoaded', function() {
     window.bizFlowApp = new BizFlowApp();
     
-    // Verificar se há token de autenticação
     const token = localStorage.getItem('bizflow_token');
     const user = localStorage.getItem('bizflow_user');
     
@@ -929,8 +968,3 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('👤 Usuário não autenticado - carregando interface pública');
     }
 });
-
-// Exportar para uso em outros módulos
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = BizFlowApp;
-}
