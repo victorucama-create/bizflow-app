@@ -1,17 +1,26 @@
-// services/cache-service.js - SISTEMA DE CACHE COM FALLBACK FASE 5 COMPLETA
+// services/cache-service.js - SISTEMA DE CACHE HÍBRIDO FASE 5 COMPLETA
 import BizFlowLogger from '../utils/logger.js';
 
-class CacheService {
+class HybridCacheService {
   constructor() {
     this.memoryCache = new Map();
     this.redisEnabled = false;
     this.redis = null;
+    this.hits = 0;
+    this.misses = 0;
+    this.isFrontendMode = typeof window !== 'undefined' || process.env.FRONTEND_MODE === 'true' || !process.env.DATABASE_URL;
     this.init();
   }
 
   async init() {
     try {
-      // Tentar conectar ao Redis se a URL estiver configurada
+      // ✅ MODO FRONTEND - Usar apenas cache em memória
+      if (this.isFrontendMode) {
+        BizFlowLogger.businessLog('🔴 Cache Service: Modo Frontend - Cache em memória ativado');
+        return;
+      }
+
+      // ✅ MODO BACKEND - Tentar conectar ao Redis se a URL estiver configurada
       if (process.env.REDIS_URL) {
         const Redis = (await import('ioredis')).default;
         this.redis = new Redis(process.env.REDIS_URL, {
@@ -40,37 +49,69 @@ class CacheService {
     }
   }
 
-  // ✅ SET - Com fallback para memória
+  // ✅ SET - Com fallback automático para memória
   async set(key, value, ttl = 3600) {
     try {
-      if (this.redisEnabled && this.redis) {
-        await this.redis.setex(key, ttl, JSON.stringify(value));
-        BizFlowLogger.cacheLog(`Cache SET no Redis: ${key}`, true);
-      } else {
-        // Cache em memória com TTL
+      // ✅ MODO FRONTEND - Sempre usar memória
+      if (this.isFrontendMode) {
         this.memoryCache.set(key, {
           value,
           expires: Date.now() + (ttl * 1000)
         });
-        
-        // Limpar expired entries periodicamente
         this.cleanupMemoryCache();
-        
+        BizFlowLogger.cacheLog(`Cache SET na memória (Frontend): ${key}`, false);
+        return true;
+      }
+
+      // ✅ MODO BACKEND - Tentar Redis primeiro
+      if (this.redisEnabled && this.redis) {
+        await this.redis.setex(key, ttl, JSON.stringify(value));
+        BizFlowLogger.cacheLog(`Cache SET no Redis: ${key}`, true);
+      } else {
+        // Fallback para memória
+        this.memoryCache.set(key, {
+          value,
+          expires: Date.now() + (ttl * 1000)
+        });
+        this.cleanupMemoryCache();
         BizFlowLogger.cacheLog(`Cache SET na memória: ${key}`, false);
       }
       return true;
     } catch (error) {
       BizFlowLogger.errorLog(error, { context: 'cache set' });
-      return false;
+      
+      // Fallback garantido para memória em caso de erro
+      this.memoryCache.set(key, {
+        value,
+        expires: Date.now() + (ttl * 1000)
+      });
+      return true;
     }
   }
 
-  // ✅ GET - Com fallback para memória
+  // ✅ GET - Com fallback automático para memória
   async get(key) {
     try {
+      // ✅ MODO FRONTEND - Sempre usar memória
+      if (this.isFrontendMode) {
+        const cached = this.memoryCache.get(key);
+        if (cached && cached.expires > Date.now()) {
+          this.hits++;
+          BizFlowLogger.cacheLog(`Cache HIT na memória (Frontend): ${key}`, false);
+          return cached.value;
+        } else if (cached) {
+          this.memoryCache.delete(key);
+        }
+        this.misses++;
+        BizFlowLogger.cacheLog(`Cache MISS (Frontend): ${key}`, false);
+        return null;
+      }
+
+      // ✅ MODO BACKEND - Tentar Redis primeiro
       if (this.redisEnabled && this.redis) {
         const value = await this.redis.get(key);
         if (value) {
+          this.hits++;
           BizFlowLogger.cacheLog(`Cache HIT no Redis: ${key}`, true);
           return JSON.parse(value);
         }
@@ -78,18 +119,25 @@ class CacheService {
         // Buscar na memória
         const cached = this.memoryCache.get(key);
         if (cached && cached.expires > Date.now()) {
+          this.hits++;
           BizFlowLogger.cacheLog(`Cache HIT na memória: ${key}`, false);
           return cached.value;
         } else if (cached) {
-          // Remover expired
           this.memoryCache.delete(key);
         }
       }
       
+      this.misses++;
       BizFlowLogger.cacheLog(`Cache MISS: ${key}`, false);
       return null;
     } catch (error) {
       BizFlowLogger.errorLog(error, { context: 'cache get' });
+      
+      // Fallback para memória em caso de erro
+      const cached = this.memoryCache.get(key);
+      if (cached && cached.expires > Date.now()) {
+        return cached.value;
+      }
       return null;
     }
   }
@@ -97,7 +145,9 @@ class CacheService {
   // ✅ DELETE
   async del(key) {
     try {
-      if (this.redisEnabled && this.redis) {
+      if (this.isFrontendMode) {
+        this.memoryCache.delete(key);
+      } else if (this.redisEnabled && this.redis) {
         await this.redis.del(key);
       } else {
         this.memoryCache.delete(key);
@@ -113,6 +163,18 @@ class CacheService {
   // ✅ DELETE MULTIPLAS CHAVES
   async delPattern(pattern) {
     try {
+      if (this.isFrontendMode) {
+        let deleted = 0;
+        for (const key of this.memoryCache.keys()) {
+          if (key.includes(pattern)) {
+            this.memoryCache.delete(key);
+            deleted++;
+          }
+        }
+        BizFlowLogger.cacheLog(`Cache DEL pattern (Frontend): ${pattern} - ${deleted} keys`);
+        return true;
+      }
+
       if (this.redisEnabled && this.redis) {
         const keys = await this.redis.keys(pattern);
         if (keys.length > 0) {
@@ -120,7 +182,6 @@ class CacheService {
         }
         BizFlowLogger.cacheLog(`Cache DEL pattern: ${pattern} - ${keys.length} keys`);
       } else {
-        // Para memória, precisamos iterar
         let deleted = 0;
         for (const key of this.memoryCache.keys()) {
           if (key.includes(pattern)) {
@@ -140,10 +201,16 @@ class CacheService {
   // ✅ FLUSH ALL
   async flush() {
     try {
-      if (this.redisEnabled && this.redis) {
+      if (this.isFrontendMode) {
+        this.memoryCache.clear();
+        this.hits = 0;
+        this.misses = 0;
+      } else if (this.redisEnabled && this.redis) {
         await this.redis.flushdb();
       } else {
         this.memoryCache.clear();
+        this.hits = 0;
+        this.misses = 0;
       }
       BizFlowLogger.cacheLog('Cache FLUSH completo');
       return true;
@@ -153,30 +220,60 @@ class CacheService {
     }
   }
 
-  // ✅ STATUS DO CACHE
+  // ✅ STATUS DO CACHE - ATUALIZADO PARA HÍBRIDO
   async status() {
     try {
+      if (this.isFrontendMode) {
+        const hitRatio = this.hits + this.misses > 0 ? 
+          (this.hits / (this.hits + this.misses) * 100).toFixed(1) : 0;
+        
+        return {
+          type: 'memory',
+          mode: 'frontend',
+          connected: true,
+          total_keys: this.memoryCache.size,
+          hits: this.hits,
+          misses: this.misses,
+          hit_ratio: hitRatio + '%',
+          memory_used: 'Frontend Optimized'
+        };
+      }
+
       if (this.redisEnabled && this.redis) {
         const info = await this.redis.info();
         const keys = await this.redis.keys('*');
+        const hitRatio = this.hits + this.misses > 0 ? 
+          (this.hits / (this.hits + this.misses) * 100).toFixed(1) : 0;
         
         return {
           type: 'redis',
+          mode: 'backend',
           connected: true,
           total_keys: keys.length,
+          hits: this.hits,
+          misses: this.misses,
+          hit_ratio: hitRatio + '%',
           memory_used: info.split('\r\n').find(line => line.startsWith('used_memory_human'))?.split(':')[1] || 'unknown'
         };
       } else {
+        const hitRatio = this.hits + this.misses > 0 ? 
+          (this.hits / (this.hits + this.misses) * 100).toFixed(1) : 0;
+        
         return {
           type: 'memory',
+          mode: 'backend',
           connected: true,
           total_keys: this.memoryCache.size,
+          hits: this.hits,
+          misses: this.misses,
+          hit_ratio: hitRatio + '%',
           memory_used: `${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} MB`
         };
       }
     } catch (error) {
       return {
         type: 'unknown',
+        mode: this.isFrontendMode ? 'frontend' : 'backend',
         connected: false,
         error: error.message
       };
@@ -185,7 +282,6 @@ class CacheService {
 
   // ✅ LIMPEZA PERIÓDICA DO CACHE EM MEMÓRIA
   cleanupMemoryCache() {
-    // Limpar a cada 100 operações para performance
     if (this.memoryCache.size > 1000) {
       const now = Date.now();
       for (const [key, value] of this.memoryCache.entries()) {
@@ -196,7 +292,7 @@ class CacheService {
     }
   }
 
-  // ✅ CACHE DE SESSÕES (otimizado)
+  // ✅ CACHE DE SESSÕES (otimizado para híbrido)
   async cacheSession(token, userData, ttl = 3600) {
     return await this.set(`session:${token}`, userData, ttl);
   }
@@ -246,9 +342,30 @@ class CacheService {
       await this.delPattern(pattern);
     }
 
-    BizFlowLogger.businessLog('Cache da empresa invalidado', { empresaId });
+    BizFlowLogger.businessLog('Cache da empresa invalidado', { 
+      empresaId,
+      mode: this.isFrontendMode ? 'frontend' : 'backend'
+    });
+  }
+
+  // ✅ NOVO: GET MODE INFO
+  getModeInfo() {
+    return {
+      isFrontendMode: this.isFrontendMode,
+      redisEnabled: this.redisEnabled,
+      totalMemoryKeys: this.memoryCache.size,
+      cacheHits: this.hits,
+      cacheMisses: this.misses
+    };
+  }
+
+  // ✅ NOVO: RESET STATS
+  resetStats() {
+    this.hits = 0;
+    this.misses = 0;
+    BizFlowLogger.businessLog('Cache stats resetados');
   }
 }
 
 // Singleton pattern
-export default new CacheService();
+export default new HybridCacheService();
