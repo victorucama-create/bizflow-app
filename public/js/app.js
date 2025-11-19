@@ -1,6 +1,4 @@
-// BizFlow App - FASE 5.1 PRODUÇÃO - VERSÃO CORRIGIDA DEFINITIVA
-console.log('🔄 Carregando BizFlow App FASE 5.1 - VERSÃO CORRIGIDA');
-
+// BizFlow App - FASE 5.1 PRODUÇÃO - VERSÃO CORRIGIDA
 class BizFlowApp {
     constructor() {
         this.API_BASE_URL = window.location.origin;
@@ -8,27 +6,40 @@ class BizFlowApp {
         this.currentUser = JSON.parse(localStorage.getItem('bizflow_user') || 'null');
         this.socket = null;
         this.cache = new Map();
+        this.metricas = {
+            requests: 0,
+            cacheHits: 0,
+            errors: 0,
+            responseTime: 0
+        };
         
         console.log('🚀 BizFlow App FASE 5.1 - CONSTRUÍDO COM SUCESSO');
     }
 
     async init() {
         try {
-            console.log('🔧 Iniciando BizFlow App FASE 5.1...');
+            console.log('🔧 Iniciando BizFlow App...');
             
-            // ✅ INICIALIZAÇÃO SEGURA - SEM testarConexao() no início
-            this.configurarEventListeners();
-            this.atualizarInterfaceUsuario();
+            // ✅ INICIALIZAÇÃO SEGURA - SEM CHAMAR testarConexao()
+            await this.inicializarComponentesBasicos();
             await this.carregarDadosIniciais();
             
-            console.log('✅ BizFlow App FASE 5.1 inicializado com sucesso!');
+            console.log('✅ BizFlow App inicializado com sucesso!');
         } catch (error) {
             console.error('❌ Erro na inicialização:', error);
         }
     }
 
+    async inicializarComponentesBasicos() {
+        console.log('🔧 Configurando componentes básicos...');
+        
+        this.configurarEventListeners();
+        this.atualizarInterfaceUsuario();
+        this.inicializarWebSocket();
+    }
+
     configurarEventListeners() {
-        console.log('🔧 Configurando event listeners FASE 5.1...');
+        console.log('🔧 Configurando event listeners...');
         
         // Forms principais
         const forms = ['venda-form', 'estoque-form', 'financeiro-form', 'empresa-form'];
@@ -41,7 +52,7 @@ class BizFlowApp {
     }
 
     async carregarDadosIniciais() {
-        console.log('📊 Carregando dados iniciais FASE 5.1...');
+        console.log('📊 Carregando dados iniciais...');
         
         try {
             await Promise.allSettled([
@@ -50,15 +61,15 @@ class BizFlowApp {
                 this.carregarNotificacoes()
             ]);
             
-            console.log('✅ Dados iniciais carregados FASE 5.1');
+            console.log('✅ Dados iniciais carregados');
         } catch (error) {
             console.error('Erro ao carregar dados:', error);
         }
     }
 
-    // ✅✅✅ FUNÇÃO testarConexao IMPLEMENTADA ✅✅✅
+    // ✅ FUNÇÃO testarConexao IMPLEMENTADA
     async testarConexao() {
-        console.log('🌐 TESTANDO CONEXÃO COM API - FUNÇÃO EXISTE!');
+        console.log('🌐 Testando conexão com API...');
         
         try {
             const startTime = Date.now();
@@ -66,6 +77,7 @@ class BizFlowApp {
             const data = await response.json();
             const responseTime = Date.now() - startTime;
 
+            this.metricas.responseTime = responseTime;
             this.atualizarStatusConexao('online', responseTime);
             
             return {
@@ -74,13 +86,14 @@ class BizFlowApp {
                 status: data.status
             };
         } catch (error) {
+            this.metricas.errors++;
             this.atualizarStatusConexao('offline');
             return { success: false, error: error.message };
         }
     }
 
     async testarConexaoCompleta() {
-        console.log('🔍 Teste completo de conexão FASE 5.1...');
+        console.log('🔍 Teste completo de conexão...');
         
         const resultados = await Promise.allSettled([
             this.testarConexao(),
@@ -102,6 +115,7 @@ class BizFlowApp {
                 resolve({ success: false, error: 'WebSocket não conectado' });
                 return;
             }
+
             resolve({ success: true, message: 'WebSocket conectado' });
         });
     }
@@ -126,7 +140,7 @@ class BizFlowApp {
             });
 
             this.socket.on('connect', () => {
-                console.log('🔌 WebSocket conectado FASE 5.1');
+                console.log('🔌 WebSocket conectado');
                 this.atualizarStatusWebSocket('connected');
             });
 
@@ -140,11 +154,42 @@ class BizFlowApp {
         }
     }
 
+    // ✅ SISTEMA DE CACHE
+    async fetchComCache(url, options = {}) {
+        const cacheKey = `${url}_${JSON.stringify(options)}`;
+        
+        if (this.cache.has(cacheKey)) {
+            this.metricas.cacheHits++;
+            return this.cache.get(cacheKey);
+        }
+
+        try {
+            this.metricas.requests++;
+            const response = await fetch(url, options);
+            const data = await response.json();
+
+            if (data.success) {
+                this.cache.set(cacheKey, data);
+                setTimeout(() => this.cache.delete(cacheKey), 60000);
+            }
+
+            return data;
+        } catch (error) {
+            this.metricas.errors++;
+            throw error;
+        }
+    }
+
+    invalidarCache() {
+        this.cache.clear();
+        this.metricas.cacheHits = 0;
+        console.log('🗑️ Cache limpo');
+    }
+
     // ✅ GERENCIAMENTO DE EMPRESAS
     async carregarEmpresas() {
         try {
-            const response = await fetch('/api/empresas');
-            const data = await response.json();
+            const data = await this.fetchComCache('/api/empresas');
             
             if (data.success) {
                 this.renderizarEmpresas(data.data);
@@ -200,8 +245,7 @@ class BizFlowApp {
     // ✅ GERENCIAMENTO DE PRODUTOS
     async carregarProdutos() {
         try {
-            const response = await fetch('/api/produtos');
-            const data = await response.json();
+            const data = await this.fetchComCache('/api/produtos');
             if (data.success) {
                 this.renderizarProdutos(data.data);
             }
@@ -247,8 +291,7 @@ class BizFlowApp {
     // ✅ NOTIFICAÇÕES
     async carregarNotificacoes() {
         try {
-            const response = await fetch('/api/notifications');
-            const data = await response.json();
+            const data = await this.fetchComCache('/api/notifications');
             if (data.success) {
                 this.renderizarNotificacoes(data.data);
             }
@@ -321,6 +364,7 @@ class BizFlowApp {
             if (data.success) {
                 this.mostrarAlerta('Operação realizada com sucesso!', 'success');
                 form.reset();
+                this.invalidarCache();
                 this.carregarDadosIniciais();
             } else {
                 throw new Error(data.error || 'Erro na operação');
@@ -336,7 +380,7 @@ class BizFlowApp {
 
     mostrarResultadoTeste(resultados) {
         const mensagem = `
-            📊 Resultado Teste FASE 5.1:
+            📊 Resultado Teste:
             ✅ API: ${resultados.conexaoAPI.success ? 'OK' : 'FALHA'}
             🔌 WebSocket: ${resultados.websocket.success ? 'OK' : 'FALHA'}
             🗄️ Banco: ${resultados.banco.success ? 'OK' : 'FALHA'}
@@ -366,39 +410,34 @@ class BizFlowApp {
     }
 }
 
-// ✅ INICIALIZAÇÃO GLOBAL FASE 5.1
+// ✅ INICIALIZAÇÃO GLOBAL SIMPLIFICADA
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('👤 DOM Carregado - Verificando autenticação FASE 5.1...');
+    console.log('👤 DOM Carregado - Verificando autenticação...');
     
     const token = localStorage.getItem('bizflow_token');
     const user = JSON.parse(localStorage.getItem('bizflow_user') || 'null');
     
     if (token && user) {
-        console.log('✅ Usuário autenticado - inicializando app FASE 5.1');
+        console.log('✅ Usuário autenticado - inicializando app');
         window.bizFlowApp = new BizFlowApp();
         
         // Inicialização segura
         setTimeout(() => {
             window.bizFlowApp.init();
         }, 100);
-    } else {
-        console.log('👤 Usuário não autenticado - interface pública');
     }
 });
 
-// ✅ FUNÇÕES GLOBAIS FASE 5.1
+// ✅ FUNÇÕES GLOBAIS
 window.testarConexoes = function() {
-    console.log('🔍 TESTAR CONEXÕES CHAMADO - FUNÇÃO EXISTE!');
-    if (window.bizFlowApp && window.bizFlowApp.testarConexaoCompleta) {
+    if (window.bizFlowApp) {
         window.bizFlowApp.testarConexaoCompleta();
-    } else {
-        alert('BizFlow App não inicializado corretamente');
     }
 };
 
 window.limparCache = function() {
     if (window.bizFlowApp) {
-        window.bizFlowApp.cache && window.bizFlowApp.cache.clear();
+        window.bizFlowApp.invalidarCache();
         window.bizFlowApp.mostrarAlerta('Cache limpo com sucesso!', 'success');
     }
 };
@@ -414,6 +453,3 @@ window.marcarTodasComoLidas = function() {
         window.bizFlowApp.marcarTodasNotificacoesComoLidas();
     }
 };
-
-console.log('✅ BizFlow App FASE 5.1 - CARREGADO COM SUCESSO!');
-console.log('✅ Função testarConexao disponível:', typeof window.bizFlowApp?.testarConexao);
