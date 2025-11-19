@@ -76,6 +76,19 @@
             padding: 0.25rem 0.5rem;
             border-radius: 0.25rem;
         }
+        
+        /* Estilos para relatórios */
+        .nav-section {
+            border-bottom: 3px solid #0d6efd;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .report-card {
+            transition: transform 0.2s;
+        }
+        .report-card:hover {
+            transform: translateY(-5px);
+        }
     </style>
 </head>
 <body>
@@ -636,6 +649,138 @@
                 </div>
             </section>
 
+            <!-- Seção Relatórios FASE 5.1 -->
+            <section id="relatorios" class="mb-5">
+                <div class="row">
+                    <div class="col-12">
+                        <h3 class="nav-section"><i class="fas fa-chart-bar me-2"></i>Relatórios</h3>
+                        <p class="text-muted">Relatórios detalhados do sistema</p>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="fas fa-chart-line me-1"></i>Relatórios Disponíveis</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <!-- Relatório de Vendas -->
+                                    <div class="col-md-6 mb-4">
+                                        <div class="card h-100 report-card">
+                                            <div class="card-header bg-success text-white">
+                                                <h6 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>Relatório de Vendas</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="card-text">Análise completa das vendas realizadas no sistema.</p>
+                                                <ul class="list-unstyled small">
+                                                    <li><i class="fas fa-check text-success me-2"></i>Vendas por período</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Ticket médio</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Métodos de pagamento</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Estatísticas detalhadas</li>
+                                                </ul>
+                                                <div class="mt-3">
+                                                    <button class="btn btn-success w-100" onclick="carregarRelatorioVendas()">
+                                                        <i class="fas fa-download me-1"></i> Gerar Relatório
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Relatório de Estoque -->
+                                    <div class="col-md-6 mb-4">
+                                        <div class="card h-100 report-card">
+                                            <div class="card-header bg-warning text-dark">
+                                                <h6 class="mb-0"><i class="fas fa-boxes me-2"></i>Relatório de Estoque</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="card-text">Situação atual do estoque e alertas.</p>
+                                                <ul class="list-unstyled small">
+                                                    <li><i class="fas fa-check text-success me-2"></i>Produtos em estoque baixo</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Valor total do estoque</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Status por categoria</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Alertas automáticos</li>
+                                                </ul>
+                                                <div class="mt-3">
+                                                    <button class="btn btn-warning w-100" onclick="carregarRelatorioEstoque()">
+                                                        <i class="fas fa-download me-1"></i> Gerar Relatório
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Relatório Financeiro -->
+                                    <div class="col-md-6 mb-4">
+                                        <div class="card h-100 report-card">
+                                            <div class="card-header bg-info text-white">
+                                                <h6 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Relatório Financeiro</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="card-text">Receitas, despesas e fluxo de caixa.</p>
+                                                <ul class="list-unstyled small">
+                                                    <li><i class="fas fa-check text-success me-2"></i>Receitas vs Despesas</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Contas a pagar/receber</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Fluxo de caixa mensal</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Resultado financeiro</li>
+                                                </ul>
+                                                <div class="mt-3">
+                                                    <button class="btn btn-info w-100" onclick="carregarRelatorioFinanceiro()">
+                                                        <i class="fas fa-download me-1"></i> Gerar Relatório
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Produtos Mais Vendidos -->
+                                    <div class="col-md-6 mb-4">
+                                        <div class="card h-100 report-card">
+                                            <div class="card-header bg-danger text-white">
+                                                <h6 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Produtos Mais Vendidos</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="card-text">Ranking dos produtos mais vendidos.</p>
+                                                <ul class="list-unstyled small">
+                                                    <li><i class="fas fa-check text-success me-2"></i>Top produtos por quantidade</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Top produtos por faturamento</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Média de vendas por produto</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Análise por categoria</li>
+                                                </ul>
+                                                <div class="mt-3">
+                                                    <button class="btn btn-danger w-100" onclick="carregarRelatorioProdutosMaisVendidos()">
+                                                        <i class="fas fa-download me-1"></i> Gerar Relatório
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resultados dos Relatórios -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-secondary text-white">
+                                <h5 class="mb-0"><i class="fas fa-file-alt me-1"></i>Resultado do Relatório</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="resultado-relatorio" class="text-center text-muted py-4">
+                                    <i class="fas fa-chart-bar fa-3x mb-3"></i>
+                                    <p>Selecione um relatório para visualizar os dados</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- Seções existentes da FASE 3 (mantidas) -->
             <!-- PDV Section -->
             <section id="vendas" class="mb-5">
@@ -1059,6 +1204,418 @@
             }
         }
 
+        // ✅ FUNÇÕES DE RELATÓRIOS FASE 5.1
+        async function carregarRelatorioVendas() {
+            if (window.bizFlowApp) {
+                try {
+                    document.getElementById('resultado-relatorio').innerHTML = `
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                            <p class="mt-2">Gerando relatório de vendas...</p>
+                        </div>
+                    `;
+
+                    const response = await fetch('/api/relatorios/vendas?periodo=30');
+                    const data = await response.json();
+
+                    if (data.success) {
+                        const estatisticas = data.data.estatisticas;
+                        const detalhes = data.data.detalhes;
+                        
+                        let html = `
+                            <h5 class="text-primary mb-4">📊 Relatório de Vendas - Últimos 30 Dias</h5>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-3">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <h4 class="text-success">${estatisticas.total_vendas_periodo}</h4>
+                                            <small>Total de Vendas</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <h4 class="text-primary">R$ ${parseFloat(estatisticas.total_faturado).toFixed(2)}</h4>
+                                            <small>Faturamento Total</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <h4 class="text-info">R$ ${parseFloat(estatisticas.ticket_medio).toFixed(2)}</h4>
+                                            <small>Ticket Médio</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <h4 class="text-warning">R$ ${parseFloat(estatisticas.maior_venda).toFixed(2)}</h4>
+                                            <small>Maior Venda</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Data</th>
+                                            <th>Total Vendas</th>
+                                            <th>Valor Total</th>
+                                            <th>Valor Médio</th>
+                                            <th>Método Pagamento</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                        `;
+
+                        detalhes.forEach(item => {
+                            html += `
+                                <tr>
+                                    <td>${new Date(item.data).toLocaleDateString('pt-BR')}</td>
+                                    <td>${item.total_vendas}</td>
+                                    <td>R$ ${parseFloat(item.total_valor).toFixed(2)}</td>
+                                    <td>R$ ${parseFloat(item.valor_medio).toFixed(2)}</td>
+                                    <td><span class="badge bg-success">${item.payment_method}</span></td>
+                                </tr>
+                            `;
+                        });
+
+                        html += `
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="mt-3 text-end">
+                                <small class="text-muted">Gerado em: ${new Date().toLocaleString('pt-BR')}</small>
+                            </div>
+                        `;
+
+                        document.getElementById('resultado-relatorio').innerHTML = html;
+                    } else {
+                        throw new Error(data.error || 'Erro ao gerar relatório');
+                    }
+                } catch (error) {
+                    document.getElementById('resultado-relatorio').innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Erro ao carregar relatório: ${error.message}
+                        </div>
+                    `;
+                }
+            } else {
+                alert('Sistema não inicializado. Faça login primeiro.');
+            }
+        }
+
+        async function carregarRelatorioEstoque() {
+            if (window.bizFlowApp) {
+                try {
+                    document.getElementById('resultado-relatorio').innerHTML = `
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                            <p class="mt-2">Gerando relatório de estoque...</p>
+                        </div>
+                    `;
+
+                    const response = await fetch('/api/relatorios/estoque');
+                    const data = await response.json();
+
+                    if (data.success) {
+                        const produtos = data.data.produtos;
+                        const estatisticas = data.data.estatisticas;
+                        
+                        let html = `
+                            <h5 class="text-primary mb-4">📦 Relatório de Estoque</h5>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-3">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <h4 class="text-info">${estatisticas.total_produtos}</h4>
+                                            <small>Total de Produtos</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <h4 class="text-success">${estatisticas.total_itens_estoque}</h4>
+                                            <small>Itens em Estoque</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <h4 class="text-warning">R$ ${parseFloat(estatisticas.valor_total_estoque).toFixed(2)}</h4>
+                                            <small>Valor Total</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <h4 class="text-danger">${estatisticas.produtos_estoque_baixo}</h4>
+                                            <small>Estoque Baixo</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Produto</th>
+                                            <th>Categoria</th>
+                                            <th>Quantidade</th>
+                                            <th>Estoque Mínimo</th>
+                                            <th>Status</th>
+                                            <th>Valor Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                        `;
+
+                        produtos.forEach(produto => {
+                            const statusClass = produto.status_estoque === 'CRÍTICO' ? 'danger' : 
+                                              produto.status_estoque === 'ALERTA' ? 'warning' : 'success';
+                            
+                            html += `
+                                <tr>
+                                    <td>${produto.produto}</td>
+                                    <td>${produto.categoria}</td>
+                                    <td>${produto.quantidade}</td>
+                                    <td>${produto.estoque_minimo}</td>
+                                    <td><span class="badge bg-${statusClass}">${produto.status_estoque}</span></td>
+                                    <td>R$ ${parseFloat(produto.valor_total_estoque || 0).toFixed(2)}</td>
+                                </tr>
+                            `;
+                        });
+
+                        html += `
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="mt-3 text-end">
+                                <small class="text-muted">Gerado em: ${new Date().toLocaleString('pt-BR')}</small>
+                            </div>
+                        `;
+
+                        document.getElementById('resultado-relatorio').innerHTML = html;
+                    } else {
+                        throw new Error(data.error || 'Erro ao gerar relatório');
+                    }
+                } catch (error) {
+                    document.getElementById('resultado-relatorio').innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Erro ao carregar relatório: ${error.message}
+                        </div>
+                    `;
+                }
+            } else {
+                alert('Sistema não inicializado. Faça login primeiro.');
+            }
+        }
+
+        async function carregarRelatorioFinanceiro() {
+            if (window.bizFlowApp) {
+                try {
+                    document.getElementById('resultado-relatorio').innerHTML = `
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                            <p class="mt-2">Gerando relatório financeiro...</p>
+                        </div>
+                    `;
+
+                    const response = await fetch('/api/relatorios/financeiro');
+                    const data = await response.json();
+
+                    if (data.success) {
+                        const financeiro = data.data.financeiro;
+                        const vendas = data.data.vendas;
+                        
+                        let html = `
+                            <h5 class="text-primary mb-4">💰 Relatório Financeiro</h5>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-4">
+                                    <div class="card bg-success text-white">
+                                        <div class="card-body text-center">
+                                            <h4>R$ ${parseFloat(vendas.total_vendas).toFixed(2)}</h4>
+                                            <small>Total em Vendas</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card bg-info text-white">
+                                        <div class="card-body text-center">
+                                            <h4>R$ ${parseFloat(financeiro.find(f => f.tipo === 'receita')?.total_valor || 0).toFixed(2)}</h4>
+                                            <small>Total Receitas</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card bg-danger text-white">
+                                        <div class="card-body text-center">
+                                            <h4>R$ ${parseFloat(financeiro.find(f => f.tipo === 'despesa')?.total_valor || 0).toFixed(2)}</h4>
+                                            <small>Total Despesas</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Tipo</th>
+                                            <th>Status</th>
+                                            <th>Total Contas</th>
+                                            <th>Valor Total</th>
+                                            <th>Valor Médio</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                        `;
+
+                        financeiro.forEach(item => {
+                            const tipoClass = item.tipo === 'receita' ? 'success' : 'danger';
+                            const statusClass = item.status === 'pago' || item.status === 'recebido' ? 'success' : 
+                                              item.status === 'pendente' ? 'warning' : 'secondary';
+                            
+                            html += `
+                                <tr>
+                                    <td><span class="badge bg-${tipoClass}">${item.tipo}</span></td>
+                                    <td><span class="badge bg-${statusClass}">${item.status}</span></td>
+                                    <td>${item.total_contas}</td>
+                                    <td>R$ ${parseFloat(item.total_valor).toFixed(2)}</td>
+                                    <td>R$ ${parseFloat(item.valor_medio).toFixed(2)}</td>
+                                </tr>
+                            `;
+                        });
+
+                        html += `
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="mt-3 text-end">
+                                <small class="text-muted">Gerado em: ${new Date().toLocaleString('pt-BR')}</small>
+                            </div>
+                        `;
+
+                        document.getElementById('resultado-relatorio').innerHTML = html;
+                    } else {
+                        throw new Error(data.error || 'Erro ao gerar relatório');
+                    }
+                } catch (error) {
+                    document.getElementById('resultado-relatorio').innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Erro ao carregar relatório: ${error.message}
+                        </div>
+                    `;
+                }
+            } else {
+                alert('Sistema não inicializado. Faça login primeiro.');
+            }
+        }
+
+        async function carregarRelatorioProdutosMaisVendidos() {
+            if (window.bizFlowApp) {
+                try {
+                    document.getElementById('resultado-relatorio').innerHTML = `
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                            <p class="mt-2">Gerando relatório de produtos mais vendidos...</p>
+                        </div>
+                    `;
+
+                    const response = await fetch('/api/relatorios/produtos-mais-vendidos?limite=10');
+                    const data = await response.json();
+
+                    if (data.success) {
+                        const produtos = data.data;
+                        
+                        let html = `
+                            <h5 class="text-primary mb-4">🏆 Produtos Mais Vendidos</h5>
+
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Posição</th>
+                                            <th>Produto</th>
+                                            <th>Categoria</th>
+                                            <th>Total Vendido</th>
+                                            <th>Total Faturado</th>
+                                            <th>Vezes Vendido</th>
+                                            <th>Média por Venda</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                        `;
+
+                        produtos.forEach((produto, index) => {
+                            const positionClass = index === 0 ? 'table-warning' : '';
+                            
+                            html += `
+                                <tr class="${positionClass}">
+                                    <td><strong>#${index + 1}</strong></td>
+                                    <td>${produto.produto}</td>
+                                    <td>${produto.categoria}</td>
+                                    <td>${produto.total_vendido} unidades</td>
+                                    <td>R$ ${parseFloat(produto.total_faturado).toFixed(2)}</td>
+                                    <td>${produto.vezes_vendido}</td>
+                                    <td>${parseFloat(produto.media_por_venda).toFixed(1)}</td>
+                                </tr>
+                            `;
+                        });
+
+                        html += `
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="mt-3 text-end">
+                                <small class="text-muted">Gerado em: ${new Date().toLocaleString('pt-BR')}</small>
+                            </div>
+                        `;
+
+                        document.getElementById('resultado-relatorio').innerHTML = html;
+                    } else {
+                        throw new Error(data.error || 'Erro ao gerar relatório');
+                    }
+                } catch (error) {
+                    document.getElementById('resultado-relatorio').innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Erro ao carregar relatório: ${error.message}
+                        </div>
+                    `;
+                }
+            } else {
+                alert('Sistema não inicializado. Faça login primeiro.');
+            }
+        }
+
         // ✅ FUNÇÕES GLOBAIS FASE 5.1
         function testarConexoes() {
             if (window.bizFlowApp) {
@@ -1081,7 +1638,7 @@
 
         function carregarDashboard() {
             if (window.bizFlowApp) {
-                window.bizFlowApp.carregarDadosIniciaisFase5();
+                window.bizFlowApp.carregarDadosIniciais();
             }
         }
 
