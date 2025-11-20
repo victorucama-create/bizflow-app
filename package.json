@@ -12,6 +12,11 @@
     "dev:frontend": "FRONTEND_MODE=true node --watch server.js",
     "dev:backend": "NODE_ENV=development node --watch server.js",
     "dev-with-errors": "node --watch server.js --trace-warnings --unhandled-rejections=strict",
+    
+    "migrate:database": "node scripts/migration/update-database-v5.js",
+    "migrate:and:start": "npm run migrate:database && npm start",
+    "migrate:and:dev": "npm run migrate:database && npm run dev",
+    
     "init-db": "node scripts/init-database.js",
     "init-demo": "FRONTEND_MODE=true node scripts/init-demo-data.js",
     "health-check": "node scripts/health-check.js",
@@ -22,20 +27,26 @@
     "test-redis": "node scripts/test-redis.js",
     "test-metrics": "node scripts/test-metrics.js",
     "test-hybrid": "npm run test-api && npm run test-api:frontend",
+    
     "backup-db": "node scripts/backup/backup-database.js",
     "backup-redis": "node scripts/backup/backup-redis.js",
     "backup-frontend": "node scripts/backup/backup-frontend-data.js",
+    
     "monitor-system": "node scripts/monitoring/system-monitor.js",
     "monitor-hybrid": "node scripts/monitoring/hybrid-monitor.js",
     "cache-stats": "node scripts/monitoring/cache-stats.js",
     "cache-stats:frontend": "FRONTEND_MODE=true node scripts/monitoring/cache-stats.js",
+    
     "test-production": "NODE_ENV=production node server.js",
     "test-production:frontend": "NODE_ENV=production FRONTEND_MODE=true node server.js",
+    
+    "migrate:frontend-to-backend": "node scripts/migration/frontend-to-backend.js",
+    "migrate:backend-to-frontend": "node scripts/migration/backend-to-frontend.js",
+    
     "lint": "echo 'Linting not configured - skipping'",
     "audit": "npm audit --audit-level=high",
     "security-scan": "npm audit --audit-level=moderate",
-    "migrate:frontend-to-backend": "node scripts/migration/frontend-to-backend.js",
-    "migrate:backend-to-frontend": "node scripts/migration/backend-to-frontend.js",
+    
     "postinstall": "echo '🚀 BizFlow FASE 5 COMPLETA HÍBRIDA - Dependências instaladas com sucesso!' && echo '📊 Sistema Híbrido (Backend/Frontend) com Redis, Prometheus e Monitoramento Avançado' && echo '💡 Use: npm run start:frontend para modo frontend' && echo '💡 Use: npm run start para modo backend'"
   },
   "dependencies": {
